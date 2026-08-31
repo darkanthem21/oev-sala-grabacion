@@ -1,0 +1,3 @@
+# Manual de despliegue
+
+Pendiente
