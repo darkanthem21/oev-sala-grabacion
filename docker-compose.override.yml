@@ -1,0 +1,17 @@
+# Desarrollo. Compose lo carga solo, sin pasarlo con -f; en el servidor los -f van
+# explicitos y este archivo queda fuera, asi que sus valores no se despliegan por
+# descuido.
+services:
+  web:
+    build:
+      context: .
+      # Hay entornos donde el contenedor de build no resuelve DNS y falla al bajar
+      # las dependencias. Con la red del host deja de depender de esa configuracion.
+      network: host
+    ports:
+      - "8000:${PUERTO:-3006}"
+    environment:
+      DEBUG: "1"
+    volumes:
+      # El codigo montado permite editar y recargar sin reconstruir la imagen.
+      - ./src:/app

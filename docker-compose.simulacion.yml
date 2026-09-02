@@ -1,0 +1,24 @@
+# Reproduce el servidor del curso en local: se usa ENCIMA del compose del servidor
+# y agrega un Caddy con la misma regla de enrutado que aplica el del curso. Permite
+# probar lo que se va a desplegar sin depender del acceso por SSH.
+#
+#   docker network create red_taller_software      # una sola vez
+#   docker compose build
+#   docker compose -p grupo6sim -f docker-compose.yml -f docker-compose.servidor.yml \
+#                  -f docker-compose.simulacion.yml up -d
+#   http://localhost:8080
+services:
+  caddy:
+    image: caddy:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./simulacion/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on: [web]
+    networks: [red_taller_software]
+
+  web:
+    environment:
+      # En local se entra por localhost y no por el subdominio, asi que
+      # ALLOWED_HOSTS tiene que aceptarlo.
+      ALLOWED_HOSTS: localhost,127.0.0.1

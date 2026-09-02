@@ -1,0 +1,67 @@
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Nada de esto vive en el codigo: lo pone el servidor de turno por entorno.
+# Mudarse de alojamiento es cambiar variables, no editar archivos.
+SECRET_KEY = os.environ.get("SECRET_KEY", "clave-solo-para-desarrollo")
+DEBUG = os.environ.get("DEBUG", "0") == "1"
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
+CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("CSRF_ORIGINS", "").split(",") if o]
+
+# Detras de un proxy (Caddy): el host y el esquema reales vienen en cabeceras.
+# Sin esto Django cree que todo llega por http a "web:8000".
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+]
+
+MIDDLEWARE = [
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+]
+
+ROOT_URLCONF = "oev.urls"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        # Lo compartido por todos los modulos; lo propio va en <modulo>/templates/.
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("POSTGRES_DB", "oev"),
+        "USER": os.environ.get("POSTGRES_USER", "oev"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "oev"),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": "5432",
+    }
+}
+
+LANGUAGE_CODE = "es-cl"
+TIME_ZONE = "America/Santiago"
+USE_TZ = True
+STATIC_URL = "static/"
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

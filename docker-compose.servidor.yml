@@ -1,0 +1,13 @@
+# Caddy enruta por container_name, y 'grupo6_frontend' es la ranura que le
+# asignaron al grupo: es un nombre, no una descripcion. Solo un stack puede
+# tenerla a la vez, asi que para levantar esto hay que bajar la plantilla.
+#
+#   docker-compose -p grupo6 -f docker-compose.yml -f docker-compose.servidor.yml up -d --build
+services:
+  web:
+    container_name: grupo6_frontend
+    networks: [default, red_taller_software]
+
+networks:
+  red_taller_software:
+    external: true
