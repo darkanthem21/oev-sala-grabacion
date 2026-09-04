@@ -10,8 +10,9 @@ DEBUG = os.environ.get("DEBUG", "0") == "1"
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("CSRF_ORIGINS", "").split(",") if o]
 
-# Detras de un proxy (Caddy): el host y el esquema reales vienen en cabeceras.
-# Sin esto Django cree que todo llega por http a "web:8000".
+# Detras de un proxy (Caddy): el host y el esquema reales llegan en cabeceras.
+# Sin la segunda linea Django cree que la peticion es http aunque el navegador
+# la haya hecho por https, y rechaza el POST del login por CSRF.
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
@@ -38,6 +39,7 @@ TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         # Lo compartido por todos los modulos; lo propio va en <modulo>/templates/.
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -64,4 +66,6 @@ LANGUAGE_CODE = "es-cl"
 TIME_ZONE = "America/Santiago"
 USE_TZ = True
 STATIC_URL = "static/"
+# Estaticos compartidos por todos los modulos; los propios van en <modulo>/static/.
+STATICFILES_DIRS = [BASE_DIR / "static"]
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
