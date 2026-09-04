@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Iniciar sesión{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'personas/ingreso.css' %}">{% endblock %}
+
+{% block contenido %}
+<video id="fondo" class="fondo" muted loop playsinline
+       poster="{% static 'video/fondo.jpg' %}"
+       data-src="{% static 'video/fondo.mp4' %}"></video>
+
+<script>
+  (function () {
+    var v = document.getElementById('fondo');
+    function arranca() {
+      if (matchMedia('(min-width: 700px)').matches &&
+          !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        v.src = v.dataset.src;
+        v.play();
+      }
+    }
+    document.readyState === 'complete'
+      ? arranca()
+      : window.addEventListener('load', arranca);
+  })();
+</script>
+
+<main class="tarjeta">
+  <h1>Sala de grabación</h1>
+  <p class="sub">Oficina de Educación Virtual</p>
+  {% include "personas/_formulario_ingreso.html" %}
+  <img class="logo" src="{% static 'img/Facultad-color-negro.png' %}"
+       alt="Universidad Austral de Chile · Facultad de Ciencias de la Ingeniería">
+</main>
+{% endblock %}
