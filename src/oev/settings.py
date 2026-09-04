@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "personas",
 ]
 
 MIDDLEWARE = [
@@ -69,3 +70,20 @@ STATIC_URL = "static/"
 # Estaticos compartidos por todos los modulos; los propios van en <modulo>/static/.
 STATICFILES_DIRS = [BASE_DIR / "static"]
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+AUTH_USER_MODEL = "personas.Usuario"
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
+
+# US-01 AC5. Por entorno hasta que exista el modulo `configuracion`: el RNF 1
+# exige que el cliente pueda cambiar estos umbrales sin tocar el codigo.
+INTENTOS_MAXIMOS = int(os.environ.get("INTENTOS_MAXIMOS", "5"))
+MINUTOS_BLOQUEO = int(os.environ.get("MINUTOS_BLOQUEO", "15"))
+
+# US-01 AC6. Sin relay institucional todavia (es una de las preguntas abiertas
+# del despliegue), asi que por defecto el correo se imprime en consola y no se
+# pierde en silencio. En el servidor se cambia por variable de entorno.
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-responder@uach.cl")
