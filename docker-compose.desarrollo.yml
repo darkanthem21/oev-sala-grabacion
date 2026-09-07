@@ -1,6 +1,8 @@
-# Desarrollo. Compose lo carga solo, sin pasarlo con -f; en el servidor los -f van
-# explicitos y este archivo queda fuera, asi que sus valores no se despliegan por
-# descuido.
+# Desarrollo: build local, codigo montado y DEBUG. Va con -f explicito, y por eso
+# ya no se llama 'override': con ese nombre Compose lo cargaba solo, y un
+# `docker-compose up` en el servidor construia ahi en vez de bajar la imagen.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.desarrollo.yml up
 services:
   web:
     build:

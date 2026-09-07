@@ -3,7 +3,7 @@
 # probar lo que se va a desplegar sin depender del acceso por SSH.
 #
 #   docker network create red_taller_software      # una sola vez
-#   docker compose build
+#   docker compose -f docker-compose.yml -f docker-compose.desarrollo.yml build
 #   docker compose -p grupo6sim -f docker-compose.yml -f docker-compose.servidor.yml \
 #                  -f docker-compose.simulacion.yml up -d
 #   http://localhost:8080

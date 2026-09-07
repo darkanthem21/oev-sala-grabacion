@@ -17,7 +17,7 @@ services:
     restart: unless-stopped
 
   web:
-    # En el servidor la imagen se baja de GHCR y no se construye nada; el override
+    # En el servidor la imagen se baja de GHCR y no se construye nada; el compose
     # de desarrollo agrega `build` para trabajar sobre el codigo local.
     # TAG es la rama publicada, o el sha de un commit para fijar una version
     # exacta. Por defecto `main`: desplegar otra cosa hay que pedirlo a proposito.
