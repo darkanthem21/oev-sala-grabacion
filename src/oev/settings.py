@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "personas",
     "agenda",
+    "configuracion",
 ]
 
 MIDDLEWARE = [
