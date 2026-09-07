@@ -34,8 +34,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oev}
       SECRET_KEY: ${SECRET_KEY:-clave-solo-para-desarrollo}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
-      # La identidad es el correo (US-01 AC1), asi que createsuperuser espera
-      # DJANGO_SUPERUSER_EMAIL y ya no existe DJANGO_SUPERUSER_USERNAME.
       DJANGO_SUPERUSER_EMAIL: ${ADMIN_EMAIL:-admin@uach.cl}
       DJANGO_SUPERUSER_PASSWORD: ${ADMIN_PASSWORD:-admin}
     depends_on:
