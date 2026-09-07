@@ -1,0 +1,173 @@
+{# htmx reemplaza este fragmento entero; Alpine reinicializa solo el x-data nuevo. #}
+<div id="calendario" class="calendario"
+     x-data="{
+       elegido: {{ elegido.pk }}, dian: {{ elegido.dian }},
+       dia: '{{ elegido.dia }}', ini: '{{ elegido.ini }}', fin: '{{ elegido.fin }}',
+       min(t) { const p = t.split(':'); return +p[0] * 60 + +p[1] },
+       hora(v) { return String(Math.floor(v / 60)).padStart(2, '0') + ':' + String(v % 60).padStart(2, '0') },
+       get duracion() { return this.ini && this.fin ? this.min(this.fin) - this.min(this.ini) : '' },
+       set duracion(v) { if (this.ini && v) this.fin = this.hora(this.min(this.ini) + Number(v)) },
+       get abierto() { return this.elegido !== null || this.dian !== null },
+       elegir(pk, dia, i, f) {
+         if (this.elegido === pk) { this.cerrar(); return }
+         this.elegido = pk; this.dian = null; this.dia = dia; this.ini = i; this.fin = f
+       },
+       agregar(dian, dia, i, f) {
+         this.elegido = null; this.dian = dian; this.dia = dia; this.ini = i; this.fin = f
+       },
+       cerrar() { this.elegido = null; this.dian = null }
+     }">
+
+  <div class="barra" hx-target="#calendario" hx-swap="outerHTML" hx-push-url="true"
+       @keydown.window.arrow-left="if ($event.target === document.body) $refs.antes.click()"
+       @keydown.window.arrow-right="if ($event.target === document.body) $refs.luego.click()">
+    <h2 class="periodo">{{ titulo }}</h2>
+
+    <div class="mandos">
+      <div class="grupo">
+        <a class="btn ico" x-ref="antes"
+           href="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ anterior|date:'Y-m-d' }}"
+           hx-get="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ anterior|date:'Y-m-d' }}"
+           aria-label="{% if vista == 'mes' %}Mes anterior{% else %}Semana anterior{% endif %}">&larr;</a>
+        <a class="btn" href="{% url 'panel_bloques' %}?vista={{ vista }}"
+           hx-get="{% url 'panel_bloques' %}?vista={{ vista }}">Hoy</a>
+        <a class="btn ico" x-ref="luego"
+           href="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ siguiente|date:'Y-m-d' }}"
+           hx-get="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ siguiente|date:'Y-m-d' }}"
+           aria-label="{% if vista == 'mes' %}Mes siguiente{% else %}Semana siguiente{% endif %}">&rarr;</a>
+      </div>
+
+      <div class="grupo" role="group" aria-label="Forma de ver el calendario">
+        <a class="btn {% if vista == 'mes' %}activa{% endif %}"
+           href="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ foco|date:'Y-m-d' }}"
+           hx-get="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ foco|date:'Y-m-d' }}"
+           {% if vista == "mes" %}aria-current="true"{% endif %}>Mensual</a>
+        <a class="btn {% if vista == 'semana' %}activa{% endif %}"
+           href="{% url 'panel_bloques' %}?vista=semana&amp;desde={{ foco|date:'Y-m-d' }}"
+           hx-get="{% url 'panel_bloques' %}?vista=semana&amp;desde={{ foco|date:'Y-m-d' }}"
+           {% if vista == "semana" %}aria-current="true"{% endif %}>Semanal</a>
+      </div>
+    </div>
+  </div>
+
+  {% if vista == "mes" %}
+    <div class="marco">
+      <table class="mes">
+        <thead><tr>
+          {% for columna in cabeceras %}
+            <th scope="col" class="{% if columna.distinto %}distinto{% endif %}"
+                {% if columna.distinto %}title="La plantilla de este día no es igual a la de los demás"{% endif %}>
+              {{ columna.nombre }}
+              <span class="jornada">{{ columna.resumen }}</span>
+            </th>
+          {% endfor %}
+        </tr></thead>
+        <tbody>
+          {% for semana in semanas %}
+            <tr>
+              {% for dia in semana %}
+                <td class="dia {% if dia.fuera %}fuera{% endif %} {% if dia.fecha == hoy %}hoy{% endif %}">
+                  <div class="celda">
+                    <span class="numero">{{ dia.fecha|date:"j" }}</span>
+                    {# La forma de la jornada, con las medidas de la vista semanal tumbadas. #}
+                    {% if dia.bloques %}
+                      <span class="franja" aria-hidden="true">
+                        {% for bloque in dia.bloques %}
+                          <span class="tramo" style="left: {{ bloque.posicion }}%; width: {{ bloque.largo }}%"></span>
+                        {% endfor %}
+                      </span>
+                    {% endif %}
+                  </div>
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="pista">La jornada se edita en la vista semanal: es la plantilla que se repite todas las semanas.</p>
+
+  {% else %}
+    <div class="marco">
+      {# La rejilla mide lo que mide la jornada, no una franja fija (US-06 AC6). #}
+      <div class="semana" style="--horas: {{ altura }}">
+        <div class="regla" aria-hidden="true">
+          {% for hora in reloj %}
+            <span class="hora" style="top: {{ hora.posicion }}%">{{ hora.etiqueta }}</span>
+          {% endfor %}
+        </div>
+        {% for dia in dias %}
+          <div class="columna {% if dia.fecha == hoy %}hoy{% endif %}">
+            <div class="cabecera">
+              <span class="dsem">{{ dia.fecha|date:"D"|capfirst }}</span><span class="dnum">{{ dia.fecha|date:"j" }}</span>
+              <button type="button" class="mas"
+                      @click="agregar({{ dia.numero }}, '{{ dia.fecha|date:"l" }}', '{{ dia.proximo.inicio }}', '{{ dia.proximo.termino }}')"
+                      aria-label="Agregar un bloque los {{ dia.fecha|date:'l' }}">+</button>
+            </div>
+            <div class="rejilla">
+              {% for bloque in dia.bloques %}
+                <button type="button" class="bloque {% if bloque.pk == choca %}choca{% endif %}"
+                        style="top: {{ bloque.posicion }}%; height: {{ bloque.largo }}%"
+                        :class="elegido === {{ bloque.pk }} ? 'elegido' : ''"
+                        :aria-pressed="elegido === {{ bloque.pk }}"
+                        @click="elegir({{ bloque.pk }}, '{{ dia.fecha|date:"l" }}', '{{ bloque.inicio|time:"H:i" }}', '{{ bloque.termino|time:"H:i" }}')">
+                  <span class="desde">{{ bloque.inicio|time:"H:i" }}</span>
+                  <span class="hasta">{{ bloque.termino|time:"H:i" }}</span>
+                </button>
+              {% empty %}
+                <p class="sin-bloques">Sin bloques</p>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if error %}<p class="aviso">{{ error }}</p>{% endif %}
+
+    {% if quitado %}
+      <form class="deshacer" method="post" action="{% url 'editar_bloque' %}"
+            hx-post="{% url 'editar_bloque' %}" hx-target="#calendario" hx-swap="outerHTML">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="reponer">
+        <input type="hidden" name="bloque" value="{{ quitado.pk }}">
+        <input type="hidden" name="vista" value="{{ vista }}">
+        <input type="hidden" name="desde" value="{{ foco|date:'Y-m-d' }}">
+        <span>Quitaste el bloque de los {{ quitado.get_dia_display }},
+          {{ quitado.inicio|time:"H:i" }} a {{ quitado.termino|time:"H:i" }}.</span>
+        <button class="btn" type="submit">Reponerlo</button>
+      </form>
+    {% endif %}
+
+    <form class="editor" x-show="abierto" x-cloak
+          method="post" action="{% url 'editar_bloque' %}"
+          hx-post="{% url 'editar_bloque' %}" hx-target="#calendario" hx-swap="outerHTML">
+      {% csrf_token %}
+      <input type="hidden" name="bloque" :value="elegido ?? ''">
+      <input type="hidden" name="dia" :value="dian ?? ''">
+      <input type="hidden" name="vista" value="{{ vista }}">
+      <input type="hidden" name="desde" value="{{ foco|date:'Y-m-d' }}">
+
+      <p class="que">
+        <span x-show="elegido !== null">Bloque de los <strong x-text="dia"></strong>.
+          El cambio vale para <strong>todos los <span x-text="dia"></span></strong>, no para una fecha sola.</span>
+        <span x-show="elegido === null">Bloque nuevo los <strong x-text="dia"></strong>,
+          todas las semanas.</span>
+      </p>
+
+      <div class="campos">
+        <label>Inicio<input type="time" name="inicio" step="300" x-model="ini" required></label>
+        <label>Término<input type="time" name="termino" step="300" x-model="fin" required></label>
+        <label>Duración<span class="conunidad"><input type="number" min="5" max="600" step="5" x-model="duracion"><span class="unidad">min</span></span></label>
+        <div class="acciones">
+          <button class="btn activa" type="submit" name="accion" value="guardar"
+                  x-text="elegido === null ? 'Agregar el bloque' : 'Guardar el bloque'"></button>
+          <button class="btn peligro" type="submit" name="accion" value="quitar" x-show="elegido !== null"
+                  hx-post="{% url 'editar_bloque' %}" hx-include="closest form"
+                  hx-vals='{"accion": "quitar"}'>Quitar de la jornada</button>
+          <button class="btn" type="button" @click="cerrar()">Cancelar</button>
+        </div>
+      </div>
+    </form>
+  {% endif %}
+</div>
