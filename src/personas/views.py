@@ -26,7 +26,12 @@ def destino_tras_login(usuario):
     los distintos tipos de usuario entran por la misma puerta. Si se decide que
     entran por puertas distintas, se agrega otra URL que reusa `entrar`: la
     autenticación no se duplica.
+
+    US-04: el administrador entra directo a su panel. El rol todavía no es un
+    grupo —eso es US-08—, así que decide el mismo permiso que abre /admin.
     """
+    if usuario.is_staff:
+        return reverse("panel_bloques")
     return reverse("panel")
 
 
