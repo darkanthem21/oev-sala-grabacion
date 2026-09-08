@@ -1,6 +1,0 @@
-# Imita la regla que el ayudante puso en el Caddy del servidor: enruta por
-# nombre de contenedor dentro de la red compartida. Si algo funciona aca y
-# falla alla, la diferencia no es el proxy.
-:8080 {
-	reverse_proxy grupo6_frontend:3006
-}
