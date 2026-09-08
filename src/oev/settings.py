@@ -24,6 +24,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "personas",
+    "agenda",
+    "configuracion",
 ]
 
 MIDDLEWARE = [

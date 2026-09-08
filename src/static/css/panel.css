@@ -1,0 +1,58 @@
+/* Cascaron del panel de administracion: lo que comparten las tres pestañas.
+ * Lo propio de cada una vive en el static de su modulo.
+ * Solo variables de marca.css: ningun color literal (docs/estilo.md). */
+
+/* Alpine tarda un instante en montar: sin esto lo que depende de x-show parpadea. */
+[x-cloak] { display: none !important; }
+
+/* Todo el encabezado —marca, titulo, quien sos y las pestañas— es un solo bloque
+ * blanco. El filete de abajo hace de riel para la pestaña activa. */
+.techo { background: var(--superficie); border-bottom: 1px solid var(--borde); }
+.techo .dentro { max-width: 74rem; margin: 0 auto; padding: 0 1.5rem; }
+.techo .fila { display: flex; align-items: center; gap: 1rem; padding: .7rem 0 .6rem; }
+.techo h1 {
+  margin: 0; font-size: 1.15rem; letter-spacing: -.01em;
+  border-left: 1px solid var(--borde); padding-left: 1rem;
+}
+.sello { height: 1.9rem; width: auto; }
+.quien { display: flex; align-items: center; gap: .75rem; margin-left: auto; }
+.quien form { margin: 0; }
+.correo { font-size: .8rem; color: var(--tinta-suave); }
+
+.panel { max-width: 74rem; margin: 0 auto; padding: 1.75rem 1.5rem 4rem; }
+
+.pestanas { display: flex; gap: 1.5rem; }
+.pestana {
+  padding: .45rem .1rem; margin-bottom: -1px; text-decoration: none;
+  color: var(--tinta-suave); border-bottom: 2px solid transparent;
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: .8rem;
+}
+.pestana:hover { color: var(--tinta); }
+.pestana.activa { color: var(--tinta); border-bottom-color: var(--acento); }
+
+.vacio { color: var(--tinta-suave); font-size: .9rem; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; position: relative;
+  min-height: 1.9rem; padding: 0 .7rem;
+  border: 1px solid var(--borde); background: var(--superficie); color: var(--accion);
+  text-decoration: none; cursor: pointer;
+  font-family: var(--fuente-texto); font-size: .8rem; font-weight: 500;
+}
+.btn:hover { border-color: var(--accion); z-index: 1; }
+.btn.ico { min-width: 2rem; padding: 0; font-size: .95rem; }
+.btn.activa { background: var(--accion); color: var(--superficie); border-color: var(--accion); z-index: 1; }
+
+/* Los botones de un grupo comparten filete: se leen como un mando, no como tres. */
+.grupo { display: flex; }
+.grupo .btn { margin-left: -1px; }
+.grupo .btn:first-child { margin-left: 0; }
+
+.marco { border: 1px solid var(--borde); background: var(--superficie); overflow-x: auto; }
+
+@media (max-width: 40rem) {
+  .techo .dentro { padding: 0 1rem; }
+  .techo h1 { border-left: 0; padding-left: 0; }
+  .panel { padding: 1.25rem 1rem 3rem; }
+  .correo { display: none; }
+}

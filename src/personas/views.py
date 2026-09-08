@@ -22,16 +22,25 @@ def destino_tras_login(usuario):
     US-01 AC3 dice "panel principal de reservas", que es US-02 y todavía no
     existe. Cuando exista, se cambia esta función y nada más.
 
-    Es también el punto donde se decide el destino por rol, si se confirma que
-    los distintos tipos de usuario entran por la misma puerta. Si se decide que
-    entran por puertas distintas, se agrega otra URL que reusa `entrar`: la
-    autenticación no se duplica.
+    Las puertas son dos desde el 08/09: `login` para solicitantes y
+    `login_gestion` para la administración. Ambas reusan `entrar`, así que la
+    autenticación, el bloqueo por intentos y la recuperación de clave viven en un
+    solo lugar; lo que cambia es la plantilla y a quién se deja pasar.
+
+    US-04: el administrador entra directo a su panel. El rol todavía no es un
+    grupo —eso es US-08—, así que decide el mismo permiso que abre /admin.
     """
+    if usuario.is_staff:
+        return reverse("panel_bloques")
     return reverse("panel")
 
 
-def _con_error(request, form, mensaje):
-    return render(request, "personas/_formulario_ingreso.html", {"form": form, "error": mensaje})
+def _con_error(request, form, mensaje, ruta):
+    return render(
+        request,
+        "personas/_formulario_ingreso.html",
+        {"form": form, "error": mensaje, "ruta": ruta},
+    )
 
 
 def _registrar_fallo(usuario):
@@ -43,19 +52,29 @@ def _registrar_fallo(usuario):
     usuario.save(update_fields=["intentos_fallidos", "bloqueado_hasta"])
 
 
-def entrar(request):
+def entrar(request, plantilla="personas/login.html", ruta="login", solo_staff=False):
+    """Las dos puertas del sistema. La de gestion cambia la plantilla y a quien
+    deja pasar; la autenticacion, el bloqueo y la recuperacion de clave son las
+    mismas para ambas."""
     if request.method != "POST":
-        return render(request, "personas/login.html", {"form": AuthenticationForm()})
+        return render(request, plantilla, {"form": AuthenticationForm(), "ruta": ruta})
 
     form = AuthenticationForm(request, data=request.POST)
     usuario = Usuario.objects.filter(email__iexact=request.POST.get("username", "")).first()
 
     if usuario and usuario.esta_bloqueado:
         minutos = max(1, int((usuario.bloqueado_hasta - timezone.now()).total_seconds() // 60) + 1)
-        return _con_error(request, form, f"Cuenta bloqueada. Vuelve a intentar en {minutos} minutos.")
+        return _con_error(
+            request, form, f"Cuenta bloqueada. Vuelve a intentar en {minutos} minutos.", ruta
+        )
 
     if form.is_valid():
         entrante = form.get_user()
+        # La puerta de gestion no responde "no eres administrador": ese mensaje la
+        # convierte en un oraculo para saber que correos existen y cuales mandan.
+        # Mismo texto que una clave mala, y sin sesion.
+        if solo_staff and not entrante.is_staff:
+            return _con_error(request, form, ERROR_CREDENCIALES, ruta)
         if entrante.intentos_fallidos or entrante.bloqueado_hasta:
             entrante.intentos_fallidos = 0
             entrante.bloqueado_hasta = None
@@ -66,7 +85,7 @@ def entrar(request):
 
     if usuario:
         _registrar_fallo(usuario)
-    return _con_error(request, form, ERROR_CREDENCIALES)
+    return _con_error(request, form, ERROR_CREDENCIALES, ruta)
 
 
 @login_required
