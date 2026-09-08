@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Solicitar reserva{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'solicitudes/solicitud.css' %}">{% endblock %}
+
+{% block contenido %}
+{% comment %}
+Alpine solo maneja lo que se ve: cuantas filas de acompanante mostrar y si el
+boton esta habilitado. Ninguna regla vive aca; todas se revalidan en la vista,
+que es la que puede negarse de verdad.
+{% endcomment %}
+<main class="hoja"
+      x-data="{ personas: {{ personas_inicial }}, acepta: {{ acepta_inicial|yesno:'true,false' }} }">
+
+  <h1>Nueva solicitud de reserva</h1>
+  <p class="sub">Completa los datos de la grabación. Revisará un validador antes de confirmarse.</p>
+
+  {% if errores or form.non_field_errors or formset.non_form_errors %}
+    <div class="error" role="alert">
+      {% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}
+      {% for e in formset.non_form_errors %}<p>{{ e }}</p>{% endfor %}
+      {% for e in errores %}<p>{{ e }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% comment %}
+    US-14 AC5: los datos del solicitante vienen de su cuenta y no se editan en
+    el formulario. Se muestran para que sepa con que identidad solicita.
+    {% endcomment %}
+    <section>
+      <h2>Solicitante</h2>
+      <dl class="ficha">
+        <dt>Nombre</dt><dd>{{ user.get_full_name|default:"—" }}</dd>
+        <dt>Correo</dt><dd>{{ user.email }}</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Detalles de la solicitud</h2>
+
+      <label for="{{ form.area.id_for_label }}">{{ form.area.label }}</label>
+      {{ form.area }}
+      {% for e in form.area.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
+
+      <label for="{{ form.motivo.id_for_label }}">{{ form.motivo.label }}</label>
+      {{ form.motivo }}
+      {% for e in form.motivo.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
+
+      <label for="{{ form.observaciones.id_for_label }}">{{ form.observaciones.label }}</label>
+      {{ form.observaciones }}
+      {% for e in form.observaciones.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
+    </section>
+
+    <section>
+      <h2>Personas en sala</h2>
+
+      <label for="{{ form.personas.id_for_label }}">{{ form.personas.label }}</label>
+      <div class="cuenta">
+        {{ form.personas }}
+        <span class="pista">Te incluye a ti, así que puedes sumar hasta
+          {{ maximo_acompanantes }} acompañante(s).</span>
+      </div>
+      {% for e in form.personas.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
+
+      {{ formset.management_form }}
+      {% for fila in formset %}
+        {% comment %}
+        Se pintan siempre todas las filas y se ocultan las que sobran: asi el
+        indice del formset nunca se mueve y no hay que reconstruirlo en
+        JavaScript.
+        {% endcomment %}
+        <fieldset class="acompanante" x-cloak x-show="personas > {{ forloop.counter }}">
+          <legend>Acompañante {{ forloop.counter }}</legend>
+          <div class="par">
+            <div>
+              <label for="{{ fila.nombre.id_for_label }}">{{ fila.nombre.label }}</label>
+              {{ fila.nombre }}
+              {% for e in fila.nombre.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
+            </div>
+            <div>
+              <label for="{{ fila.correo.id_for_label }}">{{ fila.correo.label }}</label>
+              {{ fila.correo }}
+              {% for e in fila.correo.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
+            </div>
+          </div>
+        </fieldset>
+      {% endfor %}
+    </section>
+
+    {# AC10 #}
+    <section>
+      <h2>Términos y condiciones</h2>
+      <div class="terminos" tabindex="0" role="region" aria-label="Términos y condiciones">
+        {{ terminos|linebreaks }}
+      </div>
+      <label class="acepto" for="{{ form.acepta_terminos.id_for_label }}">
+        {{ form.acepta_terminos }}
+        <span>{{ form.acepta_terminos.label }}</span>
+      </label>
+      {% for e in form.acepta_terminos.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
+    </section>
+
+    {% comment %}
+    El :disabled es cortesia, para que se vea por que no se puede enviar. El que
+    realmente bloquea el envio sin aceptar es el required del campo.
+    {% endcomment %}
+    <button type="submit" :disabled="!acepta">Enviar solicitud</button>
+    <p class="pista" x-show="!acepta">Acepta los términos para poder enviar.</p>
+  </form>
+</main>
+{% endblock %}

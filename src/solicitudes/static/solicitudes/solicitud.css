@@ -1,0 +1,91 @@
+/* Solo variables de marca.css: ningun color literal (docs/estilo.md). */
+
+/* Alpine evalua x-show despues de cargar. Sin esto, las filas de acompanante
+ * que sobran alcanzan a verse un instante antes de esconderse. */
+[x-cloak] { display: none !important; }
+
+.hoja {
+  width: 100%; max-width: 42rem; margin: 2.5rem auto; padding: 2rem 1.75rem;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: 4px;
+}
+.hoja h1 { font-size: 1.35rem; margin: 0 0 .25rem; }
+.hoja h2 {
+  font-size: .95rem; margin: 0 0 1rem;
+  padding-bottom: .4rem; border-bottom: 1px solid var(--borde);
+}
+.sub { color: var(--tinta-suave); font-size: .9rem; margin: 0 0 1.75rem; }
+.pista { display: block; color: var(--tinta-suave); font-size: .8rem; margin: .35rem 0 0; }
+
+.hoja section { margin-bottom: 2rem; }
+
+/* --- Campos --- */
+.hoja label { display: block; font-weight: 500; font-size: .85rem; margin-bottom: .35rem; }
+.hoja input[type=text], .hoja input[type=email], .hoja input[type=number],
+.hoja select, .hoja textarea {
+  width: 100%; box-sizing: border-box; padding: .6rem .7rem; margin-bottom: 1.1rem;
+  border: 1px solid var(--borde); border-radius: 3px; font: inherit;
+  background: var(--superficie); color: var(--tinta);
+}
+.hoja textarea { resize: vertical; }
+
+/* La cantidad de personas es un numero de un digito: un campo ancho invita a
+ * escribir cosas que el tope no admite. */
+.cuenta { display: flex; align-items: baseline; gap: .75rem; }
+.cuenta input[type=number] { width: 5rem; margin-bottom: 0; }
+.cuenta .pista { margin: 0; }
+
+/* --- Ficha de datos que no se editan --- */
+.ficha { margin: 0; display: grid; grid-template-columns: 8rem 1fr; gap: .4rem 1rem; font-size: .9rem; }
+.ficha dt { color: var(--tinta-suave); }
+.ficha dd { margin: 0; }
+
+/* --- Acompanantes --- */
+.acompanante {
+  margin: 1.5rem 0 1rem; padding: 1rem 1.1rem .1rem;
+  border: 1px solid var(--borde); border-radius: 3px; background: var(--fondo);
+}
+.acompanante legend {
+  padding: 0 .4rem; font-family: var(--fuente-titulo); font-weight: 700;
+  font-size: .75rem; text-transform: uppercase; color: var(--tinta-suave);
+}
+.par { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+@media (max-width: 34rem) { .par { grid-template-columns: 1fr; } }
+
+/* --- Terminos (AC10) --- */
+.terminos {
+  max-height: 11rem; overflow-y: auto; margin-bottom: 1rem;
+  padding: .85rem 1rem; border: 1px solid var(--borde); border-radius: 3px;
+  background: var(--fondo); font-size: .85rem;
+}
+.terminos p { margin: 0 0 .7rem; }
+.acepto {
+  display: flex; align-items: flex-start; gap: .5rem;
+  font-weight: 400; font-size: .9rem; cursor: pointer;
+}
+.acepto input { width: auto; margin: .25rem 0 0; }
+
+/* --- Avisos --- */
+/* El error va en tinta con una marca naranja al costado: el naranja de marca da
+ * 3.5:1 sobre el fondo, por debajo del 4.5:1 que exige el texto normal. */
+.error {
+  border-left: 3px solid var(--alerta); background: var(--fondo);
+  padding: .6rem .75rem; margin-bottom: 1.5rem; font-size: .9rem;
+}
+.error p { margin: 0 0 .35rem; }
+.error p:last-child { margin-bottom: 0; }
+.campo-error { margin: -.85rem 0 1.1rem; font-size: .82rem; color: var(--tinta-suave); }
+.aviso {
+  border-left: 3px solid var(--info); background: var(--fondo);
+  padding: .6rem .75rem; margin-bottom: 1.5rem; font-size: .9rem;
+}
+
+.lista { margin: 0 0 1.5rem; padding-left: 1.1rem; font-size: .9rem; }
+
+/* --- Envio --- */
+.hoja button {
+  width: 100%; padding: .7rem; border: 0; border-radius: 3px; cursor: pointer;
+  background: var(--accion); color: var(--superficie);
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: .9rem;
+}
+.hoja button:hover:not(:disabled) { background: var(--tinta); }
+.hoja button:disabled { background: var(--tinta-suave); cursor: not-allowed; }
