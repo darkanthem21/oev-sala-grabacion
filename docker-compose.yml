@@ -1,13 +1,10 @@
 # Base, comun a desarrollo y al servidor del curso.
-# El formato es el de la Compose Specification sin clave `version`, que es lo que
-# entiende el docker-compose 1.29 instalado en el servidor.
 services:
   db:
     image: postgres:17
     environment:
       POSTGRES_DB: oev
       POSTGRES_USER: oev
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oev}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -30,12 +27,8 @@ services:
              python manage.py createsuperuser --noinput 2>/dev/null;
              python manage.py runserver --insecure 0.0.0.0:${PUERTO:-3006}"
     environment:
+      # Unico valor fijo del stack: el resto lo pone el entorno que corresponda.
       DB_HOST: db
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oev}
-      SECRET_KEY: ${SECRET_KEY:-clave-solo-para-desarrollo}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
-      DJANGO_SUPERUSER_EMAIL: ${ADMIN_EMAIL:-admin@uach.cl}
-      DJANGO_SUPERUSER_PASSWORD: ${ADMIN_PASSWORD:-admin}
     depends_on:
       db:
         condition: service_healthy

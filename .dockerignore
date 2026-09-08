@@ -1,0 +1,13 @@
+# El build solo necesita requirements.txt y src/. Todo lo demas viaja al daemon
+# (o al runner de CI) para nada: .git solo ya son 14MB.
+.git
+.github
+docs
+*.md
+.env
+*.env
+docker-compose*.yml
+simulacion
+__pycache__/
+*.py[cod]
+.venv/

@@ -1,17 +1,28 @@
 #   docker-compose -p grupo6 -f docker-compose.yml -f docker-compose.servidor.yml up -d
+#
+# Dos reglas del servidor compartido:
+#   - No se publica ningun puerto al host. Caddy llega por la red interna.
+#   - No se crea ninguna red: se usa la unica que ya existe, red_taller_software.
+# Esa red la comparten todos los grupos, asi que el alias `db` no es unico ahi:
+# cada stack agrega el suyo. Por eso el servidor busca la base por container_name
+# y no por nombre de servicio.
+#
+# Los valores reales salen del .env que vive SOLO en el servidor, al lado de este
+# archivo, y nunca en git. Se cargan con `env_file` y no con ${VAR}: asi llegan
+# literales al contenedor, sin que una clave con `$` o `#` se trunque en el camino.
 services:
+  db:
+    container_name: grupo6_db
+    env_file: .env
+    networks: [red_taller_software]
+
   web:
     container_name: grupo6_frontend
-    networks: [default, red_taller_software]
+    env_file: .env
+    environment:
+      DB_HOST: grupo6_db
+    networks: [red_taller_software]
 
 networks:
-  # El pool por defecto de Docker arranca en 172.17.0.0/16, que es la subred desde
-  # donde se entra al servidor. Al crear la red, el host se queda con esa ruta y
-  # deja de responder a esos clientes: se cae el SSH y el sitio para todo el campus.
-  default:
-    ipam:
-      config:
-        - subnet: 10.106.0.0/24
-
   red_taller_software:
     external: true
