@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block contenido %}
+    <h1>Calendario de disponibilidad</h1>
+    <div class="calendario">
+        {{ calendario|safe }}
+    </div>
+    <style>
+        .calendario table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+        .calendario th, .calendario td { border: 1px solid #ccc; padding: 15px; text-align: center; }
+        .calendario .available { background-color: #d4edda; font-weight: bold; }
+        .calendario .available a { color: #155724; text-decoration: none; display: block; }
+        .calendario .available:hover { background-color: #c3e6cb; }
+    </style>
+{% endblock %}
