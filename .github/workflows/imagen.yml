@@ -1,0 +1,38 @@
+# Construye la imagen y la publica en GHCR, para que el servidor compartido del
+# curso no tenga que correr pip: solo baja el artefacto ya construido.
+name: imagen
+
+on:
+  push:
+    branches: [main, "feat/**", "fix/**"]
+  workflow_dispatch:
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Las etiquetas de Docker no admiten '/' y los nombres de rama si:
+      # feat/us-01-inicio-sesion -> feat-us-01-inicio-sesion
+      - id: etiqueta
+        run: echo "nombre=${GITHUB_REF_NAME//\//-}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # La de rama se mueve con cada push; la del commit es inmutable y es la
+          # que se despliega cuando hace falta saber exactamente que corre.
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ steps.etiqueta.outputs.nombre }}
+            ghcr.io/${{ github.repository }}:${{ github.sha }}

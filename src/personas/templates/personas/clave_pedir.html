@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Recuperar contraseña{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'personas/ingreso.css' %}">{% endblock %}
+{% block contenido %}
+<main class="tarjeta">
+  <h1>Recuperar contraseña</h1>
+  <p class="sub">Te enviamos un enlace para crear una nueva.</p>
+  <form method="post">{% csrf_token %}
+    <label for="id_email">Correo electrónico</label>
+    {{ form.email }}
+    <button>Enviar enlace</button>
+  </form>
+  <p class="pie"><a href="{% url 'login' %}">Volver a iniciar sesión</a></p>
+</main>
+{% endblock %}

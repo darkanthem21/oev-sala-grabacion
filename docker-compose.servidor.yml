@@ -1,0 +1,17 @@
+#   docker-compose -p grupo6 -f docker-compose.yml -f docker-compose.servidor.yml up -d
+services:
+  web:
+    container_name: grupo6_frontend
+    networks: [default, red_taller_software]
+
+networks:
+  # El pool por defecto de Docker arranca en 172.17.0.0/16, que es la subred desde
+  # donde se entra al servidor. Al crear la red, el host se queda con esa ruta y
+  # deja de responder a esos clientes: se cae el SSH y el sitio para todo el campus.
+  default:
+    ipam:
+      config:
+        - subnet: 10.106.0.0/24
+
+  red_taller_software:
+    external: true

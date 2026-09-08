@@ -1,0 +1,15 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}{% endblock %} · Sala de grabación OEV</title>
+<link rel="stylesheet" href="{% static 'css/marca.css' %}">
+{% block estilos %}{% endblock %}
+<script src="https://unpkg.com/htmx.org@2/dist/htmx.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+</head>
+<body>
+{% block contenido %}{% endblock %}
+</body>
+</html>

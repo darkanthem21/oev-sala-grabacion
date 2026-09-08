@@ -1,0 +1,62 @@
+/* Tokens del Manual de marca de la Facultad de Ciencias de la Ingeniería, UACh.
+ * Los doce colores y las dos tipografías salen del manual, que los entrega sin
+ * asignarles función: el reparto de roles es nuestro y lo decide el contraste
+ * medido, anotado junto a cada valor. docs/estilo.md es la referencia del
+ * manual; las decisiones viven aquí.
+ *
+ * Regla: en el resto del CSS no se escribe un color literal. Si hace falta uno
+ * que no está aquí, es que falta una decisión, no un hex. */
+
+/* Las fuentes vienen de Google Fonts. Si hubiera que servirlas nosotros —una
+ * red sin salida a internet, o el RNF de transferibilidad— se descargan a
+ * static/fonts y este @import pasa a ser @font-face. */
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;500&display=swap");
+
+:root {
+  /* --- Superficies y texto --- */
+  --fondo:        #ebf7fc;  /* fondo de página */
+  --superficie:   #ffffff;  /* tarjetas, formularios */
+  --borde:        #dbd5d0;  /* separadores y bordes de campo */
+  --tinta:        #2a4451;  /* texto principal — 9.4:1 sobre el fondo */
+  --tinta-suave:  #516e80;  /* texto secundario — 4.9:1, el mínimo aceptable */
+
+  /* --- Acción --- */
+  --accion:       #006699;  /* botón principal, enlaces. Texto blanco encima: 6.3:1 */
+  --acento:       #0097a6;  /* Pantone 320 C. Realces y foco */
+
+  /* --- Estado. Son RELLENOS: el texto encima va en --tinta, nunca blanco --- */
+  --alerta:       #dd5829;  /* Pantone Orange 021 C. Error */
+  --precaucion:   #e3994c;
+  --exito:        #aebe4c;
+  --exito-suave:  #9ec089;
+  --info:         #68abc2;
+  --destacado:    #954f72;  /* único de los claros que admite texto blanco */
+
+  /* --- Tipografía --- */
+  --fuente-titulo: "Montserrat", system-ui, sans-serif;
+  --fuente-texto:  "Roboto", system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: var(--fuente-texto);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--fuente-titulo);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+a { color: var(--accion); }
+
+/* El foco visible no se quita nunca: es la única pista que tiene quien navega
+ * con teclado. */
+:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
