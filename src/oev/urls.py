@@ -27,6 +27,14 @@ urlpatterns = [
     # US-04. Cada pestaña del panel la sirve su propio modulo: los bloques son de
     # agenda, no de configuracion, y asi `configuracion` sigue sin depender de
     # nadie (README.md). El cascaron con las pestañas es una plantilla compartida.
+    # US-01 + US-04: la administracion entra por su propia puerta. Reusa `entrar`,
+    # asi que comparte autenticacion, bloqueo por intentos y recuperacion de clave.
+    path(
+        "configuracion/entrar/",
+        views.entrar,
+        {"plantilla": "personas/gestion.html", "ruta": "login_gestion", "solo_staff": True},
+        name="login_gestion",
+    ),
     path("configuracion/", RedirectView.as_view(pattern_name="panel_bloques")),
     path("configuracion/bloques/", agenda.bloques, name="panel_bloques"),
     path("configuracion/bloques/editar/", agenda.editar_bloque, name="editar_bloque"),
