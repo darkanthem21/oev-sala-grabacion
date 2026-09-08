@@ -1,3 +1,6 @@
+from collections import defaultdict
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Q
@@ -82,3 +85,34 @@ class Bloque(models.Model):
             raise ValidationError(
                 f"Se cruza con el bloque de {otro.inicio:%H:%M} a {otro.termino:%H:%M}."
             )
+
+
+def plantilla_semanal():
+    """Los bloques activos agrupados por dia de la semana. Uno desactivado dejo de
+    ser parte de la jornada."""
+    por_dia = defaultdict(list)
+    for bloque in Bloque.objects.filter(activo=True):
+        por_dia[bloque.dia].append(bloque)
+    return por_dia
+
+
+def disponibilidad(desde, hasta):
+    """Que bloques tiene cada fecha del rango, ambos extremos incluidos.
+
+    La jornada se define por dia de la semana y las reservas se piden por fecha:
+    esta funcion es la traduccion entre las dos, y es el unico lugar donde pasa.
+    Cuando existan los bloqueos puntuales (US-17) se descuentan aca dentro, y
+    quien consulta no se entera.
+
+    Devuelve {fecha: [bloques]}. Una fecha sin jornada no aparece con la lista
+    vacia: no aparece.
+    """
+    plantilla = plantilla_semanal()
+    dias = {}
+    fecha = desde
+    while fecha <= hasta:
+        bloques = plantilla.get(fecha.weekday())
+        if bloques:
+            dias[fecha] = bloques
+        fecha += timedelta(days=1)
+    return dias

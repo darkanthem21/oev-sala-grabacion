@@ -1,5 +1,5 @@
 import calendar
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import date, time, timedelta
 
 from django.contrib.admin.views.decorators import staff_member_required
@@ -12,7 +12,7 @@ from django.utils.formats import date_format
 from django.views.decorators.http import require_POST
 
 from .forms import BloqueForm
-from .models import Bloque, Dia, minutos
+from .models import Bloque, Dia, minutos, plantilla_semanal
 
 # Piso de la rejilla. Sin el, la escala cambiaria con los datos —un dia con un
 # solo bloque lo mostraria ocupando toda la jornada— y dos dias dejarian de ser
@@ -55,15 +55,6 @@ def _titulo(vista, foco, fechas):
     if inicio.month == fin.month:
         return f"{inicio.day}–{fin.day} de {date_format(fin, 'F Y')}"
     return f"{date_format(inicio, 'j F')} – {date_format(fin, 'j F Y')}"
-
-
-def _plantilla():
-    """Los bloques activos agrupados por dia de la semana. Uno desactivado dejo de
-    ser parte de la jornada; se repone desde el aviso del panel o desde /admin."""
-    por_dia = defaultdict(list)
-    for bloque in Bloque.objects.filter(activo=True):
-        por_dia[bloque.dia].append(bloque)
-    return por_dia
 
 
 def _ventana(plantilla):
@@ -190,7 +181,7 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None):
     hoy = timezone.localdate()
     foco = _fecha(datos.get("desde"), hoy)
 
-    plantilla = _plantilla()
+    plantilla = plantilla_semanal()
     desde, hasta = _ventana(plantilla)
     largo = hasta - desde
     _ubicar(plantilla, desde, largo)
@@ -219,7 +210,7 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None):
     }
 
 
-@staff_member_required(login_url="login")
+@staff_member_required(login_url="login_gestion")
 def bloques(request):
     contexto = _contexto(request.GET)
     # htmx pide solo la rejilla; el navegador sin htmx pide la pagina entera y
@@ -243,7 +234,7 @@ def _responder(request, **extra):
     return redirect(destino)
 
 
-@staff_member_required(login_url="login")
+@staff_member_required(login_url="login_gestion")
 @require_POST
 def editar_bloque(request):
     """Agrega, cambia, quita o repone un bloque de la plantilla.
