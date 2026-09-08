@@ -4,6 +4,40 @@
     <div class="calendario-contenedor">
         <h2 class="titulo-calendario">Calendario de Disponibilidad</h2>
         
+        <!-- Controles de navegación de meses y años -->
+        <div class="controles-calendario">
+            <div class="navegacion-meses">
+                {% if mostrar_anterior %}
+                    <a href="?year={{ prev_year }}&month={{ prev_month }}" class="btn-nav">&laquo; Anterior</a>
+                {% else %}
+                    <span class="btn-nav disabled">&laquo; Anterior</span>
+                {% endif %}
+                
+                <h3 class="mes-actual">{{ nombre_mes_actual }} {{ year }}</h3>
+
+                {% if mostrar_siguiente %}
+                    <a href="?year={{ next_year }}&month={{ next_month }}" class="btn-nav">Siguiente &raquo;</a>
+                {% else %}
+                    <span class="btn-nav disabled">Siguiente &raquo;</span>
+                {% endif %}
+            </div>
+
+            <!-- Selector rápido desplegable -->
+            <form method="GET" class="selector-rapido">
+                <select name="month" class="select-personalizado">
+                    {% for m_num, m_nombre in meses %}
+                        <option value="{{ m_num }}" {% if m_num == month %}selected{% endif %}>{{ m_nombre }}</option>
+                    {% endfor %}
+                </select>
+                <select name="year" class="select-personalizado">
+                    {% for y in anios_permitidos %}
+                        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn-ir">Ir a fecha</button>
+            </form>
+        </div>
+        
         <div class="calendario">
             {{ calendario|safe }}
         </div>
@@ -12,24 +46,98 @@
     </div>
 
     <style>
-        /* Importación de las tipografías corporativas */
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;500&display=swap');
 
         .calendario-contenedor {
             max-width: 800px;
             margin: 0 auto;
-            font-family: 'Roboto', sans-serif; /* Párrafos: Roboto */
-            color: #2a4451; /* Gris muy oscuro del manual */
+            font-family: 'Roboto', sans-serif; 
+            color: #2a4451; 
         }
 
         .titulo-calendario {
-            font-family: 'Montserrat', sans-serif; /* Encabezados: Montserrat Bold */
+            font-family: 'Montserrat', sans-serif;
             font-weight: 700;
             text-align: center;
-            margin-bottom: 20px;
-            color: #006699; /* Azul oscuro corporativo */
+            margin-bottom: 30px;
+            color: #006699; 
         }
 
+        /* --- Estilos de Controles de Navegación --- */
+        .controles-calendario {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dbd5d0;
+        }
+
+        .navegacion-meses {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mes-actual {
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+            color: #2a4451;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+        }
+
+        .btn-nav {
+            padding: 8px 16px;
+            background-color: #0097a6; /* Teal corporativo */
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+
+        .btn-nav:hover:not(.disabled) {
+            background-color: #006699; /* Azul oscuro corporativo al pasar el cursor */
+        }
+
+        .btn-nav.disabled {
+            background-color: #dbd5d0;
+            cursor: not-allowed;
+            color: #68abc2;
+        }
+
+        .selector-rapido {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .select-personalizado {
+            padding: 8px;
+            border: 1px solid #68abc2;
+            border-radius: 4px;
+            font-family: 'Roboto', sans-serif;
+            color: #2a4451;
+            outline: none;
+        }
+
+        .btn-ir {
+            padding: 8px 15px;
+            background-color: #516e80;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+        }
+        
+        .btn-ir:hover { background-color: #2a4451; }
+
+        /* --- Estilos del Calendario (Tabla) --- */
         .calendario table { 
             border-collapse: separate; 
             border-spacing: 0;
@@ -39,11 +147,11 @@
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(42, 68, 81, 0.1);
             overflow: hidden;
-            border: 1px solid #dbd5d0; /* Gris claro corporativo */
+            border: 1px solid #dbd5d0; 
         }
 
         .calendario th { 
-            background-color: #516e80; /* Azul grisáceo del manual */
+            background-color: #516e80; 
             padding: 15px; 
             text-align: center; 
             font-family: 'Montserrat', sans-serif;
@@ -62,15 +170,13 @@
             transition: all 0.2s ease;
         }
 
-        /* Estilo para días sin bloques (deshabilitados) */
         .calendario td:not(.noday):not(.available) {
             color: #a0a0a0;
             background-color: #f9f9f9;
         }
 
-        /* Días disponibles (Placeholder seleccionable) */
         .calendario .available { 
-            background-color: #ebf7fc; /* Celeste muy claro corporativo */
+            background-color: #ebf7fc; 
             color: #006699; 
             font-weight: 500; 
             cursor: pointer;
@@ -78,7 +184,7 @@
         }
 
         .calendario .available:hover { 
-            background-color: #68abc2; /* Celeste medio corporativo */
+            background-color: #68abc2; 
             color: #ffffff;
             transform: scale(1.02);
             z-index: 1;
@@ -86,9 +192,8 @@
             border-radius: 4px;
         }
 
-        /* Días seleccionados activamente */
         .calendario .available.selected {
-            background-color: #0097a6; /* Color Pantone 320 C (Teal) */
+            background-color: #0097a6; 
             color: #ffffff;
             border-radius: 4px;
             box-shadow: inset 0 0 0 2px #006699;
@@ -100,7 +205,7 @@
             width: 100%;
             margin-top: 25px;
             padding: 16px;
-            background-color: #dd5829; /* Color Pantone Orange 021 C */
+            background-color: #dd5829; 
             color: white;
             border: none;
             border-radius: 6px;
@@ -111,14 +216,8 @@
             transition: background-color 0.3s, transform 0.1s;
         }
 
-        .btn-accion:hover {
-            /* Versión oscurecida del naranja corporativo */
-            background-color: #c24d24;
-        }
-        
-        .btn-accion:active {
-            transform: scale(0.98);
-        }
+        .btn-accion:hover { background-color: #c24d24; }
+        .btn-accion:active { transform: scale(0.98); }
     </style>
 
     <script>
