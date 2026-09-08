@@ -2,6 +2,7 @@
 # y agrega un Caddy con la misma regla de enrutado que aplica el del curso. Permite
 # probar lo que se va a desplegar sin depender del acceso por SSH.
 #
+#   cp .env.ejemplo .env                           # el sim usa el .env real
 #   docker network create red_taller_software      # una sola vez
 #   docker compose -f docker-compose.yml -f docker-compose.desarrollo.yml build
 #   docker compose -p grupo6sim -f docker-compose.yml -f docker-compose.servidor.yml \
