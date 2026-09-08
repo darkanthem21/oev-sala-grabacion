@@ -1,15 +1,147 @@
 {% extends "base.html" %}
 
 {% block contenido %}
-    <h1>Calendario de disponibilidad</h1>
-    <div class="calendario">
-        {{ calendario|safe }}
+    <div class="calendario-contenedor">
+        <h2 class="titulo-calendario">Calendario de Disponibilidad</h2>
+        
+        <div class="calendario">
+            {{ calendario|safe }}
+        </div>
+        
+        <button id="btn-confirmar" class="btn-accion">Confirmar Selección</button>
     </div>
+
     <style>
-        .calendario table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-        .calendario th, .calendario td { border: 1px solid #ccc; padding: 15px; text-align: center; }
-        .calendario .available { background-color: #d4edda; font-weight: bold; }
-        .calendario .available a { color: #155724; text-decoration: none; display: block; }
-        .calendario .available:hover { background-color: #c3e6cb; }
+        /* Importación de las tipografías corporativas */
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;500&display=swap');
+
+        .calendario-contenedor {
+            max-width: 800px;
+            margin: 0 auto;
+            font-family: 'Roboto', sans-serif; /* Párrafos: Roboto */
+            color: #2a4451; /* Gris muy oscuro del manual */
+        }
+
+        .titulo-calendario {
+            font-family: 'Montserrat', sans-serif; /* Encabezados: Montserrat Bold */
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #006699; /* Azul oscuro corporativo */
+        }
+
+        .calendario table { 
+            border-collapse: separate; 
+            border-spacing: 0;
+            width: 100%; 
+            table-layout: fixed; 
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(42, 68, 81, 0.1);
+            overflow: hidden;
+            border: 1px solid #dbd5d0; /* Gris claro corporativo */
+        }
+
+        .calendario th { 
+            background-color: #516e80; /* Azul grisáceo del manual */
+            padding: 15px; 
+            text-align: center; 
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            color: #ffffff;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            border-bottom: 3px solid #2a4451;
+        }
+
+        .calendario td { 
+            border: 1px solid #dbd5d0; 
+            padding: 20px 10px; 
+            text-align: center; 
+            font-size: 1.1rem;
+            transition: all 0.2s ease;
+        }
+
+        /* Estilo para días sin bloques (deshabilitados) */
+        .calendario td:not(.noday):not(.available) {
+            color: #a0a0a0;
+            background-color: #f9f9f9;
+        }
+
+        /* Días disponibles (Placeholder seleccionable) */
+        .calendario .available { 
+            background-color: #ebf7fc; /* Celeste muy claro corporativo */
+            color: #006699; 
+            font-weight: 500; 
+            cursor: pointer;
+            position: relative;
+        }
+
+        .calendario .available:hover { 
+            background-color: #68abc2; /* Celeste medio corporativo */
+            color: #ffffff;
+            transform: scale(1.02);
+            z-index: 1;
+            box-shadow: 0 2px 8px rgba(0, 151, 166, 0.3);
+            border-radius: 4px;
+        }
+
+        /* Días seleccionados activamente */
+        .calendario .available.selected {
+            background-color: #0097a6; /* Color Pantone 320 C (Teal) */
+            color: #ffffff;
+            border-radius: 4px;
+            box-shadow: inset 0 0 0 2px #006699;
+            font-weight: bold;
+        }
+
+        .btn-accion {
+            display: block;
+            width: 100%;
+            margin-top: 25px;
+            padding: 16px;
+            background-color: #dd5829; /* Color Pantone Orange 021 C */
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+
+        .btn-accion:hover {
+            /* Versión oscurecida del naranja corporativo */
+            background-color: #c24d24;
+        }
+        
+        .btn-accion:active {
+            transform: scale(0.98);
+        }
     </style>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const celdasDisponibles = document.querySelectorAll('.calendario td.available');
+            const btnConfirmar = document.getElementById('btn-confirmar');
+
+            celdasDisponibles.forEach(celda => {
+                celda.addEventListener('click', function() {
+                    this.classList.toggle('selected');
+                });
+            });
+
+            btnConfirmar.addEventListener('click', function() {
+                const celdasSeleccionadas = document.querySelectorAll('.calendario td.available.selected');
+                const fechas = Array.from(celdasSeleccionadas).map(celda => celda.getAttribute('data-date'));
+
+                if (fechas.length > 0) {
+                    alert("Días seleccionados actualmente:\n" + fechas.join('\n'));
+                } else {
+                    alert("Por favor, selecciona al menos un día del calendario.");
+                }
+            });
+        });
+    </script>
 {% endblock %}
