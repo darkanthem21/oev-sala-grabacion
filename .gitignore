@@ -22,6 +22,3 @@ media/
 .idea/
 *.swp
 .DS_Store
-
-# El master del video queda fuera del repo: en static va solo la version web.
-src/static/video/loop-web.mp4

@@ -1,8 +1,0 @@
-Alguien pidió cambiar la contraseña de esta cuenta en el sistema de la sala de
-grabación de la OEV.
-
-Si fuiste tú, entra aquí para crear una nueva:
-
-{{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}
-
-Si no fuiste tú, ignora este correo: la contraseña actual sigue funcionando.
