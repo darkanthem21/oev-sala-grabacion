@@ -1,0 +1,36 @@
+<div class="panel-bloques-contenido">
+    {% if fecha_str %}
+        <div class="encabezado-bloques">
+            <h3 class="titulo-bloques">Bloques para el día {{ fecha_str }}</h3>
+            <span class="total-bloques">{{ bloques|length }} bloque{{ bloques|length|pluralize }} encontrado{{ bloques|length|pluralize }}</span>
+        </div>
+
+        {% if bloques %}
+            <div class="grilla-bloques">
+                {% for bloque in bloques %}
+                    <div class="tarjeta-bloque {% if bloque.disponible %}disponible{% else %}no-disponible{% endif %}">
+                        <div class="bloque-hora">
+                            <span class="icono-reloj">&#128337;</span>
+                            <strong>{{ bloque.hora_inicio|time:"H:i" }} - {{ bloque.hora_final|time:"H:i" }}</strong>
+                        </div>
+                        <div class="bloque-estado">
+                            {% if bloque.disponible %}
+                                <span class="badge badge-disponible">Disponible</span>
+                            {% else %}
+                                <span class="badge badge-no-disponible">No disponible</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="sin-bloques">
+                <p>No se encontraron bloques registrados para esta fecha.</p>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="sin-bloques">
+            <p>Selecciona un día en el calendario para consultar sus bloques.</p>
+        </div>
+    {% endif %}
+</div>

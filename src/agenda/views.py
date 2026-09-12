@@ -4,11 +4,12 @@ from datetime import datetime, date
 from .models import Bloque
 
 class AgendaCalendar(calendar.HTMLCalendar):
-    def __init__(self, bloques, year, month):
+    def __init__(self, bloques, year, month, fecha_seleccionada=None):
         super().__init__()
         self.bloques = {b.fecha.day for b in bloques}
         self.year = year
         self.month = month
+        self.fecha_seleccionada = fecha_seleccionada
 
     def formatday(self, day, weekday):
         if day == 0:
@@ -17,10 +18,12 @@ class AgendaCalendar(calendar.HTMLCalendar):
         css_class = self.cssclasses[weekday]
         if day in self.bloques:
             css_class += ' available'
-            date_str = f"{self.year}-{self.month:02d}-{day:02d}"
-            return f'<td class="{css_class}" data-date="{date_str}">{day}</td>'
         
-        return f'<td class="{css_class}">{day}</td>'
+        date_str = f"{self.year}-{self.month:02d}-{day:02d}"
+        if self.fecha_seleccionada and self.fecha_seleccionada == date(self.year, self.month, day):
+            css_class += ' selected'
+        
+        return f'<td class="{css_class} dia-seleccionable" data-date="{date_str}">{day}</td>'
 
 def calendario(request):
     # --- MÉTODO PLACEHOLDER: LÍMITES DE VISUALIZACIÓN ---
@@ -47,10 +50,21 @@ def calendario(request):
     elif fecha_solicitada > date(FECHA_MAXIMA.year, FECHA_MAXIMA.month, 1):
         year, month = FECHA_MAXIMA.year, FECHA_MAXIMA.month
 
+    # Bloques del día seleccionado (si se pasó en el query param fecha)
+    fecha_str = request.GET.get('fecha')
+    fecha_seleccionada = None
+    bloques_seleccionados = []
+    if fecha_str:
+        try:
+            fecha_seleccionada = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+            bloques_seleccionados = Bloque.objects.filter(fecha=fecha_seleccionada).order_by('hora_inicio')
+        except ValueError:
+            fecha_str = None
+
     # Filtrar bloques para el mes y año en curso
     bloques = Bloque.objects.filter(fecha__year=year, fecha__month=month, disponible=True)
     
-    cal = AgendaCalendar(bloques, year, month)
+    cal = AgendaCalendar(bloques, year, month, fecha_seleccionada=fecha_seleccionada)
     html_cal = cal.formatmonth(year, month)
 
     # Lógica de navegación (Cálculo del mes anterior y siguiente)
@@ -85,4 +99,25 @@ def calendario(request):
         "mostrar_siguiente": mostrar_siguiente,
         "meses": meses_espanol,
         "anios_permitidos": range(FECHA_MINIMA.year, FECHA_MAXIMA.year + 1),
+        "fecha_seleccionada": fecha_seleccionada,
+        "fecha_str": fecha_str,
+        "bloques_seleccionados": bloques_seleccionados,
+    })
+
+
+def bloques_dia(request):
+    fecha_str = request.GET.get('fecha')
+    fecha = None
+    bloques = []
+    if fecha_str:
+        try:
+            fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+            bloques = Bloque.objects.filter(fecha=fecha).order_by('hora_inicio')
+        except ValueError:
+            pass
+
+    return render(request, "agenda/bloques_dia.html", {
+        "bloques": bloques,
+        "fecha": fecha,
+        "fecha_str": fecha_str,
     })
