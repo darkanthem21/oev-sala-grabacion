@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
@@ -8,6 +7,8 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
+
+from configuracion.models import Parametros
 
 from .models import Usuario
 
@@ -44,10 +45,14 @@ def _con_error(request, form, mensaje, ruta):
 
 
 def _registrar_fallo(usuario):
-    """AC5: cinco fallos consecutivos bloquean la cuenta, temporalmente."""
+    """AC5: unos cuantos fallos seguidos bloquean la cuenta, temporalmente.
+
+    Cuantos y por cuanto los fija el administrador desde el panel (US-04).
+    """
+    parametros = Parametros.cargar()
     usuario.intentos_fallidos += 1
-    if usuario.intentos_fallidos >= settings.INTENTOS_MAXIMOS:
-        usuario.bloqueado_hasta = timezone.now() + timedelta(minutes=settings.MINUTOS_BLOQUEO)
+    if usuario.intentos_fallidos >= parametros.intentos_maximos:
+        usuario.bloqueado_hasta = timezone.now() + timedelta(minutes=parametros.minutos_bloqueo)
         usuario.intentos_fallidos = 0
     usuario.save(update_fields=["intentos_fallidos", "bloqueado_hasta"])
 
