@@ -17,13 +17,13 @@ class AgendaCalendar(calendar.HTMLCalendar):
         
         css_class = self.cssclasses[weekday]
         if day in self.bloques:
-            css_class += ' available'
+            css_class += ' available dia-seleccionable'
         
         date_str = f"{self.year}-{self.month:02d}-{day:02d}"
         if self.fecha_seleccionada and self.fecha_seleccionada == date(self.year, self.month, day):
             css_class += ' selected'
         
-        return f'<td class="{css_class} dia-seleccionable" data-date="{date_str}">{day}</td>'
+        return f'<td class="{css_class}" data-date="{date_str}">{day}</td>'
 
 def calendario(request):
     # --- MÉTODO PLACEHOLDER: LÍMITES DE VISUALIZACIÓN ---
