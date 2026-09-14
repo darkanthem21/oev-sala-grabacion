@@ -3,13 +3,11 @@ from django.forms import formset_factory
 
 from personas.models import Area
 
-# T4. El manual de uso dice que el solicitante "indica la cantidad de personas
-# que van a entrar a la reserva" y que hay que dar "el correo y el nombre de
-# cada asistente adicional": el solicitante cuenta dentro del tope y sus datos
-# vienen precargados de su cuenta (US-14 AC5), asi que las filas de acompanante
-# son una menos que el tope. Si el cliente aclara que el tope son 4 ademas del
-# solicitante, se cambia MAXIMO_ACOMPANANTES y nada mas.
-MAXIMO_PERSONAS = 4
+# T4. En sala entran como maximo 5 personas: el solicitante y hasta 4 invitados.
+# Los datos del solicitante vienen precargados de su cuenta (US-14 AC5); de cada
+# invitado se pide nombre y correo, asi que las filas de acompanante son una
+# menos que el tope.
+MAXIMO_PERSONAS = 5
 MAXIMO_ACOMPANANTES = MAXIMO_PERSONAS - 1
 
 
