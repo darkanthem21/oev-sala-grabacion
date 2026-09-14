@@ -125,8 +125,8 @@
                       @click="agregar({{ dia.numero }}, '{{ dia.fecha|date:"l" }}', '{{ dia.proximo.inicio }}', '{{ dia.proximo.termino }}')"
                       aria-label="Agregar un bloque los {{ dia.fecha|date:'l' }}">+</button>
             </div>
-            {# Clic en el hueco: crea el bloque a esa hora. `.self` deja fuera los
-               clics sobre un bloque existente, que son para editarlo. #}
+            {% comment %}Clic en el hueco: crea el bloque a esa hora. `.self` deja
+            fuera los clics sobre un bloque existente, que son para editarlo.{% endcomment %}
             <div class="rejilla"
                  @click.self="nuevoEn($event, {{ dia.numero }}, '{{ dia.fecha|date:"l" }}')"
                  @mousemove.self="apuntar($event, {{ dia.numero }})"
@@ -142,8 +142,8 @@
                         :class="elegido === {{ bloque.pk }} ? 'elegido' : ''"
                         :aria-pressed="elegido === {{ bloque.pk }}"
                         @click="elegir({{ bloque.pk }}, '{{ dia.fecha|date:"l" }}', '{{ bloque.inicio|time:"H:i" }}', '{{ bloque.termino|time:"H:i" }}')">
-                  <span class="desde">{{ bloque.inicio|time:"H:i" }}</span>
-                  <span class="hasta">{{ bloque.termino|time:"H:i" }}</span>
+                  <span class="desde">{{ bloque.inicio|time:"H:i" }}</span><span
+                    class="hasta">–{{ bloque.termino|time:"H:i" }}</span>
                 </button>
               {% endfor %}
               {% if not dia.bloques %}
