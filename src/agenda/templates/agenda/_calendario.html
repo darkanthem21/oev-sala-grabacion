@@ -8,6 +8,20 @@
        get duracion() { return this.ini && this.fin ? this.min(this.fin) - this.min(this.ini) : '' },
        set duracion(v) { if (this.ini && v) this.fin = this.hora(this.min(this.ini) + Number(v)) },
        get abierto() { return this.elegido !== null || this.dian !== null },
+       desde: {{ desde_min|default:0 }}, largo: {{ largo_min|default:1 }},
+       /* Donde caeria un bloque si se hiciera clic. Null fuera de la rejilla. */
+       apunta: null,
+       minutoDe(e) {
+         const caja = e.currentTarget.getBoundingClientRect()
+         const m = this.desde + (e.clientY - caja.top) / caja.height * this.largo
+         return Math.min(Math.max(Math.round(m / 5) * 5, this.desde), this.desde + this.largo - 5)
+       },
+       apuntar(e, dian) { this.apunta = { dian, min: this.minutoDe(e) } },
+       porcentaje(min) { return (min - this.desde) / this.largo * 100 },
+       nuevoEn(e, dian, dia) {
+         const i = this.minutoDe(e)
+         this.agregar(dian, dia, this.hora(i), this.hora(Math.min(i + 90, this.desde + this.largo)))
+       },
        elegir(pk, dia, i, f) {
          if (this.elegido === pk) { this.cerrar(); return }
          this.elegido = pk; this.dian = null; this.dia = dia; this.ini = i; this.fin = f
@@ -85,6 +99,13 @@
         </tbody>
       </table>
     </div>
+    <ul class="leyenda">
+      <li><span class="muestra jornada-m" aria-hidden="true"></span>
+        La barra dibuja la jornada del día: dónde empieza y termina cada bloque, y el hueco de la colación.</li>
+      <li><span class="muestra hoy-m" aria-hidden="true"></span> Hoy</li>
+      <li><span class="muestra distinto-m" aria-hidden="true"></span>
+        Ese día de la semana tiene una jornada distinta a los demás.</li>
+    </ul>
     <p class="pista">La jornada se edita en la vista semanal: es la plantilla que se repite todas las semanas.</p>
 
   {% else %}
@@ -104,7 +125,17 @@
                       @click="agregar({{ dia.numero }}, '{{ dia.fecha|date:"l" }}', '{{ dia.proximo.inicio }}', '{{ dia.proximo.termino }}')"
                       aria-label="Agregar un bloque los {{ dia.fecha|date:'l' }}">+</button>
             </div>
-            <div class="rejilla">
+            {# Clic en el hueco: crea el bloque a esa hora. `.self` deja fuera los
+               clics sobre un bloque existente, que son para editarlo. #}
+            <div class="rejilla"
+                 @click.self="nuevoEn($event, {{ dia.numero }}, '{{ dia.fecha|date:"l" }}')"
+                 @mousemove.self="apuntar($event, {{ dia.numero }})"
+                 @mouseleave="apunta = null">
+              <div class="fantasma" aria-hidden="true" x-cloak
+                   x-show="apunta && apunta.dian === {{ dia.numero }}"
+                   :style="apunta && `top: ${porcentaje(apunta.min)}%; height: ${90 / largo * 100}%`">
+                <span x-text="apunta && hora(apunta.min)"></span>
+              </div>
               {% for bloque in dia.bloques %}
                 <button type="button" class="bloque {% if bloque.pk == choca %}choca{% endif %}"
                         style="top: {{ bloque.posicion }}%; height: {{ bloque.largo }}%"
@@ -114,9 +145,10 @@
                   <span class="desde">{{ bloque.inicio|time:"H:i" }}</span>
                   <span class="hasta">{{ bloque.termino|time:"H:i" }}</span>
                 </button>
-              {% empty %}
-                <p class="sin-bloques">Sin bloques</p>
               {% endfor %}
+              {% if not dia.bloques %}
+                <p class="sin-bloques">Sin bloques<span>Haz clic para agregar uno</span></p>
+              {% endif %}
             </div>
           </div>
         {% endfor %}

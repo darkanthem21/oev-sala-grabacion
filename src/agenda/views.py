@@ -196,6 +196,10 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None):
         "reloj": _reloj(desde, hasta, largo),
         # Cuantas horas mide la rejilla: el alto de la columna sale de aca.
         "altura": largo // 60,
+        # En minutos, para que el navegador traduzca un clic en la rejilla a una
+        # hora sin tener que parsear las etiquetas del reloj.
+        "desde_min": desde,
+        "largo_min": largo,
         "cabeceras": _cabeceras(plantilla),
         "dias": [_dia(fecha, plantilla) for fecha in fechas],
         "semanas": [[_dia(f, plantilla, foco) for f in s] for s in _mes(foco)],
