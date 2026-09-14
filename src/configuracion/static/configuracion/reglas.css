@@ -1,0 +1,86 @@
+/* Pestaña Reglas. Solo variables de marca.css: ningun color literal (docs/estilo.md). */
+
+/* En pantalla ancha las tarjetas caben de a dos y la pestaña entra entera. */
+.reglas { display: grid; grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr)); gap: 1rem; }
+.reglas .marco { padding: .9rem 1.1rem 1.1rem; }
+.reglas .ancha { grid-column: 1 / -1; }
+.reglas h2 { margin: 0 0 .2rem; font-size: .85rem; }
+
+/* El control ocupa las dos lineas de la izquierda para quedar alineado con los
+ * demas: asi se revisan todos los valores sin leer cada descripcion. */
+.regla {
+  display: grid; grid-template-columns: 1fr auto; gap: .1rem .9rem;
+  padding: .7rem 0; border-top: 1px solid var(--borde);
+}
+.regla:first-of-type { border-top: 0; }
+.regla .que { font-size: .9rem; font-weight: 500; }
+/* Flex: una fila puede llevar dos controles y pegados se leen como uno roto. */
+.regla .control {
+  grid-column: 2; grid-row: 1 / span 2; align-self: center;
+  display: flex; align-items: center; justify-content: flex-end; gap: .4rem;
+}
+.regla .detalle {
+  grid-column: 1; margin: 0;
+  font-size: .8rem; line-height: 1.45; color: var(--tinta-suave); max-width: 46ch;
+}
+.regla .error { grid-column: 1 / -1; margin: .3rem 0 0; color: var(--alerta); font-size: .8rem; }
+
+.regla input, .regla select {
+  border: 1px solid var(--borde); background: var(--superficie); color: var(--tinta);
+  font-family: var(--fuente-texto); font-size: .9rem; font-weight: 500;
+  padding: .2rem .35rem;
+}
+/* Ancho fijo por digito: si no, el ojo no alinea las cifras. */
+.regla input { font-variant-numeric: tabular-nums; text-align: center; }
+.regla input[type="number"] { width: 3.6rem; }
+.regla input[type="time"] { width: 6.4rem; }
+.regla .unidad { font-size: .8rem; color: var(--tinta-suave); white-space: nowrap; }
+.regla.con-error input, .regla.con-error select { border-color: var(--alerta); }
+
+.ancha textarea {
+  width: 100%; box-sizing: border-box; margin-top: .5rem;
+  border: 1px solid var(--borde); background: var(--superficie); color: var(--tinta);
+  font-family: var(--fuente-texto); font-size: .85rem; line-height: 1.6; padding: .5rem .6rem;
+}
+.ancha .regla { padding-bottom: 0; }
+.ancha .error { margin-top: .4rem; color: var(--alerta); font-size: .8rem; }
+
+.aviso {
+  margin: 0 0 1rem; padding: .5rem .75rem; font-size: .85rem;
+  border: 1px solid var(--borde); background: var(--superficie);
+}
+.aviso.ok  { border-left: 3px solid var(--exito); }
+.aviso.mal { border-left: 3px solid var(--alerta); }
+
+/* A la vista mientras se recorre la pestaña: guardar no se sale buscando. */
+.barra {
+  position: sticky; bottom: 0; z-index: 2;
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  margin-top: 1rem; padding: .7rem 0;
+  background: var(--fondo); border-top: 1px solid var(--borde);
+}
+.barra .pista { margin: 0; font-size: .8rem; color: var(--tinta-suave); }
+.barra .btn { margin-left: auto; }
+
+/* Se abre solo despues de guardar, para ver lo que quedo anotado. */
+.historial { margin-top: 1.5rem; }
+.historial summary {
+  cursor: pointer; font-family: var(--fuente-titulo); font-weight: 700;
+  font-size: .8rem; color: var(--tinta-suave);
+}
+.historial summary:hover { color: var(--tinta); }
+.historial table { width: 100%; border-collapse: collapse; font-size: .85rem; margin-top: .6rem; }
+.historial th {
+  text-align: left; font-weight: 500; font-size: .8rem; color: var(--tinta-suave);
+  padding: .3rem .6rem .3rem 0; border-bottom: 1px solid var(--borde);
+}
+.historial td { padding: .35rem .6rem .35rem 0; border-bottom: 1px solid var(--borde); }
+.historial tr:last-child td { border-bottom: 0; }
+.historial .cifra, .historial .cambio { font-variant-numeric: tabular-nums; }
+.historial .cambio { color: var(--tinta-suave); }
+
+@media (max-width: 40rem) {
+  .reglas { grid-template-columns: 1fr; }
+  .regla .detalle { max-width: none; }
+  .historial { overflow-x: auto; }
+}

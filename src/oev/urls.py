@@ -39,6 +39,6 @@ urlpatterns = [
     path("configuracion/bloques/", agenda.bloques, name="panel_bloques"),
     path("configuracion/bloques/editar/", agenda.editar_bloque, name="editar_bloque"),
     path("configuracion/areas/", configuracion.seccion, {"pestana": "areas"}, name="panel_areas"),
-    path("configuracion/reglas/", configuracion.seccion, {"pestana": "reglas"}, name="panel_reglas"),
+    path("configuracion/reglas/", configuracion.reglas, name="panel_reglas"),
     path("admin/", admin.site.urls),
 ]
