@@ -1,7 +1,9 @@
 from django.conf import settings
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+from . import validacion
 from .forms import MAXIMO_ACOMPANANTES, MAXIMO_PERSONAS, AcompananteFormSet, SolicitudForm
 
 
@@ -100,4 +102,18 @@ def solicitar(request):
     return render(request, "solicitudes/enviada.html", {
         "solicitud": form.cleaned_data,
         "acompanantes": [f.cleaned_data for f in llenos],
+    })
+
+
+# US-07. El rol de validador todavia no es un grupo (eso es US-08), asi que por
+# ahora entra quien entra a la administracion, igual que el panel de bloques.
+@staff_member_required(login_url="login_gestion")
+def panel_validador(request):
+    """Bandeja del validador, con datos de prueba mientras no exista el modelo.
+
+    `validacion.cargar` es el unico punto que sabe de donde vienen los datos.
+    """
+    return render(request, "solicitudes/validador.html", {
+        "datos": validacion.cargar(),
+        "origen": validacion.ORIGEN,
     })

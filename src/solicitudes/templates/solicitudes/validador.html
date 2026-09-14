@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Panel del validador{% endblock %}
+{% block estilos %}
+  <link rel="stylesheet" href="{% static 'css/panel.css' %}">
+  <link rel="stylesheet" href="{% static 'solicitudes/validador.css' %}">
+{% endblock %}
+
+{% block contenido %}
+{% comment %}
+US-07. El encabezado copia el de templates/panel.html en vez de extenderlo:
+ese cascaron tiene escritos el titulo "Configuracion" y sus tres pestañas, y el
+validador no es una seccion de la configuracion.
+{% endcomment %}
+<header class="techo">
+  <div class="dentro">
+    <div class="fila">
+      <img class="sello" src="{% static 'img/Facultad-color-negro.png' %}"
+           alt="Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile">
+      <h1>Panel del validador</h1>
+      <div class="quien">
+        <span class="correo">{{ user.get_full_name|default:user.email }}</span>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}<button class="btn" type="submit">Cerrar sesión</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</header>
+
+{{ datos|json_script:"datos-panel" }}
+<script>
+/* Toda la logica de pantalla del panel. Con datos de prueba, aprobar y rechazar
+ * solo cambian lo que se ve: no hay a donde guardar. Las reglas que valen de
+ * verdad (AC3: un aprobado por bloque y fecha) las tendra que garantizar la
+ * base cuando exista el modelo; esto es la experiencia, no la garantia. */
+function panelValidador(datos, validador) {
+  const MINIMO_MOTIVO = 10;
+  const areas = Object.fromEntries(datos.areas.map(a => [a.id, a]));
+  const dos = n => String(n).padStart(2, "0");
+
+  // La grilla de la semana tambien sale del JSON (jornada), como todo lo demas.
+  const jornada = datos.jornada;
+  const DIAS = [["lun", "L"], ["mar", "M"], ["mié", "X"], ["jue", "J"], ["vie", "V"]];
+  const iso = d => d.getFullYear() + "-" + dos(d.getMonth() + 1) + "-" + dos(d.getDate());
+  // Lunes a viernes de la semana que contiene `fecha` (texto AAAA-MM-DD).
+  function semanaDe(fecha) {
+    const lunes = new Date(fecha + "T12:00");
+    lunes.setDate(lunes.getDate() - ((lunes.getDay() + 6) % 7));
+    return DIAS.map(([corto, inicial], i) => {
+      const dia = new Date(lunes);
+      dia.setDate(lunes.getDate() + i);
+      return { iso: iso(dia), corto, inicial, dm: dos(dia.getDate()) + "/" + dos(dia.getMonth() + 1) };
+    });
+  }
+
+  // Un pedido = un bloque de una solicitud en una fecha. Guarda a su solicitud
+  // para poder decir "bloque 1 de 2 de la misma solicitud".
+  const pedidos = [];
+  datos.solicitudes.forEach(s => s.bloques.forEach((b, i) => pedidos.push({
+    ...b, sol: s, n: i + 1, de: s.bloques.length, clave: b.fecha + " " + b.inicio,
+  })));
+
+  return {
+    resoluciones: {}, motivos: {}, rechazando: null, error: "",
+    jornada, semanaDe,
+
+    // La semana del cuadro es la del bloque pendiente mas proximo. Con datos
+    // reales habra que poder cambiar de semana.
+    get semana() {
+      const fechas = pedidos.filter(p => this.vivo(p)).map(p => p.fecha).sort();
+      return semanaDe(fechas[0] || pedidos.map(p => p.fecha).sort()[0]);
+    },
+    enCelda(fecha, inicio) { return pedidos.filter(p => p.fecha === fecha && p.inicio === inicio); },
+    estadoCelda(fecha, inicio) {
+      const aqui = this.enCelda(fecha, inicio);
+      if (aqui.some(p => this.resoluciones[p.ticket]?.estado === "aprobado")) return "aprobado";
+      const vivos = aqui.filter(p => this.vivo(p)).length;
+      return vivos > 1 ? "competencia" : vivos === 1 ? "una" : "libre";
+    },
+    textoCelda(fecha, inicio) {
+      const estado = this.estadoCelda(fecha, inicio), aqui = this.enCelda(fecha, inicio);
+      if (estado === "aprobado") return "#" + aqui.find(p => this.resoluciones[p.ticket]?.estado === "aprobado").sol.id;
+      return estado === "libre" ? "" : String(aqui.filter(p => this.vivo(p)).length);
+    },
+    describirCelda(d, h) {
+      const estado = this.estadoCelda(d.iso, h.inicio);
+      const cual = { libre: "libre", una: "una solicitud pendiente", competencia: "solicitudes en competencia",
+                     aprobado: "aprobado para la solicitud " + this.textoCelda(d.iso, h.inicio) }[estado];
+      return d.corto + " " + d.dm + ", " + h.inicio + " a " + h.termino + ": " +
+             (estado === "competencia" ? this.textoCelda(d.iso, h.inicio) + " " : "") + cual;
+    },
+    // Clic en una casilla: baja a la competencia, a la solicitud o al registro.
+    irACelda(fecha, inicio) {
+      const estado = this.estadoCelda(fecha, inicio);
+      const id = estado === "competencia" ? this.ancla(fecha + " " + inicio)
+               : estado === "una" ? "sol-" + this.enCelda(fecha, inicio).find(p => this.vivo(p)).sol.id
+               : estado === "aprobado" ? "h-resueltas" : null;
+      const destino = id && document.getElementById(id);
+      if (destino) {
+        const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        destino.scrollIntoView({ behavior: quieto ? "auto" : "smooth", block: "start" });
+      }
+    },
+    // Mini calendario: solo los bloques de esa solicitud, con su estado.
+    estadoMini(s, fecha, inicio) {
+      const p = this.bloquesDe(s).find(o => o.fecha === fecha && o.inicio === inicio);
+      if (!p) return "";
+      if (this.resoluciones[p.ticket]) return this.resoluciones[p.ticket].estado;
+      return this.rivales(p).length ? "competencia" : "pendiente";
+    },
+
+    area(s) { return areas[s.area]; },
+    vivo(p) { return !this.resoluciones[p.ticket]; },
+    // Por id y no por objeto: Alpine envuelve lo que devuelve en un proxy, y un
+    // objeto envuelto nunca es === al original.
+    bloquesDe(s) { return pedidos.filter(p => p.sol.id === s.id); },
+    // AC2: compiten los pedidos pendientes del mismo bloque en la misma fecha.
+    rivales(p) { return pedidos.filter(o => o.clave === p.clave && o.ticket !== p.ticket && this.vivo(o)); },
+    otrosBloques(p) { return this.bloquesDe(p.sol).filter(o => o.ticket !== p.ticket).map(o => this.nombreBloque(o)).join(" y "); },
+    ancla(clave) { return "c-" + clave.replace(/\D/g, ""); },
+
+    get competencias() {
+      const grupos = {};
+      pedidos.filter(p => this.vivo(p)).forEach(p => (grupos[p.clave] ||= []).push(p));
+      return Object.entries(grupos)
+        .filter(([, lista]) => lista.length > 1)
+        .map(([clave, lista]) => ({
+          clave,
+          pedidos: [...lista].sort((a, b) => this.area(a.sol).prioridad - this.area(b.sol).prioridad),
+        }))
+        .sort((a, b) => a.clave.localeCompare(b.clave));
+    },
+    // AC1: una tarjeta por solicitud mientras le quede algun bloque sin resolver,
+    // ordenadas por la fecha mas proxima que piden.
+    get pendientes() {
+      const primera = s => s.bloques.map(b => b.fecha + b.inicio).sort()[0];
+      return datos.solicitudes
+        .filter(s => this.bloquesDe(s).some(p => this.vivo(p)))
+        .sort((a, b) => primera(a).localeCompare(primera(b)));
+    },
+    get bloquesPendientes() { return pedidos.filter(p => this.vivo(p)).length; },
+    get resueltos() { return Object.values(this.resoluciones).sort((a, b) => a.orden - b.orden); },
+
+    // El estado de la solicitud no se guarda: se deduce de sus bloques.
+    estadoSolicitud(s) {
+      const estados = this.bloquesDe(s).map(p => this.resoluciones[p.ticket]?.estado);
+      if (estados.some(e => !e)) return estados.some(e => e) ? "en_revision" : "pendiente";
+      if (estados.every(e => e === "aprobado")) return "aprobada";
+      if (estados.every(e => e === "rechazado")) return "rechazada";
+      return "parcial";
+    },
+    etiqueta(e) {
+      return { pendiente: "Pendiente", en_revision: "En revisión", aprobada: "Aprobada",
+               rechazada: "Rechazada", parcial: "Aprobada en parte",
+               aprobado: "Aprobado", rechazado: "Rechazado", competencia: "En competencia" }[e] || e;
+    },
+    porque(c) {
+      const [a, b] = c.pedidos;
+      const pa = this.area(a.sol).prioridad, pb = this.area(b.sol).prioridad;
+      return pa === pb
+        ? "Empatan en prioridad " + pa + ". Decide con los datos y deja el motivo."
+        : this.area(a.sol).nombre + " tiene la prioridad más alta. Puedes no seguirla, dejando el motivo.";
+    },
+    nombreBloque(p) {
+      const [, m, d] = p.fecha.split("-");
+      return p.dia + " " + d + "/" + m + " · " + p.inicio + "–" + p.termino;
+    },
+    fechaHora(iso) {
+      const [f, h] = iso.split("T"), [, m, d] = f.split("-");
+      return d + "/" + m + " " + h;
+    },
+
+    // AC5: cada resolucion con validador, hora y motivo.
+    registrar(p, estado, motivo, nota) {
+      const ahora = new Date();
+      this.resoluciones[p.ticket] = {
+        pedido: p, estado, motivo, nota, validador,
+        hora: dos(ahora.getHours()) + ":" + dos(ahora.getMinutes()),
+        orden: Object.keys(this.resoluciones).length,
+      };
+    },
+    // AC3 y AC6: se aprueba de a un pedido y a mano. Si el bloque tiene rivales,
+    // el motivo es obligatorio porque les llega a quienes lo pierden.
+    aprobar(p) {
+      this.error = "";
+      if (!this.vivo(p)) return;
+      const rivales = this.rivales(p);
+      const motivo = (this.motivos[p.clave] || "").trim();
+      if (rivales.length && motivo.length < MINIMO_MOTIVO) {
+        this.error = "Ese bloque lo piden " + (rivales.length + 1) + " solicitudes: escribe el motivo " +
+                     "(mínimo " + MINIMO_MOTIVO + " caracteres). Le llega a quien no lo obtiene.";
+        return;
+      }
+      this.registrar(p, "aprobado", motivo, "");
+      // Pierden solo este bloque, no el resto de su solicitud.
+      rivales.forEach(r => this.registrar(r, "rechazado", motivo, "El bloque se asignó a la solicitud #" + p.sol.id));
+    },
+    abrirRechazo(p) { this.error = ""; this.rechazando = p.ticket; },
+    // AC4: rechazar sin motivo no se puede.
+    rechazar(p) {
+      const motivo = (this.motivos[p.ticket] || "").trim();
+      if (motivo.length < MINIMO_MOTIVO) {
+        this.error = "Para rechazar escribe el motivo (mínimo " + MINIMO_MOTIVO + " caracteres): le llega al encargado.";
+        return;
+      }
+      this.registrar(p, "rechazado", motivo, "");
+      this.rechazando = null;
+      this.error = "";
+    },
+  };
+}
+</script>
+
+<main class="panel"
+      x-data="panelValidador(JSON.parse(document.getElementById('datos-panel').textContent), '{{ user.get_full_name|default:user.email|escapejs }}')">
+<div class="tablero">
+  <aside class="semana-col">
+    <section class="semana" aria-labelledby="h-semana">
+      <header class="semana-cab">
+        <h2 id="h-semana">Bloques de la semana</h2>
+        <p x-text="semana[0].dm + ' al ' + semana[4].dm + ' · clic para ir a la solicitud'"></p>
+      </header>
+      <div class="cuadricula">
+        <span></span>
+        <template x-for="d in semana" :key="d.iso">
+          <span class="dia"><b x-text="d.corto"></b><span x-text="d.dm"></span></span>
+        </template>
+        <template x-for="h in jornada" :key="h.inicio">
+          <div class="fila-hora">
+            <span class="hora" x-text="h.inicio"></span>
+            <template x-for="d in semana" :key="d.iso">
+              <button type="button" class="celda"
+                      :data-e="estadoCelda(d.iso, h.inicio)"
+                      :disabled="estadoCelda(d.iso, h.inicio) === 'libre'"
+                      :aria-label="describirCelda(d, h)" :title="describirCelda(d, h)"
+                      @click="irACelda(d.iso, h.inicio)"
+                      x-text="textoCelda(d.iso, h.inicio)"></button>
+            </template>
+          </div>
+        </template>
+      </div>
+      <ul class="leyenda">
+        <li><i></i>libre</li>
+        <li><i data-e="una"></i>una solicitud</li>
+        <li><i data-e="competencia"></i>en competencia</li>
+        <li><i data-e="aprobado"></i>aprobado</li>
+      </ul>
+    </section>
+  </aside>
+  <div class="contenido">
+
+  {% if origen == "prueba" %}
+  <aside class="prueba" role="note">
+    <strong>Datos de prueba — no vienen de la base de datos.</strong>
+    <p>Todo lo que ves se lee de <code>src/solicitudes/datos_prueba/panel_validador.json</code>.
+       Aprobar y rechazar funcionan solo en esta pantalla: no se guarda nada, y al recargar todo vuelve a pendiente.</p>
+  </aside>
+  {% endif %}
+
+  <div class="resumen">
+    <div><b x-text="bloquesPendientes"></b>bloques pendientes</div>
+    <div><b x-text="competencias.length"></b>en competencia</div>
+    <div><b x-text="resueltos.length"></b>resueltos</div>
+  </div>
+
+  <p class="error" role="alert" x-show="error" x-text="error" x-cloak></p>
+
+  {# AC2 #}
+  <section class="seccion" aria-labelledby="h-competencia">
+    <div class="seccion-cab">
+      <h2 id="h-competencia">En competencia</h2>
+      <span class="cuenta" x-text="competencias.length"></span>
+      <p>Dos o más solicitudes piden el mismo bloque en la misma fecha. Aprobar una rechaza a las demás
+         <b>solo en ese bloque</b>, no en toda su solicitud. Están ordenadas por prioridad del área;
+         elegir y escribir el motivo es tuyo.</p>
+    </div>
+    <p class="vacio" x-show="!competencias.length" x-cloak>Ningún bloque tiene dos solicitudes pendientes.</p>
+
+    <template x-for="c in competencias" :key="c.clave">
+      <article class="tarjeta" :id="ancla(c.clave)">
+        <header class="tarjeta-cab">
+          <span class="bloque" x-text="nombreBloque(c.pedidos[0])"></span>
+          <span class="cuenta" x-text="c.pedidos.length + ' solicitudes'"></span>
+          <span class="porque" x-text="porque(c)"></span>
+        </header>
+        <template x-for="p in c.pedidos" :key="p.ticket">
+          <div class="postulante">
+            <div class="quien-pide">
+              <span class="folio" x-text="'Solicitud #' + p.sol.id + ' · ' + p.ticket"></span>
+              <strong x-text="p.sol.encargado.nombre"></strong>
+              <span class="area"><span class="prio" x-text="'P' + area(p.sol).prioridad"></span><span x-text="area(p.sol).nombre"></span></span>
+            </div>
+            <p class="detalle" x-text="p.sol.motivo + ' · ' + p.sol.personas + ' persona(s)'"></p>
+            <p class="hermanos" x-show="p.de > 1">
+              Bloque <b x-text="p.n"></b> de <b x-text="p.de"></b> de la solicitud #<span x-text="p.sol.id"></span>.
+              También pide: <span x-text="otrosBloques(p)"></span>
+            </p>
+            <button class="btn activa" type="button" @click="aprobar(p)">Aprobar esta</button>
+          </div>
+        </template>
+        <label class="motivo">
+          <span>Motivo de la resolución</span>
+          <input type="text" x-model="motivos[c.clave]"
+                 placeholder="Le llega a quien no obtiene el bloque (mínimo 10 caracteres)">
+        </label>
+      </article>
+    </template>
+  </section>
+
+  {# AC1 #}
+  <section class="seccion" aria-labelledby="h-bandeja">
+    <div class="seccion-cab">
+      <h2 id="h-bandeja">Bandeja de pendientes</h2>
+      <span class="cuenta" x-text="pendientes.length"></span>
+      <p>Una tarjeta por solicitud, con todos sus bloques. Cada bloque se resuelve por separado,
+         así que una solicitud puede quedar aprobada en parte.</p>
+      <ul class="marcas" aria-label="Colores del mini calendario">
+        <li><i data-e="pendiente"></i>pedido pendiente</li>
+        <li><i data-e="competencia"></i>en competencia</li>
+        <li><i data-e="aprobado"></i>aprobado</li>
+        <li><i data-e="rechazado"></i>rechazado</li>
+      </ul>
+    </div>
+    <p class="vacio" x-show="!pendientes.length" x-cloak>No quedan solicitudes pendientes.</p>
+
+    <template x-for="s in pendientes" :key="s.id">
+      <article class="tarjeta" :id="'sol-' + s.id">
+        <header class="tarjeta-cab">
+          <span class="folio" x-text="'Solicitud #' + s.id"></span>
+          <strong x-text="s.encargado.nombre"></strong>
+          <span class="rol">encargado</span>
+          <span class="area"><span class="prio" x-text="'P' + area(s).prioridad"></span><span x-text="area(s).nombre"></span></span>
+          <span class="estado" :data-estado="estadoSolicitud(s)" x-text="etiqueta(estadoSolicitud(s))"></span>
+        </header>
+        <div class="cuerpo">
+        <dl class="ficha">
+          <dt>Motivo</dt><dd x-text="s.motivo"></dd>
+          <dt>Observaciones</dt><dd x-text="s.observaciones || '—'"></dd>
+          <dt>Personas</dt>
+          <dd x-text="s.personas + (s.acompanantes.length ? ' · con ' + s.acompanantes.map(a => a.nombre).join(', ') : '')"></dd>
+          <dt>Enviada</dt><dd x-text="fechaHora(s.enviada)"></dd>
+        </dl>
+        <div class="mini" role="img"
+             :aria-label="'Bloques que pide la solicitud #' + s.id + ': ' + bloquesDe(s).map(p => nombreBloque(p)).join('; ')">
+          <div class="mini-grilla" aria-hidden="true">
+            <span></span>
+            <template x-for="d in semanaDe(s.bloques[0].fecha)" :key="d.iso">
+              <span class="mini-dia" x-text="d.inicial"></span>
+            </template>
+            <template x-for="h in jornada" :key="h.inicio">
+              <div class="fila-hora">
+                <span class="mini-hora" x-text="h.inicio"></span>
+                <template x-for="d in semanaDe(s.bloques[0].fecha)" :key="d.iso">
+                  <span class="mini-celda" :data-e="estadoMini(s, d.iso, h.inicio)"
+                        :title="estadoMini(s, d.iso, h.inicio) ? d.corto + ' ' + d.dm + ' ' + h.inicio + ': ' + etiqueta(estadoMini(s, d.iso, h.inicio)) : ''"></span>
+                </template>
+              </div>
+            </template>
+          </div>
+          <p class="mini-pie" x-text="'semana del ' + semanaDe(s.bloques[0].fecha)[0].dm"></p>
+        </div>
+        </div>
+        <table class="tabla">
+          <thead><tr><th>Bloque pedido</th><th>Estado</th><th class="der">Acción</th></tr></thead>
+          <tbody>
+            <template x-for="p in bloquesDe(s)" :key="p.ticket">
+              <tr>
+                <td><span class="folio" x-text="p.ticket"></span> <span x-text="nombreBloque(p)"></span></td>
+                <td>
+                  <template x-if="resoluciones[p.ticket]">
+                    <span class="estado" :data-estado="resoluciones[p.ticket].estado"
+                          x-text="etiqueta(resoluciones[p.ticket].estado)"></span>
+                  </template>
+                  <template x-if="!resoluciones[p.ticket] && rivales(p).length">
+                    <a class="compite" :href="'#' + ancla(p.clave)"
+                       x-text="'En competencia con #' + rivales(p).map(r => r.sol.id).join(', #')"></a>
+                  </template>
+                  <template x-if="!resoluciones[p.ticket] && !rivales(p).length">
+                    <span class="estado" data-estado="pendiente">Pendiente</span>
+                  </template>
+                </td>
+                <td class="der">
+                  <template x-if="!resoluciones[p.ticket] && rechazando !== p.ticket">
+                    <span class="acciones">
+                      {# Con rivales se aprueba desde "En competencia", donde se ven todos. #}
+                      <button class="btn activa" type="button" x-show="!rivales(p).length" @click="aprobar(p)">Aprobar</button>
+                      <button class="btn peligro" type="button" @click="abrirRechazo(p)">Rechazar</button>
+                    </span>
+                  </template>
+                  <template x-if="rechazando === p.ticket">
+                    <span class="rechazo">
+                      <input type="text" x-model="motivos[p.ticket]" @keydown.enter.prevent="rechazar(p)"
+                             placeholder="Motivo del rechazo (mínimo 10 caracteres)">
+                      <button class="btn peligro" type="button" @click="rechazar(p)">Confirmar</button>
+                      <button class="btn" type="button" @click="rechazando = null; error = ''">Cancelar</button>
+                    </span>
+                  </template>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </article>
+    </template>
+  </section>
+
+  {# AC5 #}
+  <section class="seccion" aria-labelledby="h-resueltas">
+    <div class="seccion-cab">
+      <h2 id="h-resueltas">Resueltas</h2>
+      <span class="cuenta" x-text="resueltos.length"></span>
+      <p>Cada resolución queda con quién la tomó, a qué hora y con qué motivo.</p>
+    </div>
+    <p class="vacio" x-show="!resueltos.length" x-cloak>Todavía no resuelves nada.</p>
+    <div class="marco" x-show="resueltos.length" x-cloak>
+      <table class="tabla">
+        <thead><tr><th>Bloque</th><th>Solicitud</th><th>Resolución</th><th>Motivo</th><th>Validador</th><th>Hora</th></tr></thead>
+        <tbody>
+          <template x-for="r in resueltos" :key="r.pedido.ticket">
+            <tr>
+              <td><span class="folio" x-text="r.pedido.ticket"></span> <span x-text="nombreBloque(r.pedido)"></span></td>
+              <td>
+                <span x-text="'#' + r.pedido.sol.id + ' · ' + r.pedido.sol.encargado.nombre"></span><br>
+                <span class="estado" :data-estado="estadoSolicitud(r.pedido.sol)" x-text="etiqueta(estadoSolicitud(r.pedido.sol))"></span>
+              </td>
+              <td><span class="estado" :data-estado="r.estado" x-text="etiqueta(r.estado)"></span></td>
+              <td>
+                <span x-text="r.motivo || '—'"></span>
+                <template x-if="r.nota"><span class="suave" x-text="' (' + r.nota + ')'"></span></template>
+              </td>
+              <td x-text="r.validador"></td>
+              <td class="folio" x-text="r.hora"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  </div>
+</div>
+</main>
+{% endblock %}
