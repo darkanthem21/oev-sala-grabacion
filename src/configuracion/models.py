@@ -22,12 +22,17 @@ class Parametros(models.Model):
     `forms.SECCIONES`. Escrito en dos lugares terminaria diciendo dos cosas.
     """
 
-    # La anticipacion minima que nombra AC1 ya no existe: este plazo la absorbe
-    # (contexto.md, decision 9).
     pedir_dia = models.PositiveSmallIntegerField(
         "día límite para pedir", choices=DIAS_HABILES, default=4
     )
     pedir_hora = models.TimeField("hora límite para pedir", default=time(10, 0))
+    # La anticipacion minima del AC1, que se habia dado por eliminada: vuelve como
+    # semanas completas y no como dias, para que la fecha mas cercana sea siempre
+    # un lunes y el validador tenga la semana entera para revisar.
+    semanas_desfase = models.PositiveSmallIntegerField(
+        "desfase mínimo", default=1,
+        validators=[MinValueValidator(0), MaxValueValidator(8)],
+    )
 
     plazo_confirmacion_dias = models.PositiveSmallIntegerField(
         "plazo de confirmación previa", default=2,

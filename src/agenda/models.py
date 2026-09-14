@@ -1,9 +1,12 @@
 from collections import defaultdict
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Q
+from django.utils import timezone
+
+from configuracion.models import Parametros
 
 
 class Dia(models.IntegerChoices):
@@ -116,3 +119,24 @@ def disponibilidad(desde, hasta):
             dias[fecha] = bloques
         fecha += timedelta(days=1)
     return dias
+
+
+def primera_fecha_pedible(ahora=None):
+    """El lunes de la primera semana para la que se puede pedir.
+
+    Entre la solicitud y la fecha pedida tienen que pasar semanas completas
+    (`semanas_desfase`), y el limite semanal corre esa cuenta una semana mas en
+    cuanto se pasa: quien pide el viernes a las 11:00 ya esta pidiendo para la
+    semana siguiente a la que alcanzaba a las 09:00.
+
+    Semanas y no dias para que la fecha mas cercana sea siempre un lunes: asi el
+    validador recibe la semana completa de una vez y no un dia cada dia.
+    """
+    parametros = Parametros.cargar()
+    ahora = timezone.localtime(ahora)
+    lunes = ahora.date() - timedelta(days=ahora.weekday())
+    corte = timezone.make_aware(
+        datetime.combine(lunes + timedelta(days=parametros.pedir_dia), parametros.pedir_hora)
+    )
+    semanas = 1 + parametros.semanas_desfase + (1 if ahora > corte else 0)
+    return lunes + timedelta(weeks=semanas)

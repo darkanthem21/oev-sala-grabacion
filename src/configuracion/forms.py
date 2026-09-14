@@ -8,8 +8,11 @@ from .models import Parametros
 SECCIONES = [
     ("Recepción de solicitudes", [
         ("Límite para pedir", ["pedir_dia", "pedir_hora"],
-         "Pasado ese momento no se reciben solicitudes para la semana siguiente. "
-         "Las que ya llegaron se resuelven igual."),
+         "Pasado ese momento la fecha más cercana que se puede pedir se corre una "
+         "semana. Las solicitudes que ya llegaron se resuelven igual."),
+        ("Desfase mínimo", ["semanas_desfase"],
+         "Semanas completas entre la solicitud y la fecha pedida. Con 1, lo que se "
+         "pide esta semana es para dentro de dos."),
     ]),
     ("Reserva", [
         ("Confirmación previa", ["plazo_confirmacion_dias"],
@@ -40,6 +43,7 @@ SECCIONES = [
 
 # Va pegada al ultimo control de la fila: "8" no dice nada, "8 bloques" si.
 UNIDADES = {
+    "semanas_desfase": "semanas",
     "plazo_confirmacion_dias": "días antes",
     "tope_mensual": "bloques al mes",
     "max_bloques_solicitud": "bloques",
