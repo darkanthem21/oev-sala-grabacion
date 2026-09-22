@@ -14,16 +14,19 @@ Nada se integra por commit directo a `main`: todo entra por pull request.
 
 ## Commits
 
-Conventional Commits, en inglés, con el módulo como scope:
+Conventional Commits, en español, con el módulo como scope:
 
 ```
-feat(solicitudes): add block selection to request form
-fix(agenda): prevent booking a blocked slot
-docs(despliegue): document cron entry for reminders
-test(uso): cover check-out with missing items
+feat(solicitudes): agregar la selección de bloques al formulario
+fix(agenda): impedir reservar un bloque bloqueado
+docs(despliegue): documentar la entrada de cron para los recordatorios
+test(uso): cubrir el check-out con ítems faltantes
 ```
 
 Tipos: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`.
+
+El cuerpo explica por qué se hizo así y qué se descartó, no qué cambió: el
+diff ya dice qué. Un commit sin cuerpo es para lo que se explica solo.
 
 ## Pull requests
 
