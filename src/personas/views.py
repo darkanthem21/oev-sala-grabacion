@@ -13,7 +13,7 @@ from configuracion.models import Parametros
 from .models import Rol, Usuario
 
 # AC4: el mismo texto para credenciales malas y para correo inexistente. Decir
-# "ese correo no existe" le regala al atacante la lista de cuentas.
+# "ese correo no existe" le regalaría al atacante la lista de cuentas.
 ERROR_CREDENCIALES = "Correo o contraseña incorrectos."
 
 
@@ -53,7 +53,7 @@ def _con_error(request, form, mensaje, ruta):
 def _registrar_fallo(usuario):
     """AC5: unos cuantos fallos seguidos bloquean la cuenta, temporalmente.
 
-    Cuantos y por cuanto los fija el administrador desde el panel (US-04).
+    Cuántos y por cuánto los fija el administrador desde el panel (US-04).
     """
     parametros = Parametros.cargar()
     usuario.intentos_fallidos += 1
@@ -64,11 +64,10 @@ def _registrar_fallo(usuario):
 
 
 def _puede_pasar(usuario, rol):
-    """Quien cruza esta puerta.
+    """Quién cruza esta puerta.
 
-    `is_staff` vale en la de administracion ademas del grupo: el superusuario que
-    crea el despliegue no pertenece a ninguno, y sin esto quedaria afuera de su
-    propia puerta la primera vez que entra.
+    En la de administración vale también `is_staff`, porque el superusuario del
+    despliegue no pertenece a ningún grupo y quedaría afuera de su propia puerta.
     """
     if rol is None:
         return True
@@ -79,7 +78,7 @@ def _puede_pasar(usuario, rol):
 
 def entrar(request, plantilla="personas/login.html", ruta="login", rol=None, titulo=None):
     """Las puertas del sistema. Cada una cambia la plantilla, el encabezado y a
-    quien deja pasar; la autenticacion, el bloqueo por intentos y la recuperacion
+    quién deja pasar. La autenticación, el bloqueo por intentos y la recuperación
     de clave son las mismas para todas."""
     contexto = {"form": AuthenticationForm(), "ruta": ruta, "titulo": titulo}
     if request.method != "POST":
@@ -96,9 +95,9 @@ def entrar(request, plantilla="personas/login.html", ruta="login", rol=None, tit
 
     if form.is_valid():
         entrante = form.get_user()
-        # Una puerta de rol no responde "no eres administrador": ese mensaje la
-        # convierte en un oraculo para saber que correos existen y cuales mandan.
-        # Mismo texto que una clave mala, y sin sesion.
+        # Una puerta de rol no responde "no eres administrador". Ese mensaje la
+        # convertiría en un oráculo para saber qué correos existen y cuáles
+        # mandan, así que contesta lo mismo que una clave mala, y sin sesión.
         if not _puede_pasar(entrante, rol):
             return _con_error(request, form, ERROR_CREDENCIALES, ruta)
         if entrante.intentos_fallidos or entrante.bloqueado_hasta:
@@ -106,7 +105,7 @@ def entrar(request, plantilla="personas/login.html", ruta="login", rol=None, tit
             entrante.bloqueado_hasta = None
             entrante.save(update_fields=["intentos_fallidos", "bloqueado_hasta"])
         login(request, entrante)
-        # 204 sin cuerpo: no hay nada que pegar, el navegador navega de verdad.
+        # 204 sin cuerpo porque no hay nada que pegar; el navegador navega.
         return HttpResponse(status=204, headers={"HX-Redirect": destino_tras_login(entrante)})
 
     if usuario:

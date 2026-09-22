@@ -1,7 +1,7 @@
 from django.db import migrations
 
-# Escritos aca y no importados de `Rol`: una migracion tiene que seguir diciendo
-# lo mismo dentro de diez commits, aunque el codigo se renombre.
+# Escritos acá en vez de importados de `Rol`, porque una migración tiene que
+# seguir diciendo lo mismo aunque el código se renombre.
 ROLES = ["Administrador", "Validador", "Personal de apoyo", "Solicitante"]
 
 
@@ -12,8 +12,8 @@ def crear(apps, schema_editor):
 
 
 def borrar(apps, schema_editor):
-    # Solo los grupos vacios: si alguien ya tiene el rol, quitarselo al revertir
-    # una migracion seria una sorpresa desagradable.
+    # Solo los grupos vacíos. Quitarle el rol a alguien por revertir una
+    # migración sería una sorpresa fea.
     Group = apps.get_model("auth", "Group")
     Group.objects.filter(name__in=ROLES, user__isnull=True).delete()
 
