@@ -14,14 +14,13 @@ from django.views.decorators.http import require_POST
 from .forms import BloqueForm
 from .models import Bloque, Dia, minutos, plantilla_semanal
 
-# Piso de la rejilla. Sin el, la escala cambiaria con los datos —un dia con un
-# solo bloque lo mostraria ocupando toda la jornada— y dos dias dejarian de ser
-# comparables, que es justo para lo que sirve la vista mensual.
+# Piso de la rejilla: sin esto un día con un solo bloque se dibujaría ocupando
+# toda la jornada y los días dejarían de ser comparables.
 JORNADA_MINIMA = (8 * 60, 19 * 60)
 
 
 def _fecha(texto, por_defecto):
-    """La fecha llega por la barra de direcciones: cualquiera puede escribirla."""
+    """La fecha llega por la barra de direcciones y cualquiera puede escribirla."""
     try:
         return date.fromisoformat(texto)
     except (TypeError, ValueError):
@@ -48,12 +47,11 @@ def _correr(dia, vista, signo):
 
 
 def _titulo(vista, foco):
-    """Que se esta mirando, escrito como lo diria una persona.
+    """Qué se está mirando, escrito como lo diría una persona.
 
-    La semanal no lleva fechas y no es un descuido: es la plantilla que se repite
-    todas las semanas, no una semana concreta. Titularla "21-25 de septiembre"
-    hacia creer que lo editado valia solo para esos cinco dias, que es justo lo
-    que confundio a la contraparte.
+    La semanal no lleva fechas porque es la plantilla que se repite, no una
+    semana concreta. Titularla "21-25 de septiembre" hacía creer que lo editado
+    valía solo para esos cinco días.
     """
     if vista == "mes":
         return date_format(foco, "F Y").capitalize()
@@ -61,11 +59,11 @@ def _titulo(vista, foco):
 
 
 def _ventana(plantilla):
-    """De que hora a que hora se dibuja la rejilla, redondeado a la hora entera.
+    """De qué hora a qué hora se dibuja la rejilla, redondeado a la hora entera.
 
-    Nunca menos que la jornada laboral y mas si hace falta: el cliente pidio
-    bloques fuera del horario laboral (US-06 AC6, 06/08 03:48), y con una ventana
-    fija uno de las 20:00 no se veria en ninguna parte.
+    Nunca menos que la jornada laboral, y más si hace falta. El cliente pidió
+    bloques fuera del horario laboral (US-06 AC6) y con una ventana fija uno de
+    las 20:00 no se vería en ninguna parte.
     """
     piso, techo = JORNADA_MINIMA
     horas = [(minutos(b.inicio), minutos(b.termino)) for bs in plantilla.values() for b in bs]
@@ -78,12 +76,10 @@ def _ventana(plantilla):
 
 
 def _ubicar(plantilla, desde, largo):
-    """Donde empieza cada bloque y cuanto ocupa, en porcentaje de la jornada.
+    """Dónde empieza cada bloque y cuánto ocupa, en porcentaje de la jornada.
 
-    Sin eje: la semana los usa como `top`/`height` y el mes como `left`/`width`, y
-    por ser porcentajes la misma cifra sirve en las dos escalas. Se formatean aca
-    porque un float en la plantilla saldria con coma decimal —el proyecto esta en
-    es-CL— y eso no es CSS valido.
+    Se formatean acá porque un float en la plantilla saldría con coma decimal
+    (el proyecto está en es-CL) y eso no es CSS válido.
     """
     for bloques in plantilla.values():
         for bloque in bloques:
@@ -113,10 +109,9 @@ def _resumen(bloques):
 
 
 def _cabeceras(plantilla):
-    """Cuanta jornada tiene cada dia de la semana, y cual se sale del molde.
+    """Cuánta jornada tiene cada día de la semana, y cuál se sale del molde.
 
-    Se dice una vez por columna y no treinta veces en las celdas: la plantilla se
-    repite todas las semanas.
+    Se dice una vez por columna porque la plantilla se repite todas las semanas.
     """
     forma = {d: tuple((b.inicio, b.termino) for b in plantilla[d]) for d in Dia.values}
     comun = Counter(forma.values()).most_common(1)[0][0]
@@ -135,8 +130,8 @@ def _hhmm(total):
 
 
 def _proximo(bloques):
-    """Donde caeria un bloque nuevo: pegado al ultimo del dia y de 90 minutos. Es
-    la sugerencia que trae el formulario, no una regla."""
+    """Dónde caería un bloque nuevo, pegado al último del día y de 90 minutos.
+    Es la sugerencia que trae el formulario, no una regla."""
     inicio = bloques[-1].termino if bloques else time(8, 10)
     return {"inicio": f"{inicio:%H:%M}", "termino": _hhmm(min(minutos(inicio) + 90, 23 * 60 + 55))}
 
@@ -152,31 +147,30 @@ def _dia(fecha, plantilla, foco=None):
     }
 
 
-# Lo que la plantilla mete en el x-data de Alpine. Cuando no hay nada elegido va
-# la palabra `null` para que el objeto de JavaScript quede escrito igual en los
-# dos casos y la plantilla no lleve condicionales.
+# Lo que la plantilla mete en el x-data de Alpine. Sin nada elegido va la palabra
+# `null`, para que el objeto de JavaScript se escriba igual en los dos casos.
 SIN_ELEGIR = {"pk": "null", "dian": "null", "dia": "", "ini": "", "fin": ""}
 
 
 def _elegido(bloque):
-    """El bloque abierto en el editor. Sin `pk` es un alta que no paso la
-    validacion y vuelve con lo que el administrador escribio."""
+    """El bloque abierto en el editor. Sin `pk` es un alta que no pasó la
+    validación y vuelve con lo que el administrador escribió."""
     if bloque is None:
         return SIN_ELEGIR
     return {
         "pk": bloque.pk or "null",
         "dian": bloque.dia,
         "dia": bloque.get_dia_display(),
-        # Un alta con la hora en blanco llega sin `inicio`: campo vacio, no un None
-        # formateado.
+        # Un alta con la hora en blanco llega sin `inicio`, así que el campo
+        # va vacío.
         "ini": f"{bloque.inicio:%H:%M}" if bloque.inicio else "",
         "fin": f"{bloque.termino:%H:%M}" if bloque.termino else "",
     }
 
 
 def _contexto(datos, error=None, elegido=None, quitado=None, choca=None):
-    """Todo lo que necesita el calendario. Lo comparten la vista que lo muestra y
-    la que guarda un bloque, porque las dos terminan dibujando la misma rejilla."""
+    """Todo lo que necesita el calendario. Lo comparten la vista que lo muestra
+    y la que guarda un bloque, porque las dos dibujan la misma rejilla."""
     # US-02 AC7: la vista por defecto es la mensual, pedida por el cliente.
     vista = datos.get("vista")
     if vista not in ("mes", "semana"):
@@ -197,10 +191,10 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None):
         "hoy": hoy,
         "titulo": _titulo(vista, foco),
         "reloj": _reloj(desde, hasta, largo),
-        # Cuantas horas mide la rejilla: el alto de la columna sale de aca.
+        # Cuántas horas mide la rejilla; de acá sale el alto de la columna.
         "altura": largo // 60,
-        # En minutos, para que el navegador traduzca un clic en la rejilla a una
-        # hora sin tener que parsear las etiquetas del reloj.
+        # En minutos, para que el navegador traduzca un clic a una hora sin
+        # parsear las etiquetas del reloj.
         "desde_min": desde,
         "largo_min": largo,
         "cabeceras": _cabeceras(plantilla),
@@ -210,9 +204,9 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None):
         "siguiente": _correr(foco, vista, +1),
         "error": error,
         "elegido": _elegido(elegido),
-        # Un bloque quitado no se confirma antes: se deshace despues.
+        # Quitar un bloque no se confirma antes, se deshace después.
         "quitado": quitado,
-        # El bloque contra el que se choco, para senalarlo en la rejilla.
+        # El bloque contra el que se chocó, para señalarlo en la rejilla.
         "choca": choca.pk if choca is not None else None,
     }
 
@@ -220,7 +214,7 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None):
 @staff_member_required(login_url="login_gestion")
 def bloques(request):
     contexto = _contexto(request.GET)
-    # htmx pide solo la rejilla; el navegador sin htmx pide la pagina entera y
+    # htmx pide solo la rejilla. El navegador sin htmx pide la página entera y
     # recibe lo mismo dentro de ella.
     if request.headers.get("HX-Request"):
         return render(request, "agenda/_calendario.html", contexto)
@@ -228,13 +222,13 @@ def bloques(request):
 
 
 def _mensaje(formulario):
-    """Los errores en una linea: el aviso vive en la barra, no en un panel."""
+    """Los errores en una línea, porque el aviso vive en la barra."""
     return " ".join(m for grupo in formulario.errors.values() for m in grupo)
 
 
 def _responder(request, **extra):
-    """htmx recibe la rejilla ya redibujada; el navegador sin htmx, una redireccion
-    para que recargar no reenvie el formulario."""
+    """htmx recibe la rejilla ya redibujada. El navegador sin htmx recibe una
+    redirección, para que recargar no reenvíe el formulario."""
     if request.headers.get("HX-Request"):
         return render(request, "agenda/_calendario.html", _contexto(request.POST, **extra))
     destino = f"{reverse('panel_bloques')}?vista=semana&desde={request.POST.get('desde', '')}"
@@ -246,8 +240,8 @@ def _responder(request, **extra):
 def editar_bloque(request):
     """Agrega, cambia, quita o repone un bloque de la plantilla.
 
-    Las cuatro acciones comparten vista porque las cuatro devuelven la misma
-    rejilla. El cambio vale para ese dia de la semana, todas las semanas.
+    Las cuatro acciones comparten vista porque devuelven la misma rejilla. El
+    cambio vale para ese día de la semana, todas las semanas.
     """
     accion = request.POST.get("accion", "guardar")
 
@@ -257,7 +251,8 @@ def editar_bloque(request):
             bloque.activo = False
             bloque.save(update_fields=["activo"])
             return _responder(request, quitado=bloque)
-        # Reponer puede chocar: mientras estuvo fuera, alguien pudo ocupar la hora.
+        # Reponer puede chocar, porque mientras estuvo fuera alguien pudo
+        # ocupar la hora.
         bloque.activo = True
         try:
             bloque.full_clean(exclude=["dia"])
@@ -268,7 +263,7 @@ def editar_bloque(request):
         bloque.save(update_fields=["activo"])
         return _responder(request, elegido=bloque)
 
-    # Guardar y agregar son el mismo formulario: cambia la instancia, no la regla.
+    # Guardar y agregar usan el mismo formulario; lo que cambia es la instancia.
     pk = request.POST.get("bloque")
     if pk:
         bloque = get_object_or_404(Bloque, pk=pk)
@@ -282,5 +277,5 @@ def editar_bloque(request):
     if formulario.is_valid():
         formulario.save()
         return _responder(request, elegido=bloque)
-    # `cruce()` de nuevo solo en el camino del error, para poder senalar el otro.
+    # `cruce()` de nuevo solo en el camino del error, para señalar el otro.
     return _responder(request, error=_mensaje(formulario), elegido=bloque, choca=bloque.cruce())

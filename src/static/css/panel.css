@@ -1,12 +1,12 @@
-/* Cascaron del panel de administracion: lo que comparten las tres pestañas.
- * Lo propio de cada una vive en el static de su modulo.
- * Solo variables de marca.css: ningun color literal (docs/estilo.md). */
+/* Cascarón del panel de administración, lo que comparten las tres pestañas.
+ * Lo propio de cada una vive en el static de su módulo.
+ * Solo variables de marca.css, ningún color literal (docs/estilo.md). */
 
-/* Alpine tarda un instante en montar: sin esto lo que depende de x-show parpadea. */
+/* Alpine tarda un instante en montar y sin esto lo que usa x-show parpadea. */
 [x-cloak] { display: none !important; }
 
-/* Todo el encabezado —marca, titulo, quien sos y las pestañas— es un solo bloque
- * blanco. El filete de abajo hace de riel para la pestaña activa. */
+/* Todo el encabezado (marca, título, quién sos y las pestañas) es un solo
+ * bloque blanco. El filete de abajo hace de riel para la pestaña activa. */
 .techo { background: var(--superficie); border-bottom: 1px solid var(--borde); }
 .techo .dentro { max-width: 74rem; margin: 0 auto; padding: 0 1.5rem; }
 .techo .fila { display: flex; align-items: center; gap: 1rem; padding: .7rem 0 .6rem; }
@@ -43,7 +43,7 @@
 .btn.ico { min-width: 2rem; padding: 0; font-size: .95rem; }
 .btn.activa { background: var(--accion); color: var(--superficie); border-color: var(--accion); z-index: 1; }
 
-/* Los botones de un grupo comparten filete: se leen como un mando, no como tres. */
+/* Los botones de un grupo comparten filete para leerse como un solo mando. */
 .grupo { display: flex; }
 .grupo .btn { margin-left: -1px; }
 .grupo .btn:first-child { margin-left: 0; }

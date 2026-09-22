@@ -7,8 +7,8 @@
  * Regla: en el resto del CSS no se escribe un color literal. Si hace falta uno
  * que no está aquí, es que falta una decisión, no un hex. */
 
-/* Las fuentes vienen de Google Fonts. Si hubiera que servirlas nosotros —una
- * red sin salida a internet, o el RNF de transferibilidad— se descargan a
+/* Las fuentes vienen de Google Fonts. Si hubiera que servirlas nosotros (una
+ * red sin salida a internet, o el RNF de transferibilidad) se descargan a
  * static/fonts y este @import pasa a ser @font-face. */
 @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;500&display=swap");
 
@@ -17,8 +17,8 @@
   --fondo:        #ebf7fc;  /* fondo de página */
   --superficie:   #ffffff;  /* tarjetas, formularios */
   --borde:        #dbd5d0;  /* separadores y bordes de campo */
-  --tinta:        #2a4451;  /* texto principal — 9.4:1 sobre el fondo */
-  --tinta-suave:  #516e80;  /* texto secundario — 4.9:1, el mínimo aceptable */
+  --tinta:        #2a4451;  /* texto principal, 9.4:1 sobre el fondo */
+  --tinta-suave:  #516e80;  /* texto secundario, 4.9:1, el mínimo aceptable */
 
   /* --- Acción --- */
   --accion:       #006699;  /* botón principal, enlaces. Texto blanco encima: 6.3:1 */
@@ -54,8 +54,8 @@ h1, h2, h3, h4 {
 
 a { color: var(--accion); }
 
-/* El foco visible no se quita nunca: es la única pista que tiene quien navega
- * con teclado. */
+/* El foco visible no se quita nunca, porque es la única pista que tiene quien
+ * navega con teclado. */
 :focus-visible {
   outline: 2px solid var(--acento);
   outline-offset: 2px;

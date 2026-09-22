@@ -6,29 +6,29 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.dates import WEEKDAYS
 
-# Los nombres ya traducidos que trae Django. Importar `agenda.Dia` seria una
-# dependencia al reves: `configuracion` no depende de nadie (README.md).
+# Los nombres ya traducidos que trae Django. Importar `agenda.Dia` sería una
+# dependencia al revés, y `configuracion` no depende de nadie (README.md).
 DIAS_HABILES = [(n, WEEKDAYS[n]) for n in range(5)]
 
 
 class Parametros(models.Model):
     """Los umbrales con los que opera el sistema. Una sola fila.
 
-    Cada campo trae el valor por defecto que fijo el cliente (AC2). Quien decide
-    lee el parametro al resolver una solicitud nueva, asi que cambiarlo no toca
-    las ya enviadas (AC3).
+    Cada campo trae el valor por defecto que fijó el cliente (AC2). El parámetro
+    se lee al resolver una solicitud nueva, así que cambiarlo no toca las ya
+    enviadas (AC3).
 
-    Sin `help_text`: lo que hace cada umbral lo dice su descripcion en
-    `forms.SECCIONES`. Escrito en dos lugares terminaria diciendo dos cosas.
+    No llevan `help_text`: lo que hace cada umbral lo dice su descripción en
+    `forms.SECCIONES`, y escrito en dos lugares terminaría diciendo dos cosas.
     """
 
     pedir_dia = models.PositiveSmallIntegerField(
         "día límite para pedir", choices=DIAS_HABILES, default=4
     )
     pedir_hora = models.TimeField("hora límite para pedir", default=time(10, 0))
-    # La anticipacion minima del AC1, que se habia dado por eliminada: vuelve como
-    # semanas completas y no como dias, para que la fecha mas cercana sea siempre
-    # un lunes y el validador tenga la semana entera para revisar.
+    # La anticipación mínima del AC1. Vuelve medida en semanas completas para que
+    # la fecha más cercana caiga siempre en lunes y el validador tenga la semana
+    # entera para revisar.
     semanas_desfase = models.PositiveSmallIntegerField(
         "desfase mínimo", default=1,
         validators=[MinValueValidator(0), MaxValueValidator(8)],
@@ -48,7 +48,7 @@ class Parametros(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(10)],
     )
 
-    # Decision 17: la sancion corre sola y el administrador la gestiona despues.
+    # Decisión 17: la sanción corre sola y el administrador la gestiona después.
     inasistencias_para_sancion = models.PositiveSmallIntegerField(
         "inasistencias para penalizar", default=2,
         validators=[MinValueValidator(1), MaxValueValidator(10)],
@@ -58,7 +58,7 @@ class Parametros(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(365)],
     )
 
-    # Estaban en `settings`: el RNF 1 pide cambiarlos sin redesplegar.
+    # Estaban en `settings`, pero el RNF 1 pide cambiarlos sin redesplegar.
     intentos_maximos = models.PositiveSmallIntegerField(
         "intentos antes de bloquear", default=5,
         validators=[MinValueValidator(3), MaxValueValidator(20)],
@@ -68,8 +68,8 @@ class Parametros(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(1440)],
     )
 
-    # AC5: el cliente lo edita sin recompilar. Este texto es el marcador; el real
-    # lo redacta la Oficina de Educacion Virtual.
+    # AC5: el cliente lo edita sin recompilar. Este texto es provisorio, el real
+    # lo redacta la Oficina de Educación Virtual.
     terminos = models.TextField(
         "términos y condiciones", blank=True,
         default=(
@@ -91,26 +91,26 @@ class Parametros(models.Model):
         return "Parámetros del sistema"
 
     def save(self, *args, **kwargs):
-        # Fila unica: sin esto un `Parametros()` suelto crearia una segunda que
-        # nadie leeria, y el sistema operaria con dos verdades.
+        # Una sola fila: un `Parametros()` suelto crearía otra y el sistema
+        # tendría dos configuraciones distintas.
         self.pk = 1
         super().save(*args, **kwargs)
 
     @classmethod
     def cargar(cls):
-        """Los parametros vigentes, creando la fila con los valores por defecto si
-        no existe. Es el unico punto de entrada: nadie hace `objects.get`."""
+        """Los parámetros vigentes, creando la fila con los valores por defecto
+        si no existe. Es el único punto de entrada; nadie hace `objects.get`."""
         return cls.objects.get_or_create(pk=1)[0]
 
 
 class CambioParametro(models.Model):
-    """AC4: quien cambio que valor, de cuanto a cuanto y cuando."""
+    """AC4: quién cambió qué valor, de cuánto a cuánto y cuándo."""
 
     campo = models.CharField(max_length=50)
     antes = models.TextField()
     despues = models.TextField()
-    # SET_NULL y no PROTECT: la bitacora no puede impedir dar de baja a un
-    # administrador, pero tampoco desaparecer con el.
+    # SET_NULL porque la bitácora no puede impedir dar de baja a un
+    # administrador, ni desaparecer con él.
     quien = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
         related_name="cambios_de_configuracion",
@@ -130,6 +130,6 @@ class CambioParametro(models.Model):
         try:
             return Parametros._meta.get_field(self.campo).verbose_name
         except FieldDoesNotExist:
-            # Un parametro que se quito del modelo sigue en la bitacora: vale mas
-            # su nombre crudo que perder la fila.
+            # Un parámetro que se quitó del modelo sigue en la bitácora. Vale
+            # más su nombre crudo que perder la fila.
             return self.campo

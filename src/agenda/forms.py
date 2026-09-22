@@ -4,11 +4,11 @@ from .models import Bloque
 
 
 class BloqueForm(forms.ModelForm):
-    """Valida y nada mas: los campos los dibuja la plantilla, porque la duracion
-    se calcula en el navegador y no es una columna.
+    """Solo valida. Los campos los dibuja la plantilla porque la duración se
+    calcula en el navegador y no es una columna.
 
-    ModelForm y no `full_clean` a mano: si la hora viene rota, el formulario no la
-    escribe en la instancia y `Bloque.clean()` sigue comparando horas, no texto.
+    Es ModelForm para que una hora rota no llegue a la instancia y
+    `Bloque.clean()` siga comparando horas en vez de texto.
     """
 
     class Meta:

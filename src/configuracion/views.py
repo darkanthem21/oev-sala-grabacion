@@ -6,13 +6,13 @@ from .forms import ParametrosForm
 from .models import CambioParametro, Parametros
 from .services import guardar
 
-# El historial completo esta en la administracion de Django. Aca sirve ver lo
-# ultimo que se toco, que es como se detecta el cambio que uno no hizo.
+# El historial completo está en la administración de Django. Acá basta con lo
+# último que se tocó, que es como se detecta un cambio ajeno.
 ULTIMOS = 15
 
 
 def _guardados(valor):
-    """Llega de la barra de direcciones, asi que puede ser cualquier cosa."""
+    """Llega de la barra de direcciones, así que puede ser cualquier cosa."""
     try:
         return max(0, int(valor))
     except (TypeError, ValueError):
@@ -21,10 +21,10 @@ def _guardados(valor):
 
 @staff_member_required(login_url="login_gestion")
 def reglas(request):
-    """Los parametros con los que opera el sistema (US-04).
+    """Los parámetros con los que opera el sistema (US-04).
 
-    Se guarda con POST y se vuelve con una redireccion para que recargar no
-    reenvie el formulario y duplique las filas de la bitacora.
+    Se guarda con POST y se vuelve con una redirección, para que recargar no
+    reenvíe el formulario y duplique las filas de la bitácora.
     """
     parametros = Parametros.cargar()
 
@@ -44,7 +44,7 @@ def reglas(request):
     })
 
 
-# Marcador de posicion: Areas es US-05.
+# Marcador de posición; Áreas es US-05.
 @staff_member_required(login_url="login_gestion")
 def seccion(request, pestana):
     return render(request, "configuracion/seccion.html", {"pestana": pestana})

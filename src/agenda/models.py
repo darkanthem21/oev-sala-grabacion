@@ -22,19 +22,18 @@ def minutos(hora):
 
 
 class Bloque(models.Model):
-    """Un tramo de la plantilla semanal, no una fecha.
+    """Un tramo de la plantilla semanal, sin fecha.
 
-    La jornada se define una vez y se repite todas las semanas; suspender fechas
-    concretas es `bloqueo` (US-17). Con `fecha` —como en el diagrama del Drive—
-    editar la plantilla no significaria nada: cada semana serian filas nuevas.
-    La colacion no esta modelada: es el hueco entre dos bloques.
+    La jornada se define una vez y se repite todas las semanas. Suspender fechas
+    concretas es `bloqueo` (US-17). La colación no está modelada: es el hueco
+    entre dos bloques.
     """
 
     dia = models.PositiveSmallIntegerField("día", choices=Dia)
     inicio = models.TimeField()
     termino = models.TimeField("término")
-    # US-04 AC3: un bloque no se borra nunca. Desactivarlo lo saca de la jornada
-    # sin tocar las solicitudes que ya apuntan a el.
+    # US-04 AC3: un bloque nunca se borra. Desactivarlo lo saca de la jornada y
+    # las solicitudes que ya lo apuntan siguen resolviendo.
     activo = models.BooleanField(default=True)
 
     class Meta:
@@ -44,8 +43,8 @@ class Bloque(models.Model):
                 condition=Q(termino__gt=F("inicio")),
                 name="bloque_termina_despues_de_empezar",
             ),
-            # Parcial: un bloque quitado sigue en la tabla, y su hora tiene que
-            # quedar libre para uno nuevo.
+            # Parcial porque un bloque quitado sigue en la tabla y su hora
+            # tiene que quedar libre.
             models.UniqueConstraint(
                 fields=["dia", "inicio"],
                 condition=Q(activo=True),
@@ -63,8 +62,8 @@ class Bloque(models.Model):
     def cruce(self):
         """El bloque activo con el que se pisa, si hay alguno.
 
-        Devuelve el bloque y no un booleano para que la pantalla pueda señalarlo:
-        un error que dice cual es el otro se arregla solo.
+        Devuelve el bloque para que la pantalla pueda señalarlo. Un error que
+        dice cuál es el otro se arregla solo.
         """
         if self.inicio is None or self.termino is None or self.termino <= self.inicio:
             return None
@@ -77,8 +76,8 @@ class Bloque(models.Model):
         )
 
     def clean(self):
-        """El cruce no lo puede declarar la base sin una extension de Postgres, asi
-        que se valida aca. El unico y el check si son declarativos."""
+        """El cruce se valida acá porque declararlo en la base necesitaría una
+        extensión de Postgres. El único y el check sí son declarativos."""
         if self.inicio is None or self.termino is None:
             return  # Falta una hora: eso lo reporta `clean_fields`, no este.
         if self.termino <= self.inicio:
@@ -91,8 +90,8 @@ class Bloque(models.Model):
 
 
 def plantilla_semanal():
-    """Los bloques activos agrupados por dia de la semana. Uno desactivado dejo de
-    ser parte de la jornada."""
+    """Los bloques activos agrupados por día de la semana. Uno desactivado ya no
+    es parte de la jornada."""
     por_dia = defaultdict(list)
     for bloque in Bloque.objects.filter(activo=True):
         por_dia[bloque.dia].append(bloque)
@@ -100,15 +99,13 @@ def plantilla_semanal():
 
 
 def disponibilidad(desde, hasta):
-    """Que bloques tiene cada fecha del rango, ambos extremos incluidos.
+    """Qué bloques tiene cada fecha del rango, ambos extremos incluidos.
 
-    La jornada se define por dia de la semana y las reservas se piden por fecha:
-    esta funcion es la traduccion entre las dos, y es el unico lugar donde pasa.
-    Cuando existan los bloqueos puntuales (US-17) se descuentan aca dentro, y
-    quien consulta no se entera.
+    La jornada se define por día de la semana y las reservas se piden por fecha.
+    Esta función es la traducción entre las dos y el único lugar donde ocurre.
+    Los bloqueos puntuales (US-17) se van a descontar acá dentro.
 
-    Devuelve {fecha: [bloques]}. Una fecha sin jornada no aparece con la lista
-    vacia: no aparece.
+    Devuelve {fecha: [bloques]}. Una fecha sin jornada no aparece.
     """
     plantilla = plantilla_semanal()
     dias = {}
@@ -125,12 +122,12 @@ def primera_fecha_pedible(ahora=None):
     """El lunes de la primera semana para la que se puede pedir.
 
     Entre la solicitud y la fecha pedida tienen que pasar semanas completas
-    (`semanas_desfase`), y el limite semanal corre esa cuenta una semana mas en
-    cuanto se pasa: quien pide el viernes a las 11:00 ya esta pidiendo para la
-    semana siguiente a la que alcanzaba a las 09:00.
+    (`semanas_desfase`). Pasado el límite semanal la cuenta corre una semana más:
+    quien pide el viernes a las 11:00 ya pide para la semana siguiente a la que
+    alcanzaba a las 09:00.
 
-    Semanas y no dias para que la fecha mas cercana sea siempre un lunes: asi el
-    validador recibe la semana completa de una vez y no un dia cada dia.
+    Se cuenta en semanas para que la fecha más cercana caiga siempre en lunes y
+    el validador reciba la semana completa de una vez.
     """
     parametros = Parametros.cargar()
     ahora = timezone.localtime(ahora)

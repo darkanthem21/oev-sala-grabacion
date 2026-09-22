@@ -2,13 +2,13 @@ from datetime import time
 
 from django.db import migrations
 
-# Decision 1 del diseño: seis bloques de 90 min de lunes a viernes, con la
-# colacion entre las 12:40 y las 14:10, que no es una fila sino el hueco. Es el
-# "valor por defecto cargado" que pide US-04 AC2; desde aca la jornada se edita.
+# Decisión 1 del diseño: seis bloques de 90 min de lunes a viernes, con la
+# colación entre las 12:40 y las 14:10, que es el hueco y no una fila. Es el
+# "valor por defecto cargado" que pide US-04 AC2, y desde acá se edita.
 #
-# Pendiente con el cliente: de la Maza fijo bloques de 1,5 h (05/08, 16:03) y
-# Jose Tomas un minimo de reserva de 2 h (06/08, 18:31). La reunion del 21/08 no
-# dejo minuta, asi que esto es la propuesta del equipo y no una respuesta.
+# Pendiente con el cliente: de la Maza fijó bloques de 1,5 h (05/08) y José Tomás
+# un mínimo de reserva de 2 h (06/08). La reunión del 21/08 no dejó minuta, así
+# que esto es la propuesta del equipo y no una respuesta.
 HORARIO = [
     (time(8, 10), time(9, 40)),
     (time(9, 40), time(11, 10)),
@@ -34,6 +34,6 @@ def cargar(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [("agenda", "0001_initial")]
 
-    # Sin vuelta atras a proposito: revertir borraria la jornada que el
-    # administrador haya editado desde el panel.
+    # Sin vuelta atrás, porque revertir borraría la jornada que el administrador
+    # haya editado desde el panel.
     operations = [migrations.RunPython(cargar, migrations.RunPython.noop)]

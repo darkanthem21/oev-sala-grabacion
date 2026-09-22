@@ -2,8 +2,8 @@ from django import forms
 
 from .models import Parametros
 
-# Etiqueta, controles y descripcion de cada fila del panel. La descripcion dice
-# que hace el sistema con el valor; de donde salio el numero es cosa de
+# Etiqueta, controles y descripción de cada fila del panel. La descripción dice
+# qué hace el sistema con el valor; de dónde salió el número lo cuenta
 # `models.py`.
 SECCIONES = [
     ("Recepción de solicitudes", [
@@ -41,7 +41,7 @@ SECCIONES = [
     ]),
 ]
 
-# Va pegada al ultimo control de la fila: "8" no dice nada, "8 bloques" si.
+# Va pegada al último control de la fila, porque "8" no dice nada y "8 bloques" sí.
 UNIDADES = {
     "semanas_desfase": "semanas",
     "plazo_confirmacion_dias": "días antes",
@@ -55,16 +55,16 @@ UNIDADES = {
 
 
 class ParametrosForm(forms.ModelForm):
-    """Un campo por parametro. Los `min`/`max` del HTML salen de los validadores
-    del modelo, asi que el rango se escribe una vez y manda el del servidor."""
+    """Un campo por parámetro. Los `min`/`max` del HTML salen de los validadores
+    del modelo, así que el rango se escribe una vez y manda el del servidor."""
 
     class Meta:
         model = Parametros
         fields = "__all__"
         widgets = {
-            # `aria-label` porque comparte fila con el dia y el <label> visible
-            # es de ese: es el unico control sin etiqueta propia. Sin `format` el
-            # value sale con segundos y hay navegadores que lo descartan.
+            # `aria-label` porque comparte fila con el día y el <label> visible
+            # es de ese. Sin `format` el value sale con segundos y hay
+            # navegadores que lo descartan.
             "pedir_hora": forms.TimeInput(
                 format="%H:%M",
                 attrs={"type": "time", "step": 900, "aria-label": "Hora límite para pedir"},
@@ -73,8 +73,8 @@ class ParametrosForm(forms.ModelForm):
         }
 
     def secciones(self):
-        """Las filas listas para dibujar. `terminos` no esta aca: es un texto
-        largo y ocupa su propia tarjeta."""
+        """Las filas listas para dibujar. `terminos` no está acá porque es un
+        texto largo y ocupa su propia tarjeta."""
         return [
             (titulo, [self._fila(*fila) for fila in filas])
             for titulo, filas in SECCIONES
