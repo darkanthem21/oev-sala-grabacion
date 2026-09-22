@@ -121,6 +121,9 @@
  * se confunda con uno que ya existe. `pointer-events` apagado: si recibiera el
  * puntero, el `.self` de la rejilla dejaria de reconocer el hueco. */
 .fantasma {
+  /* Oculto salvo que el binding lo destape: asi no depende de x-cloak ni de que
+   * Alpine haya arrancado. */
+  display: none;
   position: absolute; left: 3px; right: 3px; box-sizing: border-box;
   padding: .25rem .4rem; pointer-events: none;
   border: 1px dashed var(--accion); background: var(--fondo);

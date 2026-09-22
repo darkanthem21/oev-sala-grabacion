@@ -131,9 +131,15 @@
                  @click.self="nuevoEn($event, {{ dia.numero }}, '{{ dia.fecha|date:"l" }}')"
                  @mousemove.self="apuntar($event, {{ dia.numero }})"
                  @mouseleave="apunta = null">
-              <div class="fantasma" aria-hidden="true" x-cloak
-                   x-show="apunta && apunta.dian === {{ dia.numero }}"
-                   :style="apunta && `top: ${porcentaje(apunta.min)}%; height: ${90 / largo * 100}%`">
+              {% comment %}Todo en `:style` y nada en `x-show`: con los dos en el mismo
+              elemento, Alpine escribe el atributo `style` entero y borra el
+              `display: none` que acaba de poner `x-show`. Como las cinco columnas
+              miran `apunta`, al moverse se reevaluaban las cinco y aparecia un
+              fantasma en cada dia. Oculto por defecto lo pone el CSS.{% endcomment %}
+              <div class="fantasma" aria-hidden="true"
+                   :style="apunta && apunta.dian === {{ dia.numero }}
+                           ? `display: block; top: ${porcentaje(apunta.min)}%; height: ${90 / largo * 100}%`
+                           : ''">
                 <span x-text="apunta && hora(apunta.min)"></span>
               </div>
               {% for bloque in dia.bloques %}
@@ -141,7 +147,11 @@
                         style="top: {{ bloque.posicion }}%; height: {{ bloque.largo }}%"
                         :class="elegido === {{ bloque.pk }} ? 'elegido' : ''"
                         :aria-pressed="elegido === {{ bloque.pk }}"
-                        @click="elegir({{ bloque.pk }}, '{{ dia.fecha|date:"l" }}', '{{ bloque.inicio|time:"H:i" }}', '{{ bloque.termino|time:"H:i" }}')">
+                        @click="elegir({{ bloque.pk }}, '{{ dia.fecha|date:"l" }}', '{{ bloque.inicio|time:"H:i" }}', '{{ bloque.termino|time:"H:i" }}')"
+                        {% comment %}`mouseleave` de la rejilla no se dispara al entrar a un hijo,
+                        asi que sin esto el aviso queda congelado donde estaba mientras se
+                        recorren los bloques, y la columna se llena de recuadros punteados.{% endcomment %}
+                        @mouseenter="apunta = null">
                   <span class="desde">{{ bloque.inicio|time:"H:i" }}</span><span
                     class="hasta">–{{ bloque.termino|time:"H:i" }}</span>
                 </button>
