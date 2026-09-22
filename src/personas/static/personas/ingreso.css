@@ -3,6 +3,11 @@
   width: 100%; max-width: 23rem; margin: 4rem auto;
   background: var(--superficie); border: 1px solid var(--borde); border-radius: 4px;
   padding: 2rem 1.75rem;
+  /* Las etiquetas son de bloque y ocupan el ancho entero de la tarjeta, asi que
+   * sin esto la franja vacia a la derecha de "Correo electronico" sigue siendo
+   * la etiqueta y muestra el cursor de escritura donde no hay nada que escribir.
+   * Los controles se lo vuelven a poner mas abajo. */
+  cursor: default;
 }
 .logo {
   display: block; width: 100%; max-width: 16rem; height: auto;
@@ -14,6 +19,7 @@
 label { display: block; font-weight: 500; font-size: .85rem; margin-bottom: .35rem; }
 input[type=email], input[type=password], input[type=text] {
   width: 100%; box-sizing: border-box; padding: .6rem .7rem; margin-bottom: 1.1rem;
+  cursor: text;
   border: 1px solid var(--borde); border-radius: 3px; font: inherit;
   background: var(--superficie); color: var(--tinta);
 }
