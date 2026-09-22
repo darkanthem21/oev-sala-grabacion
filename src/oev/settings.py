@@ -29,11 +29,18 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # El de seguridad va primero y el de clickjacking ultimo: uno mira la peticion
+    # antes que nadie y el otro la respuesta ya armada. Solos ya sirven nosniff,
+    # Referrer-Policy y COOP, que son los valores por defecto de Django.
+    # Sin SECURE_SSL_REDIRECT ni HSTS a proposito: el TLS y la redireccion los hace
+    # Caddy, y el dominio del curso lo comparten todos los grupos.
+    "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = "oev.urls"
