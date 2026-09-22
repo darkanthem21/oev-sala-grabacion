@@ -8,6 +8,29 @@
        get duracion() { return this.ini && this.fin ? this.min(this.fin) - this.min(this.ini) : '' },
        set duracion(v) { if (this.ini && v) this.fin = this.hora(this.min(this.ini) + Number(v)) },
        get abierto() { return this.elegido !== null || this.dian !== null },
+       desde: {{ desde_min|default:0 }}, largo: {{ largo_min|default:1 }},
+       /* Dónde caería un bloque si se hiciera clic. Null fuera de la rejilla. */
+       apunta: null,
+       minutoDe(e) {
+         const caja = e.currentTarget.getBoundingClientRect()
+         const m = this.desde + (e.clientY - caja.top) / caja.height * this.largo
+         return Math.min(Math.max(Math.round(m / 5) * 5, this.desde), this.desde + this.largo - 5)
+       },
+       apuntar(e, dian) { this.apunta = { dian, min: this.minutoDe(e) } },
+       porcentaje(min) { return (min - this.desde) / this.largo * 100 },
+       /* Dónde va un tramo de la columna, recortado a lo que la rejilla dibuja.
+          Devuelve el estilo entero porque Alpine escribe el atributo completo y
+          `x-show` junto a `:style` se pisan. */
+       tramo(desdeHora, hastaHora) {
+         const a = Math.max(this.min(desdeHora), this.desde)
+         const b = Math.min(this.min(hastaHora), this.desde + this.largo)
+         if (!(b > a)) return ''
+         return `display: block; top: ${this.porcentaje(a)}%; height: ${(b - a) / this.largo * 100}%`
+       },
+       nuevoEn(e, dian, dia) {
+         const i = this.minutoDe(e)
+         this.agregar(dian, dia, this.hora(i), this.hora(Math.min(i + 90, this.desde + this.largo)))
+       },
        elegir(pk, dia, i, f) {
          if (this.elegido === pk) { this.cerrar(); return }
          this.elegido = pk; this.dian = null; this.dia = dia; this.ini = i; this.fin = f
@@ -19,23 +42,27 @@
      }">
 
   <div class="barra" hx-target="#calendario" hx-swap="outerHTML" hx-push-url="true"
-       @keydown.window.arrow-left="if ($event.target === document.body) $refs.antes.click()"
-       @keydown.window.arrow-right="if ($event.target === document.body) $refs.luego.click()">
+       @keydown.window.arrow-left="if ($event.target === document.body) $refs.antes?.click()"
+       @keydown.window.arrow-right="if ($event.target === document.body) $refs.luego?.click()">
     <h2 class="periodo">{{ titulo }}</h2>
 
     <div class="mandos">
-      <div class="grupo">
-        <a class="btn ico" x-ref="antes"
-           href="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ anterior|date:'Y-m-d' }}"
-           hx-get="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ anterior|date:'Y-m-d' }}"
-           aria-label="{% if vista == 'mes' %}Mes anterior{% else %}Semana anterior{% endif %}">&larr;</a>
-        <a class="btn" href="{% url 'panel_bloques' %}?vista={{ vista }}"
-           hx-get="{% url 'panel_bloques' %}?vista={{ vista }}">Hoy</a>
-        <a class="btn ico" x-ref="luego"
-           href="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ siguiente|date:'Y-m-d' }}"
-           hx-get="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ siguiente|date:'Y-m-d' }}"
-           aria-label="{% if vista == 'mes' %}Mes siguiente{% else %}Semana siguiente{% endif %}">&rarr;</a>
-      </div>
+      {% comment %}Moverse de período solo significa algo sobre fechas, y la vista
+      semanal es la plantilla que se repite.{% endcomment %}
+      {% if vista == "mes" %}
+        <div class="grupo">
+          <a class="btn ico" x-ref="antes"
+             href="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ anterior|date:'Y-m-d' }}"
+             hx-get="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ anterior|date:'Y-m-d' }}"
+             aria-label="Mes anterior">&larr;</a>
+          <a class="btn" href="{% url 'panel_bloques' %}?vista=mes"
+             hx-get="{% url 'panel_bloques' %}?vista=mes">Hoy</a>
+          <a class="btn ico" x-ref="luego"
+             href="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ siguiente|date:'Y-m-d' }}"
+             hx-get="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ siguiente|date:'Y-m-d' }}"
+             aria-label="Mes siguiente">&rarr;</a>
+        </div>
+      {% endif %}
 
       <div class="grupo" role="group" aria-label="Forma de ver el calendario">
         <a class="btn {% if vista == 'mes' %}activa{% endif %}"
@@ -67,16 +94,11 @@
             <tr>
               {% for dia in semana %}
                 <td class="dia {% if dia.fuera %}fuera{% endif %} {% if dia.fecha == hoy %}hoy{% endif %}">
+                  {% comment %}Solo el número. La jornada se repite todas las semanas
+                  y ya se resume en la cabecera de cada columna. La celda queda libre
+                  para los bloqueos de US-17 y las reservas.{% endcomment %}
                   <div class="celda">
                     <span class="numero">{{ dia.fecha|date:"j" }}</span>
-                    {# La forma de la jornada, con las medidas de la vista semanal tumbadas. #}
-                    {% if dia.bloques %}
-                      <span class="franja" aria-hidden="true">
-                        {% for bloque in dia.bloques %}
-                          <span class="tramo" style="left: {{ bloque.posicion }}%; width: {{ bloque.largo }}%"></span>
-                        {% endfor %}
-                      </span>
-                    {% endif %}
                   </div>
                 </td>
               {% endfor %}
@@ -85,6 +107,11 @@
         </tbody>
       </table>
     </div>
+    <ul class="leyenda">
+      <li><span class="muestra hoy-m" aria-hidden="true"></span> Hoy</li>
+      <li><span class="muestra distinto-m" aria-hidden="true"></span>
+        Ese día de la semana tiene una jornada distinta a los demás.</li>
+    </ul>
     <p class="pista">La jornada se edita en la vista semanal: es la plantilla que se repite todas las semanas.</p>
 
   {% else %}
@@ -99,24 +126,53 @@
         {% for dia in dias %}
           <div class="columna {% if dia.fecha == hoy %}hoy{% endif %}">
             <div class="cabecera">
-              <span class="dsem">{{ dia.fecha|date:"D"|capfirst }}</span><span class="dnum">{{ dia.fecha|date:"j" }}</span>
+              {% comment %}El nombre del día, porque lo que se edita acá vale para
+              todos los martes.{% endcomment %}
+              <span class="dsem">{{ dia.fecha|date:"l"|capfirst }}</span>
               <button type="button" class="mas"
                       @click="agregar({{ dia.numero }}, '{{ dia.fecha|date:"l" }}', '{{ dia.proximo.inicio }}', '{{ dia.proximo.termino }}')"
                       aria-label="Agregar un bloque los {{ dia.fecha|date:'l' }}">+</button>
             </div>
-            <div class="rejilla">
+            {% comment %}Clic en el hueco crea el bloque a esa hora. `.self` deja fuera
+            los clics sobre un bloque existente, que son para editarlo.{% endcomment %}
+            <div class="rejilla"
+                 @click.self="nuevoEn($event, {{ dia.numero }}, '{{ dia.fecha|date:"l" }}')"
+                 @mousemove.self="apuntar($event, {{ dia.numero }})"
+                 @mouseleave="apunta = null">
+              {% comment %}Alpine escribe el atributo style completo, así que `x-show`
+              y `:style` juntos se pisan y el aviso aparecía en las cinco columnas. Todo
+              va en `:style`; ocultarlo por defecto es del CSS.{% endcomment %}
+              <div class="fantasma" aria-hidden="true"
+                   :style="!abierto && apunta && apunta.dian === {{ dia.numero }}
+                           ? `display: block; top: ${porcentaje(apunta.min)}%; height: ${90 / largo * 100}%`
+                           : ''">
+                <span x-text="apunta && hora(apunta.min)"></span>
+              </div>
+              {% comment %}El bloque que se está creando, dibujado mientras se ajustan
+              las horas en el editor. Se ve más firme que el aviso de hover, que se
+              apaga mientras tanto.{% endcomment %}
+              <div class="fantasma creando" aria-hidden="true"
+                   :style="elegido === null && dian === {{ dia.numero }} && ini && fin
+                           ? tramo(ini, fin) : ''">
+                <span x-text="ini && fin ? `${ini}–${fin}` : ''"></span>
+              </div>
               {% for bloque in dia.bloques %}
                 <button type="button" class="bloque {% if bloque.pk == choca %}choca{% endif %}"
                         style="top: {{ bloque.posicion }}%; height: {{ bloque.largo }}%"
                         :class="elegido === {{ bloque.pk }} ? 'elegido' : ''"
                         :aria-pressed="elegido === {{ bloque.pk }}"
-                        @click="elegir({{ bloque.pk }}, '{{ dia.fecha|date:"l" }}', '{{ bloque.inicio|time:"H:i" }}', '{{ bloque.termino|time:"H:i" }}')">
-                  <span class="desde">{{ bloque.inicio|time:"H:i" }}</span>
-                  <span class="hasta">{{ bloque.termino|time:"H:i" }}</span>
+                        @click="elegir({{ bloque.pk }}, '{{ dia.fecha|date:"l" }}', '{{ bloque.inicio|time:"H:i" }}', '{{ bloque.termino|time:"H:i" }}')"
+                        {% comment %}`mouseleave` de la rejilla no se dispara al entrar
+                        a un hijo, así que sin esto el aviso queda congelado al recorrer
+                        los bloques.{% endcomment %}
+                        @mouseenter="apunta = null">
+                  <span class="desde">{{ bloque.inicio|time:"H:i" }}</span><span
+                    class="hasta">–{{ bloque.termino|time:"H:i" }}</span>
                 </button>
-              {% empty %}
-                <p class="sin-bloques">Sin bloques</p>
               {% endfor %}
+              {% if not dia.bloques %}
+                <p class="sin-bloques">Sin bloques<span>Haz clic para agregar uno</span></p>
+              {% endif %}
             </div>
           </div>
         {% endfor %}
@@ -148,11 +204,11 @@
       <input type="hidden" name="vista" value="{{ vista }}">
       <input type="hidden" name="desde" value="{{ foco|date:'Y-m-d' }}">
 
+      {% comment %}Sin la advertencia de que vale para todas las semanas, porque la
+      pantalla ya no muestra fechas.{% endcomment %}
       <p class="que">
-        <span x-show="elegido !== null">Bloque de los <strong x-text="dia"></strong>.
-          El cambio vale para <strong>todos los <span x-text="dia"></span></strong>, no para una fecha sola.</span>
-        <span x-show="elegido === null">Bloque nuevo los <strong x-text="dia"></strong>,
-          todas las semanas.</span>
+        <span x-show="elegido !== null">Bloque de los <strong x-text="dia"></strong>.</span>
+        <span x-show="elegido === null">Bloque nuevo los <strong x-text="dia"></strong>.</span>
       </p>
 
       <div class="campos">
