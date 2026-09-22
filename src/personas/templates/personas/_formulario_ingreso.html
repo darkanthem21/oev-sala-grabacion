@@ -1,6 +1,6 @@
 {% comment %}
-htmx reemplaza este formulario cuando hay error: sin recargar y sin perder el
-correo escrito. Al entrar bien la vista responde 204 + HX-Redirect.
+htmx reemplaza este formulario cuando hay error, sin recargar y sin perder el
+correo escrito. Al entrar bien la vista responde 204 con HX-Redirect.
 {% endcomment %}
 <form id="ingreso" hx-post="{% url ruta %}" hx-target="#ingreso" hx-swap="outerHTML">
   {% csrf_token %}
