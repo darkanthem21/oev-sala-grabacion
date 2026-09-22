@@ -1,11 +1,10 @@
 /* El calendario de la plantilla semanal.
  *
- * La idea: el mes es la semana alejada. Las dos vistas dibujan la misma jornada
- * con las mismas filas —una fila son 5 minutos, y en que fila cae cada bloque lo
- * calcula el modelo— y solo cambia la altura de la fila. Por eso el hueco de la
- * colacion se reconoce igual en un mes que en una semana.
+ * La vista semanal dibuja la jornada proporcional al minuto, con el hueco de la
+ * colación visible como tal. La mensual es solo la grilla de días: la jornada se
+ * repite todas las semanas y se resume en la cabecera de cada columna.
  *
- * Solo variables de marca.css: ningun color literal (docs/estilo.md). */
+ * Solo variables de marca.css, ningún color literal (docs/estilo.md). */
 
 .barra {
   display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
@@ -20,15 +19,15 @@
   padding: .5rem .7rem; border-bottom: 1px solid var(--borde); text-align: left;
   font-family: var(--fuente-titulo); font-weight: 700; font-size: .7rem; color: var(--tinta-suave);
 }
-/* La plantilla se repite todas las semanas: cuanta jornada tiene cada dia se
- * dice una vez por columna, no treinta veces en las celdas. */
+/* La plantilla se repite todas las semanas, así que cuánta jornada tiene cada
+ * día se dice una vez por columna. */
 .jornada {
   display: block; margin-top: .1rem;
   font-family: var(--fuente-texto); font-weight: 400; color: var(--tinta-suave);
   font-variant-numeric: tabular-nums;
 }
-/* El dia que se sale del molde de los otros cuatro. Se marca la columna, no cada
- * celda, porque la diferencia es del dia de la semana y no de la fecha. */
+/* El día que se sale del molde de los otros cuatro. Se marca la columna porque
+ * la diferencia es del día de la semana, no de la fecha. */
 .mes th.distinto { color: var(--tinta); box-shadow: inset 0 -2px 0 var(--precaucion); }
 .dia { width: 20%; padding: 0; border: 1px solid var(--borde); border-top: 0; }
 .dia:first-child { border-left: 0; }
@@ -40,13 +39,12 @@
 .numero { font-size: .95rem; font-weight: 500; font-variant-numeric: tabular-nums; }
 .dia.fuera { background: var(--fondo); }
 .dia.fuera .numero { color: var(--tinta-suave); }
-/* Hoy se marca con un filete al canto y no con un relleno: el acento de marca da
- * 3.0:1 contra blanco, asi que no puede llevar texto encima (marca.css:27). */
+/* Hoy se marca con un filete al canto. El acento de marca da 3.0:1 contra
+ * blanco, así que no puede llevar texto encima (marca.css:27). */
 .dia.hoy { box-shadow: inset 3px 0 0 var(--acento); }
 .dia.hoy .numero { font-weight: 700; }
 
-/* Que significa cada marca de la vista mensual. Dos marcas son mas de las que
- * alguien adivina mirando. */
+/* Qué significa cada marca de la vista mensual, porque nadie las adivina. */
 .leyenda {
   display: flex; flex-wrap: wrap; gap: .35rem 1.25rem;
   margin: .7rem 0 0; padding: 0; list-style: none;
@@ -58,8 +56,8 @@
 .distinto-m { background: var(--superficie); box-shadow: inset 0 -2px 0 var(--precaucion), inset 0 0 0 1px var(--borde); }
 
 /* --- vista semanal, proporcional al minuto --- */
-/* `--horas` lo pone la vista: es cuantas horas mide la jornada dibujada. Todo lo
- * demas cuelga de ahi, asi que la rejilla crece si aparece un bloque nocturno. */
+/* `--horas` lo pone la vista y es cuántas horas mide la jornada dibujada. Todo
+ * lo demás cuelga de ahí, así que la rejilla crece con un bloque nocturno. */
 .semana { display: grid; grid-template-columns: 3.4rem repeat(5, minmax(6.5rem, 1fr)); min-width: 44rem; }
 .regla, .rejilla { position: relative; height: calc(var(--horas) * 3rem); }
 .regla { margin-top: 2.25rem; }
@@ -75,8 +73,9 @@
   height: 2.25rem; border-bottom: 1px solid var(--borde);
   font-size: .78rem; color: var(--tinta-suave);
 }
-/* Visible siempre: es la via por teclado de lo que el mouse hace clicando la
- * rejilla, y escondida hasta el hover no existe para quien no la conoce. */
+/* Visible siempre, porque es la vía por teclado de lo que el mouse hace
+ * clicando la rejilla. Escondida hasta el hover no existe para quien no la
+ * conoce. */
 .mas {
   position: absolute; right: 2px; width: 1.4rem; height: 1.4rem; padding: 0;
   border: 1px solid var(--borde); background: var(--superficie); color: var(--accion);
@@ -86,19 +85,25 @@
 .dsem { font-family: var(--fuente-titulo); font-weight: 700; }
 .columna.hoy .cabecera { color: var(--tinta); box-shadow: inset 0 -2px 0 var(--acento); }
 
-/* Una linea por hora. Es lo que deja ver que la colacion es un hueco y no una
- * caja mas. */
+/* Una línea por hora, que es lo que deja ver la colación como un hueco. */
 .rejilla {
   background-image: repeating-linear-gradient(to bottom, var(--borde) 0 1px, transparent 1px 3rem);
   cursor: cell;
 }
 
-/* Donde caeria el bloque si se hiciera clic. Punteado y sin relleno para que no
- * se confunda con uno que ya existe. `pointer-events` apagado: si recibiera el
- * puntero, el `.self` de la rejilla dejaria de reconocer el hueco. */
+/* Dónde caería el bloque si se hiciera clic. Punteado y sin relleno para que no
+ * se confunda con uno que ya existe. Sin `pointer-events`, porque si recibiera
+ * el puntero el `.self` de la rejilla dejaría de reconocer el hueco. */
+/* El bloque que se está creando. Se dibuja firme y por encima de los que ya
+ * existen, para que un cruce se vea antes de intentar guardarlo. */
+.fantasma.creando {
+  border-style: solid; border-left-width: 3px; z-index: 1;
+  background: var(--superficie); color: var(--tinta);
+}
+
 .fantasma {
-  /* Oculto salvo que el binding lo destape: asi no depende de x-cloak ni de que
-   * Alpine haya arrancado. */
+  /* Oculto hasta que el binding lo destape, así no depende de que Alpine haya
+   * arrancado. */
   display: none;
   position: absolute; left: 3px; right: 3px; box-sizing: border-box;
   padding: .25rem .4rem; pointer-events: none;
@@ -106,9 +111,8 @@
   font-size: .7rem; color: var(--accion); font-variant-numeric: tabular-nums;
 }
 
-/* Las dos horas juntas arriba y no una en cada punta: en un bloque de cinco
- * horas las puntas quedan a cinco horas de distancia y dejan de leerse como un
- * rango. El borde del bloque ya dice donde empieza y donde termina. */
+/* Las dos horas juntas arriba. En un bloque de cinco horas, una en cada punta
+ * queda demasiado separada para leerse como un rango. */
 .bloque {
   position: absolute; left: 3px; right: 3px; box-sizing: border-box;
   padding: .25rem .4rem; overflow: hidden; cursor: pointer; text-align: left;
@@ -120,23 +124,23 @@
 .bloque:hover { border-color: var(--accion); }
 .bloque.elegido { background: var(--accion); border-color: var(--accion); color: var(--superficie); }
 .bloque.elegido .hasta { color: var(--superficie); }
-/* El otro lado del choque: el error dice la hora y aca se ve cual es. */
+/* El otro lado del choque: el error dice la hora y acá se ve cuál es. */
 .bloque.choca { border-color: var(--alerta); background: var(--fondo); }
 
-/* Una columna vacia no es un error: es un dia al que la plantilla no le puso
- * nada. El + de la cabecera es lo que la llena. */
+/* Una columna vacía es un día al que la plantilla no le puso nada, no un
+ * error. El + de la cabecera es lo que la llena. */
 .sin-bloques {
   position: absolute; inset: 0; margin: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15rem;
   font-size: .7rem; color: var(--tinta-suave); text-align: center;
-  /* Cubre la rejilla entera: si recibiera el clic, en un dia vacio —justo donde
-   * mas falta hace agregar— no se podria crear nada. */
+  /* Cubre la rejilla entera, así que si recibiera el clic no se podría crear
+   * nada justo en los días vacíos. */
   pointer-events: none;
 }
 .sin-bloques span { font-size: .65rem; }
 
 /* --- editor del bloque elegido --- */
-/* Pegado abajo: la rejilla es alta y el bloque que se esta editando suele quedar
+/* Pegado abajo porque la rejilla es alta y el bloque que se está editando queda
  * fuera de pantalla si el editor vive arriba. */
 .editor {
   position: sticky; bottom: 0; z-index: 2; margin-top: .75rem; padding: .75rem .9rem;
@@ -145,8 +149,8 @@
 .editor .que { margin: 0 0 .6rem; font-size: .82rem; color: var(--tinta-suave); }
 .editor .que strong { color: var(--tinta); font-weight: 500; }
 
-/* El naranja de marca da 3.5:1 sobre el fondo, por debajo del 4.5:1 que exige el
- * texto: va como filete al costado y el mensaje queda en tinta (marca.css:28). */
+/* El naranja de marca da 3.5:1 sobre el fondo, por debajo del 4.5:1 que exige
+ * el texto, así que va como filete y el mensaje queda en tinta (marca.css:28). */
 .aviso {
   margin: 0 0 .6rem; padding: .5rem .7rem; font-size: .82rem;
   background: var(--fondo); border-left: 3px solid var(--alerta);
@@ -169,13 +173,13 @@
 
 .pista { margin: .6rem 0 0; font-size: .8rem; color: var(--tinta-suave); }
 
-/* Quitar es reversible, asi que no pregunta antes: ofrece deshacer despues. */
+/* Quitar es reversible, así que no pregunta antes y ofrece deshacer después. */
 .deshacer {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   margin-top: .6rem; padding: .5rem .7rem; font-size: .82rem;
   background: var(--fondo); border-left: 3px solid var(--info);
 }
 
-/* Un boton rojo grita mas de lo que una baja logica merece. */
+/* Un botón rojo grita más de lo que una baja lógica merece. */
 .btn.peligro { color: var(--tinta); }
 .btn.peligro:hover { border-color: var(--alerta); background: var(--fondo); }
