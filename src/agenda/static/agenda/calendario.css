@@ -45,26 +45,7 @@
 .dia.hoy { box-shadow: inset 3px 0 0 var(--acento); }
 .dia.hoy .numero { font-weight: 700; }
 
-/* La forma de la jornada, con las mismas medidas que la vista semanal tumbadas:
- * como van en porcentaje, la misma cifra vale en una columna alta y en esta
- * franja. Horizontal porque la celda del mes es ancha y baja; en vertical seis
- * bloques quedaban en dos milimetros. Un dia sin bloques no dibuja nada. */
-.franja { position: relative; height: 9px; background: var(--fondo); }
-.dia.fuera .franja { background: var(--superficie); }
-/* Los dias de otro mes son contexto, no contenido: se atenuan enteros en vez de
- * pintarse con otro color, que sumaria un significado mas a la pantalla. */
-.dia.fuera .franja, .dia.fuera .tramo { opacity: .45; }
-.tramo {
-  position: absolute; top: 0; bottom: 0; box-sizing: border-box;
-  /* Azul de accion y no --info: sobre el fondo de la franja, --info daba 1.9:1 y
-   * la jornada no se distinguia del hueco. */
-  background: var(--accion);
-  /* El filete separador se deja transparente y deja ver la franja de atras, sea
-   * cual sea su color: asi dos bloques pegados no se leen como uno solo. */
-  border-right: 1px solid transparent; background-clip: padding-box;
-}
-
-/* Que significa cada marca de la vista mensual. Tres marcas son mas de las que
+/* Que significa cada marca de la vista mensual. Dos marcas son mas de las que
  * alguien adivina mirando. */
 .leyenda {
   display: flex; flex-wrap: wrap; gap: .35rem 1.25rem;
@@ -73,10 +54,6 @@
 }
 .leyenda li { display: flex; align-items: center; gap: .4rem; }
 .muestra { flex: none; width: 1.6rem; height: .7rem; }
-.jornada-m {
-  background: var(--fondo);
-  background-image: linear-gradient(to right, var(--accion) 0 55%, transparent 55% 70%, var(--accion) 70% 100%);
-}
 .hoy-m { background: var(--superficie); box-shadow: inset 3px 0 0 var(--acento), inset 0 0 0 1px var(--borde); }
 .distinto-m { background: var(--superficie); box-shadow: inset 0 -2px 0 var(--precaucion), inset 0 0 0 1px var(--borde); }
 

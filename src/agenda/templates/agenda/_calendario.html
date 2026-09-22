@@ -86,16 +86,13 @@
             <tr>
               {% for dia in semana %}
                 <td class="dia {% if dia.fuera %}fuera{% endif %} {% if dia.fecha == hoy %}hoy{% endif %}">
+                  {% comment %}Solo el numero. La jornada es la misma todos los martes,
+                  asi que dibujarla en cada celda la repetia veinte veces sin agregar
+                  nada: se dice una vez por columna, arriba. La celda queda para lo que
+                  si depende de la fecha —los bloqueos de US-17 y las reservas—, que es
+                  para lo que sirve mirar un mes.{% endcomment %}
                   <div class="celda">
                     <span class="numero">{{ dia.fecha|date:"j" }}</span>
-                    {# La forma de la jornada, con las medidas de la vista semanal tumbadas. #}
-                    {% if dia.bloques %}
-                      <span class="franja" aria-hidden="true">
-                        {% for bloque in dia.bloques %}
-                          <span class="tramo" style="left: {{ bloque.posicion }}%; width: {{ bloque.largo }}%"></span>
-                        {% endfor %}
-                      </span>
-                    {% endif %}
                   </div>
                 </td>
               {% endfor %}
@@ -105,8 +102,6 @@
       </table>
     </div>
     <ul class="leyenda">
-      <li><span class="muestra jornada-m" aria-hidden="true"></span>
-        La barra dibuja la jornada del día: dónde empieza y termina cada bloque, y el hueco de la colación.</li>
       <li><span class="muestra hoy-m" aria-hidden="true"></span> Hoy</li>
       <li><span class="muestra distinto-m" aria-hidden="true"></span>
         Ese día de la semana tiene una jornada distinta a los demás.</li>
