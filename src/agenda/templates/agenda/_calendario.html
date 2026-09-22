@@ -33,23 +33,28 @@
      }">
 
   <div class="barra" hx-target="#calendario" hx-swap="outerHTML" hx-push-url="true"
-       @keydown.window.arrow-left="if ($event.target === document.body) $refs.antes.click()"
-       @keydown.window.arrow-right="if ($event.target === document.body) $refs.luego.click()">
+       @keydown.window.arrow-left="if ($event.target === document.body) $refs.antes?.click()"
+       @keydown.window.arrow-right="if ($event.target === document.body) $refs.luego?.click()">
     <h2 class="periodo">{{ titulo }}</h2>
 
     <div class="mandos">
-      <div class="grupo">
-        <a class="btn ico" x-ref="antes"
-           href="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ anterior|date:'Y-m-d' }}"
-           hx-get="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ anterior|date:'Y-m-d' }}"
-           aria-label="{% if vista == 'mes' %}Mes anterior{% else %}Semana anterior{% endif %}">&larr;</a>
-        <a class="btn" href="{% url 'panel_bloques' %}?vista={{ vista }}"
-           hx-get="{% url 'panel_bloques' %}?vista={{ vista }}">Hoy</a>
-        <a class="btn ico" x-ref="luego"
-           href="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ siguiente|date:'Y-m-d' }}"
-           hx-get="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ siguiente|date:'Y-m-d' }}"
-           aria-label="{% if vista == 'mes' %}Mes siguiente{% else %}Semana siguiente{% endif %}">&rarr;</a>
-      </div>
+      {% comment %}Moverse de periodo solo significa algo sobre fechas. La vista
+      semanal es la plantilla que se repite, asi que ahi no hay semana anterior
+      ni siguiente a la que ir.{% endcomment %}
+      {% if vista == "mes" %}
+        <div class="grupo">
+          <a class="btn ico" x-ref="antes"
+             href="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ anterior|date:'Y-m-d' }}"
+             hx-get="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ anterior|date:'Y-m-d' }}"
+             aria-label="Mes anterior">&larr;</a>
+          <a class="btn" href="{% url 'panel_bloques' %}?vista=mes"
+             hx-get="{% url 'panel_bloques' %}?vista=mes">Hoy</a>
+          <a class="btn ico" x-ref="luego"
+             href="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ siguiente|date:'Y-m-d' }}"
+             hx-get="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ siguiente|date:'Y-m-d' }}"
+             aria-label="Mes siguiente">&rarr;</a>
+        </div>
+      {% endif %}
 
       <div class="grupo" role="group" aria-label="Forma de ver el calendario">
         <a class="btn {% if vista == 'mes' %}activa{% endif %}"
@@ -120,7 +125,9 @@
         {% for dia in dias %}
           <div class="columna {% if dia.fecha == hoy %}hoy{% endif %}">
             <div class="cabecera">
-              <span class="dsem">{{ dia.fecha|date:"D"|capfirst }}</span><span class="dnum">{{ dia.fecha|date:"j" }}</span>
+              {% comment %}El nombre del dia y no la fecha: lo que se edita aca vale
+              para todos los martes, no para el martes 22.{% endcomment %}
+              <span class="dsem">{{ dia.fecha|date:"l"|capfirst }}</span>
               <button type="button" class="mas"
                       @click="agregar({{ dia.numero }}, '{{ dia.fecha|date:"l" }}', '{{ dia.proximo.inicio }}', '{{ dia.proximo.termino }}')"
                       aria-label="Agregar un bloque los {{ dia.fecha|date:'l' }}">+</button>
@@ -190,11 +197,11 @@
       <input type="hidden" name="vista" value="{{ vista }}">
       <input type="hidden" name="desde" value="{{ foco|date:'Y-m-d' }}">
 
+      {% comment %}Sin la advertencia de que "vale para todas las semanas": la
+      pantalla ya no muestra fechas, asi que no hay de que desdecirse.{% endcomment %}
       <p class="que">
-        <span x-show="elegido !== null">Bloque de los <strong x-text="dia"></strong>.
-          El cambio vale para <strong>todos los <span x-text="dia"></span></strong>, no para una fecha sola.</span>
-        <span x-show="elegido === null">Bloque nuevo los <strong x-text="dia"></strong>,
-          todas las semanas.</span>
+        <span x-show="elegido !== null">Bloque de los <strong x-text="dia"></strong>.</span>
+        <span x-show="elegido === null">Bloque nuevo los <strong x-text="dia"></strong>.</span>
       </p>
 
       <div class="campos">

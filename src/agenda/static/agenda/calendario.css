@@ -107,7 +107,6 @@
 }
 .mas:hover { border-color: var(--accion); }
 .dsem { font-family: var(--fuente-titulo); font-weight: 700; }
-.dnum { font-variant-numeric: tabular-nums; }
 .columna.hoy .cabecera { color: var(--tinta); box-shadow: inset 0 -2px 0 var(--acento); }
 
 /* Una linea por hora. Es lo que deja ver que la colacion es un hueco y no una

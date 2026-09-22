@@ -47,14 +47,17 @@ def _correr(dia, vista, signo):
     return (dia.replace(day=28) + timedelta(days=4)).replace(day=1)
 
 
-def _titulo(vista, foco, fechas):
-    """El periodo que se esta mirando, escrito como lo diria una persona."""
+def _titulo(vista, foco):
+    """Que se esta mirando, escrito como lo diria una persona.
+
+    La semanal no lleva fechas y no es un descuido: es la plantilla que se repite
+    todas las semanas, no una semana concreta. Titularla "21-25 de septiembre"
+    hacia creer que lo editado valia solo para esos cinco dias, que es justo lo
+    que confundio a la contraparte.
+    """
     if vista == "mes":
         return date_format(foco, "F Y").capitalize()
-    inicio, fin = fechas[0], fechas[-1]
-    if inicio.month == fin.month:
-        return f"{inicio.day}–{fin.day} de {date_format(fin, 'F Y')}"
-    return f"{date_format(inicio, 'j F')} – {date_format(fin, 'j F Y')}"
+    return "Jornada semanal"
 
 
 def _ventana(plantilla):
@@ -192,7 +195,7 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None):
         "vista": vista,
         "foco": foco,
         "hoy": hoy,
-        "titulo": _titulo(vista, foco, fechas),
+        "titulo": _titulo(vista, foco),
         "reloj": _reloj(desde, hasta, largo),
         # Cuantas horas mide la rejilla: el alto de la columna sale de aca.
         "altura": largo // 60,
