@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from configuracion.models import Parametros
 
-from .models import Usuario
+from .models import Rol, Usuario
 
 # AC4: el mismo texto para credenciales malas y para correo inexistente. Decir
 # "ese correo no existe" le regala al atacante la lista de cuentas.
@@ -28,10 +28,16 @@ def destino_tras_login(usuario):
     autenticación, el bloqueo por intentos y la recuperación de clave viven en un
     solo lugar; lo que cambia es la plantilla y a quién se deja pasar.
 
-    US-04: el administrador entra directo a su panel. El rol todavía no es un
-    grupo —eso es US-08—, así que decide el mismo permiso que abre /admin.
+    Los roles ya son grupos de Django (US-08 AC6), así que alguien puede tener
+    varios: el orden de abajo es la prioridad, no una clasificación. `is_staff`
+    sigue contando como administrador porque el superusuario que crea el
+    despliegue no pertenece a ningún grupo.
+
+    Validación (US-07) y apoyo (US-14) no tienen panel propio todavía y caen en
+    el mismo marcador de posición que el solicitante. Cuando existan se cambian
+    estas dos líneas.
     """
-    if usuario.is_staff:
+    if usuario.is_staff or usuario.tiene_rol(Rol.ADMINISTRADOR):
         return reverse("panel_bloques")
     return reverse("panel")
 
@@ -57,12 +63,27 @@ def _registrar_fallo(usuario):
     usuario.save(update_fields=["intentos_fallidos", "bloqueado_hasta"])
 
 
-def entrar(request, plantilla="personas/login.html", ruta="login", solo_staff=False):
-    """Las dos puertas del sistema. La de gestion cambia la plantilla y a quien
-    deja pasar; la autenticacion, el bloqueo y la recuperacion de clave son las
-    mismas para ambas."""
+def _puede_pasar(usuario, rol):
+    """Quien cruza esta puerta.
+
+    `is_staff` vale en la de administracion ademas del grupo: el superusuario que
+    crea el despliegue no pertenece a ninguno, y sin esto quedaria afuera de su
+    propia puerta la primera vez que entra.
+    """
+    if rol is None:
+        return True
+    if rol == Rol.ADMINISTRADOR and usuario.is_staff:
+        return True
+    return usuario.tiene_rol(rol)
+
+
+def entrar(request, plantilla="personas/login.html", ruta="login", rol=None, titulo=None):
+    """Las puertas del sistema. Cada una cambia la plantilla, el encabezado y a
+    quien deja pasar; la autenticacion, el bloqueo por intentos y la recuperacion
+    de clave son las mismas para todas."""
+    contexto = {"form": AuthenticationForm(), "ruta": ruta, "titulo": titulo}
     if request.method != "POST":
-        return render(request, plantilla, {"form": AuthenticationForm(), "ruta": ruta})
+        return render(request, plantilla, contexto)
 
     form = AuthenticationForm(request, data=request.POST)
     usuario = Usuario.objects.filter(email__iexact=request.POST.get("username", "")).first()
@@ -75,10 +96,10 @@ def entrar(request, plantilla="personas/login.html", ruta="login", solo_staff=Fa
 
     if form.is_valid():
         entrante = form.get_user()
-        # La puerta de gestion no responde "no eres administrador": ese mensaje la
+        # Una puerta de rol no responde "no eres administrador": ese mensaje la
         # convierte en un oraculo para saber que correos existen y cuales mandan.
         # Mismo texto que una clave mala, y sin sesion.
-        if solo_staff and not entrante.is_staff:
+        if not _puede_pasar(entrante, rol):
             return _con_error(request, form, ERROR_CREDENCIALES, ruta)
         if entrante.intentos_fallidos or entrante.bloqueado_hasta:
             entrante.intentos_fallidos = 0

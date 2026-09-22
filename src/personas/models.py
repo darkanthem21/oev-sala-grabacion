@@ -22,6 +22,20 @@ class Area(models.Model):
         return self.nombre
 
 
+class Rol(models.TextChoices):
+    """Los roles del sistema, que son grupos de Django y no un campo.
+
+    US-08 AC6 permite varios a la vez —hay quien valida y ademas pide la sala—,
+    y un campo obligaria a elegir uno. El valor es el nombre del grupo: asi la
+    migracion que los crea y el codigo que los pregunta leen lo mismo.
+    """
+
+    ADMINISTRADOR = "Administrador", "administrador"
+    VALIDADOR = "Validador", "validador"
+    APOYO = "Personal de apoyo", "personal de apoyo"
+    SOLICITANTE = "Solicitante", "solicitante"
+
+
 class UsuarioManager(UserManager):
     """El de Django exige `username`; acá la identidad es el correo."""
 
@@ -64,6 +78,10 @@ class Usuario(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def tiene_rol(self, *roles):
+        """Si pertenece a alguno de esos grupos. Una consulta, no una por rol."""
+        return self.groups.filter(name__in=roles).exists()
 
     @property
     def esta_bloqueado(self):

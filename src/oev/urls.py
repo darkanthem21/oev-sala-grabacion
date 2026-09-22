@@ -6,6 +6,7 @@ from django.views.generic import RedirectView
 from agenda import views as agenda
 from configuracion import views as configuracion
 from personas import views
+from personas.models import Rol
 
 urlpatterns = [
     path("", views.panel, name="panel"),
@@ -27,13 +28,30 @@ urlpatterns = [
     # US-04. Cada pestaña del panel la sirve su propio modulo: los bloques son de
     # agenda, no de configuracion, y asi `configuracion` sigue sin depender de
     # nadie (README.md). El cascaron con las pestañas es una plantilla compartida.
-    # US-01 + US-04: la administracion entra por su propia puerta. Reusa `entrar`,
-    # asi que comparte autenticacion, bloqueo por intentos y recuperacion de clave.
+    # US-01 + US-08: una puerta por rol, ninguna enlazada desde el sitio publico.
+    # Todas reusan `entrar`, asi que comparten autenticacion, bloqueo por intentos
+    # y recuperacion de clave; lo que cambia es el encabezado y el grupo que deja
+    # pasar. Ninguna dice "no eres de este rol": seria un oraculo.
     path(
         "configuracion/entrar/",
         views.entrar,
-        {"plantilla": "personas/gestion.html", "ruta": "login_gestion", "solo_staff": True},
+        {"plantilla": "personas/gestion.html", "ruta": "login_gestion",
+         "rol": Rol.ADMINISTRADOR, "titulo": "Administración"},
         name="login_gestion",
+    ),
+    path(
+        "validacion/entrar/",
+        views.entrar,
+        {"plantilla": "personas/gestion.html", "ruta": "login_validacion",
+         "rol": Rol.VALIDADOR, "titulo": "Validación"},
+        name="login_validacion",
+    ),
+    path(
+        "apoyo/entrar/",
+        views.entrar,
+        {"plantilla": "personas/gestion.html", "ruta": "login_apoyo",
+         "rol": Rol.APOYO, "titulo": "Personal de apoyo"},
+        name="login_apoyo",
     ),
     path("configuracion/", RedirectView.as_view(pattern_name="panel_bloques")),
     path("configuracion/bloques/", agenda.bloques, name="panel_bloques"),
