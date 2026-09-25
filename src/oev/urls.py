@@ -6,6 +6,7 @@ from django.views.generic import RedirectView
 from agenda import views as agenda
 from configuracion import views as configuracion
 from personas import views
+from uso import views as uso
 
 urlpatterns = [
     path("", views.panel, name="panel"),
@@ -41,4 +42,5 @@ urlpatterns = [
     path("configuracion/areas/", configuracion.seccion, {"pestana": "areas"}, name="panel_areas"),
     path("configuracion/reglas/", configuracion.reglas, name="panel_reglas"),
     path("admin/", admin.site.urls),
+    path("checklist/", uso.checklist, name="checklist"),
 ]
