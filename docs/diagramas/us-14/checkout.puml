@@ -1,0 +1,30 @@
+@startuml checkout
+!include ../estilo.iuml
+title Acceder al check-out de un bloque (US-14)
+hide footbox
+autonumber "<b>0."
+
+actor "Personal de apoyo" as A
+participant "Vista del personal de apoyo" as N <<presentación>>
+participant Uso as V <<dominio>>
+participant "Base de datos" as J <<persistencia>>
+
+note over J : Hoy son datos de prueba:\nun JSON y la sesión
+
+A -> N : Selecciona "Hacer check-out"
+N -> V : Solicita el check-out del bloque
+V -> J : Obtiene la reserva
+
+alt El bloque no ha terminado o fue cancelado
+  V --> N : Página no encontrada
+else Check-out ya completado
+  V --> N : Muestra quién lo registró y cuándo
+else Check-out pendiente
+  V --> N : Muestra el bloque y el botón de registro
+  A -> N : Registra el check-out
+  N -> V : Envía el registro
+  V -> J : Guarda quién lo registró y cuándo
+  V --> N : Vuelve a la lista del día
+  N --> A : El bloque aparece como completado
+end
+@enduml

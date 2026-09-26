@@ -7,6 +7,7 @@ from agenda import views as agenda
 from configuracion import views as configuracion
 from personas import views
 from personas.models import Rol
+from uso import views as uso
 
 urlpatterns = [
     path("", views.panel, name="panel"),
@@ -53,6 +54,8 @@ urlpatterns = [
          "rol": Rol.APOYO, "titulo": "Personal de apoyo"},
         name="login_apoyo",
     ),
+    path("apoyo/", uso.bloques, name="panel_apoyo"),
+    path("apoyo/checkout/<str:codigo>/", uso.checkout, name="checkout_apoyo"),
     path("configuracion/", RedirectView.as_view(pattern_name="panel_bloques")),
     path("configuracion/bloques/", agenda.bloques, name="panel_bloques"),
     path("configuracion/bloques/editar/", agenda.editar_bloque, name="editar_bloque"),

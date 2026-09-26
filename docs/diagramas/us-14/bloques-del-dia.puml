@@ -1,0 +1,22 @@
+@startuml bloques-del-dia
+!include ../estilo.iuml
+title Ver los bloques del día (US-14)
+hide footbox
+autonumber "<b>0."
+
+actor "Personal de apoyo" as A
+participant "Vista del personal de apoyo" as N <<presentación>>
+participant Uso as V <<dominio>>
+participant "Base de datos" as J <<persistencia>>
+
+note over J : Hoy son datos de prueba:\nun JSON con reservas simuladas
+
+A -> N : Abre la vista o elige otra fecha
+N -> V : Solicita los bloques de la fecha
+V -> J : Obtiene las reservas de ese día
+V -> V : Descarta las pendientes y marca las canceladas
+V -> V : Determina el estado del check-out
+V -> V : Ordena por hora de inicio
+V --> N : Devuelve la lista de bloques
+N --> A : Muestra solicitante, área, personas y check-out
+@enduml

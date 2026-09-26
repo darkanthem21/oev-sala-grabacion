@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "personas",
     "agenda",
     "configuracion",
+    "uso",
 ]
 
 MIDDLEWARE = [
