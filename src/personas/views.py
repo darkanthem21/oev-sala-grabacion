@@ -33,12 +33,13 @@ def destino_tras_login(usuario):
     sigue contando como administrador porque el superusuario que crea el
     despliegue no pertenece a ningún grupo.
 
-    Validación (US-07) y apoyo (US-14) no tienen panel propio todavía y caen en
-    el mismo marcador de posición que el solicitante. Cuando existan se cambian
-    estas dos líneas.
+    Validación (US-07) no tiene panel propio todavía y cae en el mismo marcador
+    de posición que el solicitante.
     """
     if usuario.is_staff or usuario.tiene_rol(Rol.ADMINISTRADOR):
         return reverse("panel_bloques")
+    if usuario.tiene_rol(Rol.APOYO):
+        return reverse("panel_apoyo")
     return reverse("panel")
 
 
