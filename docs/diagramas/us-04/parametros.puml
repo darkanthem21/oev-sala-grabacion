@@ -1,0 +1,23 @@
+@startuml parametros
+!include ../estilo.iuml
+title Guardar los parámetros del sistema (US-04)
+hide footbox
+autonumber "<b>0."
+
+actor Administrador as A
+participant "Vista de administrador" as N <<presentación>>
+participant Configuración as V <<dominio>>
+participant "Base de datos" as D <<persistencia>>
+
+A -> N : Cambia valores y guarda
+N -> V : Envía el formulario
+V -> V : Valida el rango de cada valor
+
+alt Algún valor fuera de rango
+  V --> N : Marca el campo y no guarda nada
+else Valores válidos
+  V -> D : Guarda los valores y la bitácora en una transacción
+  V --> N : Redirige a la misma página
+  N --> A : Muestra los parámetros y los últimos cambios
+end
+@enduml

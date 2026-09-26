@@ -1,0 +1,24 @@
+@startuml bloques
+!include ../estilo.iuml
+title Editar la plantilla semanal de bloques (US-04)
+hide footbox
+autonumber "<b>0."
+
+actor Administrador as A
+participant "Vista de administrador" as N <<presentación>>
+participant Agenda as V <<dominio>>
+participant "Base de datos" as D <<persistencia>>
+
+A -> N : Agrega, edita, quita o repone un bloque
+N -> V : Envía la acción
+
+alt Agregar, editar o reponer
+  V -> D : Verifica que no se cruce con otro bloque
+  V -> D : Guarda o reactiva el bloque
+else Quitar
+  V -> D : Desactiva el bloque sin borrarlo
+end
+
+V --> N : Devuelve el calendario actualizado
+N --> A : Muestra el cambio o el cruce detectado
+@enduml
