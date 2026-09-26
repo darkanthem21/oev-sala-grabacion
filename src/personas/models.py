@@ -6,8 +6,8 @@ from django.utils import timezone
 class Area(models.Model):
     """Área académica, programa o unidad.
 
-    Vive en `personas` y no en `configuracion` porque tiene ciclo de vida y ABM
-    propios (US-05), no es un umbral.
+    Vive en `personas` porque tiene ciclo de vida y ABM propios (US-05). No es
+    un umbral.
     """
 
     nombre = models.CharField(max_length=120, unique=True)
@@ -20,6 +20,20 @@ class Area(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+class Rol(models.TextChoices):
+    """Los roles del sistema, guardados como grupos de Django.
+
+    US-08 AC6 permite tener varios a la vez (hay quien valida y además pide la
+    sala) y un campo obligaría a elegir uno. El valor es el nombre del grupo,
+    así la migración que los crea y el código que los pregunta leen lo mismo.
+    """
+
+    ADMINISTRADOR = "Administrador", "administrador"
+    VALIDADOR = "Validador", "validador"
+    APOYO = "Personal de apoyo", "personal de apoyo"
+    SOLICITANTE = "Solicitante", "solicitante"
 
 
 class UsuarioManager(UserManager):
@@ -42,8 +56,8 @@ class UsuarioManager(UserManager):
 class Usuario(AbstractUser):
     """US-01 AC1: se entra con correo, no con nombre de usuario.
 
-    Los roles no son un campo: son grupos de Django, porque US-08 AC6 permite
-    varios a la vez y el framework ya lo resuelve.
+    Los roles viven en grupos de Django (ver `Rol`), porque US-08 AC6 permite
+    tener varios a la vez y el framework ya lo resuelve.
     """
 
     username = None
@@ -51,9 +65,9 @@ class Usuario(AbstractUser):
     # US-05 AC2: hay docentes que dictan en más de un programa.
     areas = models.ManyToManyField(Area, related_name="usuarios", blank=True)
 
-    # US-01 AC5. El bloqueo es temporal a propósito: si fuera permanente,
-    # cualquiera que conozca un correo institucional podría dejar a esa persona
-    # fuera del sistema para siempre.
+    # US-01 AC5. El bloqueo es temporal porque uno permanente dejaría que
+    # cualquiera que conozca un correo institucional saque a esa persona del
+    # sistema para siempre.
     intentos_fallidos = models.PositiveSmallIntegerField(default=0)
     bloqueado_hasta = models.DateTimeField(null=True, blank=True)
 
@@ -64,6 +78,10 @@ class Usuario(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def tiene_rol(self, *roles):
+        """Si pertenece a alguno de esos grupos, en una sola consulta."""
+        return self.groups.filter(name__in=roles).exists()
 
     @property
     def esta_bloqueado(self):

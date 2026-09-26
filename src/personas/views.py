@@ -10,10 +10,10 @@ from django.utils import timezone
 
 from configuracion.models import Parametros
 
-from .models import Usuario
+from .models import Rol, Usuario
 
 # AC4: el mismo texto para credenciales malas y para correo inexistente. Decir
-# "ese correo no existe" le regala al atacante la lista de cuentas.
+# "ese correo no existe" le regalaría al atacante la lista de cuentas.
 ERROR_CREDENCIALES = "Correo o contraseña incorrectos."
 
 
@@ -28,10 +28,16 @@ def destino_tras_login(usuario):
     autenticación, el bloqueo por intentos y la recuperación de clave viven en un
     solo lugar; lo que cambia es la plantilla y a quién se deja pasar.
 
-    US-04: el administrador entra directo a su panel. El rol todavía no es un
-    grupo —eso es US-08—, así que decide el mismo permiso que abre /admin.
+    Los roles ya son grupos de Django (US-08 AC6), así que alguien puede tener
+    varios: el orden de abajo es la prioridad, no una clasificación. `is_staff`
+    sigue contando como administrador porque el superusuario que crea el
+    despliegue no pertenece a ningún grupo.
+
+    Validación (US-07) y apoyo (US-14) no tienen panel propio todavía y caen en
+    el mismo marcador de posición que el solicitante. Cuando existan se cambian
+    estas dos líneas.
     """
-    if usuario.is_staff:
+    if usuario.is_staff or usuario.tiene_rol(Rol.ADMINISTRADOR):
         return reverse("panel_bloques")
     return reverse("panel")
 
@@ -47,7 +53,7 @@ def _con_error(request, form, mensaje, ruta):
 def _registrar_fallo(usuario):
     """AC5: unos cuantos fallos seguidos bloquean la cuenta, temporalmente.
 
-    Cuantos y por cuanto los fija el administrador desde el panel (US-04).
+    Cuántos y por cuánto los fija el administrador desde el panel (US-04).
     """
     parametros = Parametros.cargar()
     usuario.intentos_fallidos += 1
@@ -57,12 +63,26 @@ def _registrar_fallo(usuario):
     usuario.save(update_fields=["intentos_fallidos", "bloqueado_hasta"])
 
 
-def entrar(request, plantilla="personas/login.html", ruta="login", solo_staff=False):
-    """Las dos puertas del sistema. La de gestion cambia la plantilla y a quien
-    deja pasar; la autenticacion, el bloqueo y la recuperacion de clave son las
-    mismas para ambas."""
+def _puede_pasar(usuario, rol):
+    """Quién cruza esta puerta.
+
+    En la de administración vale también `is_staff`, porque el superusuario del
+    despliegue no pertenece a ningún grupo y quedaría afuera de su propia puerta.
+    """
+    if rol is None:
+        return True
+    if rol == Rol.ADMINISTRADOR and usuario.is_staff:
+        return True
+    return usuario.tiene_rol(rol)
+
+
+def entrar(request, plantilla="personas/login.html", ruta="login", rol=None, titulo=None):
+    """Las puertas del sistema. Cada una cambia la plantilla, el encabezado y a
+    quién deja pasar. La autenticación, el bloqueo por intentos y la recuperación
+    de clave son las mismas para todas."""
+    contexto = {"form": AuthenticationForm(), "ruta": ruta, "titulo": titulo}
     if request.method != "POST":
-        return render(request, plantilla, {"form": AuthenticationForm(), "ruta": ruta})
+        return render(request, plantilla, contexto)
 
     form = AuthenticationForm(request, data=request.POST)
     usuario = Usuario.objects.filter(email__iexact=request.POST.get("username", "")).first()
@@ -75,17 +95,17 @@ def entrar(request, plantilla="personas/login.html", ruta="login", solo_staff=Fa
 
     if form.is_valid():
         entrante = form.get_user()
-        # La puerta de gestion no responde "no eres administrador": ese mensaje la
-        # convierte en un oraculo para saber que correos existen y cuales mandan.
-        # Mismo texto que una clave mala, y sin sesion.
-        if solo_staff and not entrante.is_staff:
+        # Una puerta de rol no responde "no eres administrador". Ese mensaje la
+        # convertiría en un oráculo para saber qué correos existen y cuáles
+        # mandan, así que contesta lo mismo que una clave mala, y sin sesión.
+        if not _puede_pasar(entrante, rol):
             return _con_error(request, form, ERROR_CREDENCIALES, ruta)
         if entrante.intentos_fallidos or entrante.bloqueado_hasta:
             entrante.intentos_fallidos = 0
             entrante.bloqueado_hasta = None
             entrante.save(update_fields=["intentos_fallidos", "bloqueado_hasta"])
         login(request, entrante)
-        # 204 sin cuerpo: no hay nada que pegar, el navegador navega de verdad.
+        # 204 sin cuerpo porque no hay nada que pegar; el navegador navega.
         return HttpResponse(status=204, headers={"HX-Redirect": destino_tras_login(entrante)})
 
     if usuario:

@@ -6,13 +6,14 @@ from django.views.generic import RedirectView
 from agenda import views as agenda
 from configuracion import views as configuracion
 from personas import views
+from personas.models import Rol
 
 urlpatterns = [
     path("", views.panel, name="panel"),
     path("login/", views.entrar, name="login"),
     path("logout/", auth.LogoutView.as_view(next_page="login"), name="logout"),
-    # US-01 AC6: las cuatro vistas de recuperacion las trae Django, con enlace
-    # firmado y sin tabla propia. Solo ponemos las plantillas.
+    # US-01 AC6: las cuatro vistas de recuperación las trae Django, con enlace
+    # firmado y sin tabla propia. Nosotros solo ponemos las plantillas.
     path("clave/", auth.PasswordResetView.as_view(
         template_name="personas/clave_pedir.html",
         email_template_name="personas/clave_correo.txt",
@@ -24,16 +25,33 @@ urlpatterns = [
         success_url="/clave/lista/"), name="password_reset_confirm"),
     path("clave/lista/", auth.PasswordResetCompleteView.as_view(
         template_name="personas/clave_lista.html"), name="password_reset_complete"),
-    # US-04. Cada pestaña del panel la sirve su propio modulo: los bloques son de
-    # agenda, no de configuracion, y asi `configuracion` sigue sin depender de
-    # nadie (README.md). El cascaron con las pestañas es una plantilla compartida.
-    # US-01 + US-04: la administracion entra por su propia puerta. Reusa `entrar`,
-    # asi que comparte autenticacion, bloqueo por intentos y recuperacion de clave.
+    # US-04. Cada pestaña del panel la sirve su propio módulo: los bloques son de
+    # agenda, así `configuracion` sigue sin depender de nadie (README.md). El
+    # cascarón con las pestañas es una plantilla compartida.
+    # US-08 AC4: una puerta por rol, ninguna enlazada desde el sitio público.
+    # Todas reusan `entrar`, así que comparten autenticación, bloqueo por intentos
+    # y recuperación de clave. Lo que cambia es el encabezado y el grupo que dejan
+    # pasar.
     path(
         "configuracion/entrar/",
         views.entrar,
-        {"plantilla": "personas/gestion.html", "ruta": "login_gestion", "solo_staff": True},
+        {"plantilla": "personas/gestion.html", "ruta": "login_gestion",
+         "rol": Rol.ADMINISTRADOR, "titulo": "Administración"},
         name="login_gestion",
+    ),
+    path(
+        "validacion/entrar/",
+        views.entrar,
+        {"plantilla": "personas/gestion.html", "ruta": "login_validacion",
+         "rol": Rol.VALIDADOR, "titulo": "Validación"},
+        name="login_validacion",
+    ),
+    path(
+        "apoyo/entrar/",
+        views.entrar,
+        {"plantilla": "personas/gestion.html", "ruta": "login_apoyo",
+         "rol": Rol.APOYO, "titulo": "Personal de apoyo"},
+        name="login_apoyo",
     ),
     path("configuracion/", RedirectView.as_view(pattern_name="panel_bloques")),
     path("configuracion/bloques/", agenda.bloques, name="panel_bloques"),
