@@ -1,189 +1,235 @@
 /* Solo variables de marca.css: ningun color literal (docs/estilo.md). */
 
+/* --- Contenedor principal estilo ficha institucional --- */
 .calendario-contenedor {
-    max-width: 50rem;
-    margin: 2rem auto;
-    padding: 0 1rem;
+    width: 100%;
+    max-width: 52rem;
+    margin: 2.5rem auto;
+    padding: 2rem 1.75rem;
     box-sizing: border-box;
+    background: var(--superficie);
+    border: 1px solid var(--borde);
+    border-radius: 4px;
     font-family: var(--fuente-texto);
     color: var(--tinta);
 }
 
+/* --- Cabecera del calendario --- */
+.calendario-cabecera {
+    margin-bottom: 2rem;
+}
+
 .titulo-calendario {
     font-family: var(--fuente-titulo);
+    font-size: 1.35rem;
     font-weight: 700;
-    text-align: center;
-    margin-bottom: 2rem;
-    color: var(--accion);
-}
-
-/* --- Avisos y confirmaciones de Django --- */
-.aviso {
-    border-left: 4px solid var(--acento);
-    background: var(--fondo);
-    padding: 0.75rem 1rem;
-    margin-top: 1.5rem;
-    border-radius: 4px;
-    font-size: 0.95rem;
+    margin: 0 0 0.35rem;
     color: var(--tinta);
 }
-.aviso p { margin: 0; }
+
+.subtitulo-calendario {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--tinta-suave);
+    line-height: 1.45;
+}
+
+/* --- Avisos y confirmaciones del sistema --- */
+.aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    border-left: 3px solid var(--info);
+    background: var(--fondo);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0 3px 3px 0;
+    font-size: 0.9rem;
+    color: var(--tinta);
+}
+
+.aviso p {
+    margin: 0;
+}
 
 .error {
-    border-left: 4px solid var(--alerta);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    border-left: 3px solid var(--alerta);
     background: var(--fondo);
     padding: 0.75rem 1rem;
-    margin-top: 1.5rem;
-    border-radius: 4px;
-    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0 3px 3px 0;
+    font-size: 0.9rem;
     color: var(--tinta);
 }
-.error p { margin: 0; }
 
-/* --- Estilos de Controles de Navegación --- */
+.error p {
+    margin: 0;
+}
+
+.icono-alerta {
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+    color: inherit;
+}
+
+/* --- Barra de navegación de meses y selector rápido --- */
 .controles-calendario {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
     gap: 1rem;
     margin-bottom: 1.5rem;
-    background: var(--superficie);
-    padding: 1rem;
-    border-radius: 4px;
+    padding: 0.85rem 1rem;
+    background: var(--fondo);
     border: 1px solid var(--borde);
+    border-radius: 4px;
 }
 
 .navegacion-meses {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 0.75rem;
 }
 
 .mes-actual {
     font-family: var(--fuente-titulo);
     margin: 0;
     color: var(--tinta);
-    font-size: 1.2rem;
-    text-transform: uppercase;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    min-width: 11rem;
+    text-align: center;
 }
 
 .btn-nav {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    background-color: var(--accion);
-    color: var(--superficie);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.45rem 0.85rem;
+    background-color: var(--superficie);
+    color: var(--tinta);
     text-decoration: none;
-    border-radius: 4px;
+    border: 1px solid var(--borde);
+    border-radius: 3px;
     font-family: var(--fuente-titulo);
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     font-weight: 700;
-    transition: background-color 0.2s;
+    line-height: 1.2;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .btn-nav:hover:not(.disabled) {
-    background-color: var(--tinta);
+    background-color: var(--accion);
+    border-color: var(--accion);
+    color: var(--superficie);
 }
 
 .btn-nav.disabled {
-    background-color: var(--borde);
-    cursor: not-allowed;
+    background-color: var(--superficie);
+    border-color: var(--borde);
     color: var(--tinta-suave);
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .selector-rapido {
     display: flex;
-    justify-content: center;
-    gap: 0.75rem;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .select-personalizado {
-    padding: 0.5rem 0.75rem;
+    padding: 0.45rem 0.65rem;
     border: 1px solid var(--borde);
-    border-radius: 4px;
+    border-radius: 3px;
     font-family: var(--fuente-texto);
+    font-size: 0.85rem;
     background-color: var(--superficie);
     color: var(--tinta);
+    cursor: pointer;
+}
+
+.select-personalizado:focus-visible {
+    outline: 2px solid var(--acento);
+    outline-offset: 1px;
 }
 
 .btn-ir {
-    padding: 0.5rem 1rem;
+    padding: 0.45rem 0.85rem;
     background-color: var(--accion);
     color: var(--superficie);
-    border: none;
-    border-radius: 4px;
+    border: 1px solid var(--accion);
+    border-radius: 3px;
     cursor: pointer;
     font-family: var(--fuente-titulo);
     font-weight: 700;
-    font-size: 0.9rem;
-    transition: background-color 0.2s;
+    font-size: 0.82rem;
+    line-height: 1.2;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.btn-ir:hover { 
-    background-color: var(--tinta); 
+.btn-ir:hover {
+    background-color: var(--tinta);
+    border-color: var(--tinta);
 }
 
-/* --- Estilos del Calendario (Tabla) --- */
-.calendario table { 
-    border-collapse: separate; 
-    border-spacing: 0;
-    width: 100%; 
-    table-layout: fixed; 
+/* --- Grilla del calendario mensual --- */
+.calendario-wrapper {
+    margin-bottom: 2rem;
+}
+
+.calendario {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.calendario table {
+    border-collapse: collapse;
+    width: 100%;
+    table-layout: fixed;
     background: var(--superficie);
+    border: 1px solid var(--borde);
     border-radius: 4px;
-    box-shadow: 0 2px 12px rgb(42 68 81 / 0.08);
     overflow: hidden;
-    border: 1px solid var(--borde); 
 }
 
 .calendario table th.month {
     display: none;
 }
 
-.calendario th { 
-    background-color: var(--tinta-suave); 
-    padding: 0.9rem 0.5rem; 
-    text-align: center; 
+.calendario th {
+    background-color: var(--fondo);
+    padding: 0.75rem 0.25rem;
+    text-align: center;
     font-family: var(--fuente-titulo);
     font-weight: 700;
-    color: var(--superficie);
-    text-transform: uppercase;
-    font-size: 0.85rem;
-    border-bottom: 3px solid var(--tinta);
-}
-
-.calendario td { 
-    border: 1px solid var(--borde); 
-    padding: 0; 
-    text-align: center; 
-    font-size: 1.1rem;
-    color: var(--tinta);
-    transition: all 0.2s ease;
-}
-
-.calendario td:not(.dia-seleccionable) {
-    padding: 1.25rem 0.5rem;
-}
-
-.calendario td.dia-seleccionable a.dia-enlace {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-    padding: 1.25rem 0.5rem;
-    color: inherit;
-    text-decoration: none;
-    font-weight: inherit;
-}
-
-.calendario td.dia-seleccionable {
-    cursor: pointer;
-}
-
-.calendario td:not(.noday):not(.available) {
     color: var(--tinta-suave);
-    background-color: var(--superficie);
-    opacity: 0.6;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--borde);
+    border-left: 1px solid var(--borde);
+}
+
+.calendario th:first-child {
+    border-left: none;
+}
+
+.calendario td {
+    border: 1px solid var(--borde);
+    padding: 0;
+    text-align: center;
+    font-size: 0.95rem;
+    height: 3.4rem;
+    color: var(--tinta);
+    position: relative;
+    vertical-align: middle;
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .calendario td.noday {
@@ -191,46 +237,121 @@
     opacity: 0.35;
 }
 
-.calendario .available { 
-    background-color: var(--fondo); 
-    color: var(--accion); 
-    font-weight: 500; 
-    position: relative;
+.calendario td:not(.noday):not(.available) {
+    color: var(--tinta-suave);
+    background-color: var(--superficie);
+    opacity: 0.65;
 }
 
-.calendario td.dia-seleccionable:hover {
+.calendario td.sat:not(.available),
+.calendario td.sun:not(.available) {
+    background-color: var(--fondo);
+    opacity: 0.45;
+}
+
+.calendario .available {
+    background-color: var(--fondo);
+    color: var(--accion);
+    font-weight: 500;
+}
+
+.calendario td.dia-seleccionable a.dia-enlace {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    color: var(--accion);
+    text-decoration: none;
+    font-family: var(--fuente-titulo);
+    font-weight: 700;
+    font-size: 1rem;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.calendario td.dia-seleccionable a.dia-enlace::after {
+    content: "";
+    display: block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: var(--acento);
+    margin-top: 3px;
+}
+
+.calendario td.dia-seleccionable:hover,
+.calendario td.dia-seleccionable:hover a.dia-enlace {
     background-color: var(--acento);
     color: var(--superficie);
-    transform: scale(1.02);
-    z-index: 1;
-    box-shadow: 0 2px 8px rgb(0 151 166 / 0.3);
-    border-radius: 4px;
+}
+
+.calendario td.dia-seleccionable:hover a.dia-enlace::after {
+    background-color: var(--superficie);
 }
 
 .calendario td.dia-seleccionable.selected,
-.calendario .available.selected {
-    background-color: var(--accion) !important; 
+.calendario .available.selected,
+.calendario td.dia-seleccionable.selected a.dia-enlace,
+.calendario .available.selected a.dia-enlace {
+    background-color: var(--accion) !important;
     color: var(--superficie) !important;
-    border-radius: 4px;
-    box-shadow: inset 0 0 0 2px var(--acento);
-    font-weight: 700;
 }
 
-/* --- Panel y tarjetas de bloques --- */
+.calendario td.dia-seleccionable.selected a.dia-enlace::after {
+    background-color: var(--superficie) !important;
+}
+
+/* --- Leyenda explicativa del calendario --- */
+.leyenda-calendario {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    margin-top: 0.85rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    color: var(--tinta-suave);
+}
+
+.leyenda-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.leyenda-muestra {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    box-sizing: border-box;
+}
+
+.muestra-disponible {
+    background-color: var(--fondo);
+    border: 1px solid var(--accion);
+}
+
+.muestra-seleccionado {
+    background-color: var(--accion);
+    border: 1px solid var(--accion);
+}
+
+.muestra-no-disponible {
+    background-color: var(--superficie);
+    border: 1px solid var(--borde);
+}
+
+/* --- Panel de selección de bloques horarios --- */
 .panel-bloques {
     margin-top: 1.5rem;
     background: var(--superficie);
     border: 1px solid var(--borde);
     border-radius: 4px;
-    padding: 1.25rem;
-    box-shadow: 0 2px 12px rgb(42 68 81 / 0.08);
-}
-
-.mensaje-sin-seleccion, .sin-bloques, .cargando-bloques {
-    text-align: center;
     padding: 1.5rem;
-    color: var(--tinta-suave);
-    font-size: 1rem;
 }
 
 .encabezado-bloques {
@@ -238,62 +359,82 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--borde);
-    padding-bottom: 0.75rem;
+    padding-bottom: 0.6rem;
     margin-bottom: 1.25rem;
 }
 
 .titulo-bloques {
     font-family: var(--fuente-titulo);
-    font-size: 1.15rem;
-    color: var(--accion);
+    font-size: 0.95rem;
+    color: var(--tinta);
     margin: 0;
+    font-weight: 700;
 }
 
 .total-bloques {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--tinta-suave);
     background: var(--fondo);
-    padding: 0.25rem 0.6rem;
-    border-radius: 12px;
+    padding: 0.2rem 0.55rem;
+    border-radius: 3px;
+    border: 1px solid var(--borde);
     font-weight: 500;
 }
 
+/* Estados vacíos informativos */
+.mensaje-sin-seleccion,
+.sin-bloques {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    color: var(--tinta-suave);
+    font-size: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.mensaje-sin-seleccion p,
+.sin-bloques p {
+    margin: 0;
+    max-width: 26rem;
+    line-height: 1.45;
+}
+
+.icono-estado-vacio {
+    color: var(--tinta-suave);
+    opacity: 0.6;
+}
+
+/* Grilla y tarjetas de bloques */
 .grilla-bloques {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 0.85rem;
 }
 
 .tarjeta-bloque {
     border: 1px solid var(--borde);
     border-radius: 4px;
-    padding: 0.9rem;
+    padding: 0.85rem 1rem;
     display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
+    align-items: center;
+    gap: 0.85rem;
     background: var(--superficie);
-    transition: all 0.2s ease;
-}
-
-.bloque-checkbox {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-    pointer-events: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    box-sizing: border-box;
 }
 
 .tarjeta-bloque.disponible {
-    border-left: 4px solid var(--acento);
+    border-left: 3px solid var(--acento);
     cursor: pointer;
     user-select: none;
     position: relative;
 }
 
 .tarjeta-bloque.disponible:hover {
-    box-shadow: 0 3px 10px rgb(0 151 166 / 0.2);
+    background-color: var(--fondo);
     border-color: var(--acento);
-    transform: translateY(-2px);
 }
 
 .tarjeta-bloque.disponible:has(.bloque-checkbox:focus-visible) {
@@ -304,9 +445,111 @@
 .tarjeta-bloque.disponible:has(.bloque-checkbox:checked),
 .tarjeta-bloque.disponible.selected {
     background-color: var(--fondo);
+    border-color: var(--accion);
+    border-left: 3px solid var(--accion);
+}
+
+.bloque-checkbox {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+/* Indicador visual de casilla */
+.checkbox-visual {
+    width: 1.15rem;
+    height: 1.15rem;
+    border: 1.5px solid var(--borde);
+    border-radius: 3px;
+    background: var(--superficie);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    transition: all 0.15s ease;
+}
+
+.tarjeta-bloque.disponible:hover .checkbox-visual {
     border-color: var(--acento);
-    box-shadow: 0 0 0 2px var(--acento), 0 4px 12px rgb(0 151 166 / 0.25);
-    transform: translateY(-2px);
+}
+
+.tarjeta-bloque.disponible:has(.bloque-checkbox:checked) .checkbox-visual,
+.tarjeta-bloque.disponible.selected .checkbox-visual {
+    background-color: var(--accion);
+    border-color: var(--accion);
+}
+
+.tarjeta-bloque.disponible:has(.bloque-checkbox:checked) .checkbox-visual::after,
+.tarjeta-bloque.disponible.selected .checkbox-visual::after {
+    content: "";
+    display: block;
+    width: 4px;
+    height: 8px;
+    border: solid var(--superficie);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-bottom: 2px;
+}
+
+.checkbox-visual.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.bloque-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.bloque-hora {
+    font-size: 0.95rem;
+    color: var(--tinta);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    white-space: nowrap;
+}
+
+.icono-reloj {
+    color: var(--tinta-suave);
+    flex-shrink: 0;
+}
+
+/* Badges de estado de bloque */
+.badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    width: fit-content;
+}
+
+.badge-disponible {
+    background-color: var(--fondo);
+    color: var(--accion);
+    border: 1px solid var(--info);
+}
+
+.badge-seleccionado {
+    background-color: var(--accion);
+    color: var(--superficie);
+    border: 1px solid var(--accion);
+    font-weight: 600;
+}
+
+.badge-no-disponible {
+    background-color: var(--fondo);
+    color: var(--tinta-suave);
+    border: 1px solid var(--borde);
 }
 
 .tarjeta-bloque .badge-seleccionado {
@@ -324,82 +567,88 @@
 }
 
 .tarjeta-bloque.no-disponible {
-    border-left: 4px solid var(--alerta);
+    border: 1px dashed var(--borde);
+    border-left: 3px solid var(--borde);
     background-color: var(--fondo);
-    opacity: 0.75;
+    opacity: 0.65;
     cursor: not-allowed;
     user-select: none;
 }
 
-.bloque-hora {
-    font-size: 1.05rem;
-    color: var(--tinta);
+/* --- Botón y pie del formulario --- */
+.pie-formulario {
+    margin-top: 1.5rem;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 0.5rem;
 }
 
-.icono-reloj {
-    font-size: 1.1rem;
-    color: var(--tinta-suave);
-}
-
-.badge {
-    display: inline-block;
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    transition: all 0.2s ease;
-}
-
-.badge-disponible {
-    background-color: var(--fondo);
-    color: var(--accion);
-    border: 1px solid var(--info);
-}
-
-.badge-seleccionado {
-    background-color: var(--acento);
-    color: var(--superficie);
-    border: 1px solid var(--accion);
-    font-weight: 600;
-}
-
-.badge-no-disponible {
-    background-color: var(--fondo);
-    color: var(--tinta);
-    border: 1px solid var(--alerta);
-}
-
 .btn-accion {
-    display: block;
     width: 100%;
     box-sizing: border-box;
-    margin-top: 1.5rem;
-    padding: 0.85rem;
-    background-color: var(--accion); 
+    padding: 0.75rem 1.25rem;
+    background-color: var(--accion);
     color: var(--superficie);
-    border: none;
-    border-radius: 4px;
+    border: 0;
+    border-radius: 3px;
     font-family: var(--fuente-titulo);
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
+    transition: background-color 0.15s ease;
 }
 
-.btn-accion:hover:not(:disabled) { 
-    background-color: var(--tinta); 
+.btn-accion:hover:not(:disabled) {
+    background-color: var(--tinta);
 }
 
 .btn-accion:disabled {
     background-color: var(--tinta-suave);
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
-.btn-accion:active { 
-    transform: scale(0.98); 
+.pista-accion {
+    font-size: 0.8rem;
+    color: var(--tinta-suave);
+    text-align: center;
 }
+
+/* Utilidad para lectores de pantalla */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* --- Responsividad --- */
+@media (max-width: 40rem) {
+    .controles-calendario {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .navegacion-meses {
+        justify-content: space-between;
+    }
+
+    .selector-rapido {
+        justify-content: stretch;
+    }
+
+    .select-personalizado {
+        flex: 1;
+    }
+
+    .calendario td {
+        height: 2.8rem;
+        font-size: 0.85rem;
+    }
+}
+
