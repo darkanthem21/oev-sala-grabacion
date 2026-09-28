@@ -85,12 +85,12 @@ function panelValidador(datos, validador) {
     },
     describirCelda(d, h) {
       const estado = this.estadoCelda(d.iso, h.inicio);
-      const cual = { libre: "libre", una: "una solicitud pendiente", competencia: "solicitudes en competencia",
+      const cual = { libre: "libre", una: "una solicitud pendiente", competencia: "solicitudes con tope",
                      aprobado: "aprobado para la solicitud " + this.textoCelda(d.iso, h.inicio) }[estado];
       return d.corto + " " + d.dm + ", " + h.inicio + " a " + h.termino + ": " +
              (estado === "competencia" ? this.textoCelda(d.iso, h.inicio) + " " : "") + cual;
     },
-    // Clic en una casilla: baja a la competencia, a la solicitud o al registro.
+    // Clic en una casilla: baja al tope, a la solicitud o al registro.
     irACelda(fecha, inicio) {
       const estado = this.estadoCelda(fecha, inicio);
       const id = estado === "competencia" ? this.ancla(fecha + " " + inicio)
@@ -102,12 +102,24 @@ function panelValidador(datos, validador) {
         destino.scrollIntoView({ behavior: quieto ? "auto" : "smooth", block: "start" });
       }
     },
-    // Mini calendario: solo los bloques de esa solicitud, con su estado.
-    estadoMini(s, fecha, inicio) {
-      const p = this.bloquesDe(s).find(o => o.fecha === fecha && o.inicio === inicio);
+    // Mini calendario: solo los pedidos de `lista` (una solicitud o un tope), con su estado.
+    enMini(lista, fecha, inicio) { return lista.find(o => o.fecha === fecha && o.inicio === inicio); },
+    estadoMini(lista, fecha, inicio) {
+      const p = this.enMini(lista, fecha, inicio);
       if (!p) return "";
       if (this.resoluciones[p.ticket]) return this.resoluciones[p.ticket].estado;
-      return this.rivales(p).length ? "competencia" : "pendiente";
+      return this.conTope(p) ? "competencia" : "pendiente";
+    },
+    // En la casilla con tope va cuantas solicitudes chocan en ese bloque.
+    topesMini(lista, fecha, inicio) {
+      const p = this.enMini(lista, fecha, inicio);
+      return p && this.vivo(p) && this.conTope(p) ? String(this.rivales(p).length + 1) : "";
+    },
+    tituloMini(lista, d, h) {
+      const estado = this.estadoMini(lista, d.iso, h.inicio);
+      if (!estado) return "";
+      const n = this.topesMini(lista, d.iso, h.inicio);
+      return d.corto + " " + d.dm + " " + h.inicio + ": " + this.etiqueta(estado) + (n ? " (" + n + " solicitudes)" : "");
     },
 
     area(s) { return areas[s.area]; },
@@ -115,8 +127,9 @@ function panelValidador(datos, validador) {
     // Por id y no por objeto: Alpine envuelve lo que devuelve en un proxy, y un
     // objeto envuelto nunca es === al original.
     bloquesDe(s) { return pedidos.filter(p => p.sol.id === s.id); },
-    // AC2: compiten los pedidos pendientes del mismo bloque en la misma fecha.
+    // AC2: chocan los pedidos pendientes del mismo bloque en la misma fecha.
     rivales(p) { return pedidos.filter(o => o.clave === p.clave && o.ticket !== p.ticket && this.vivo(o)); },
+    conTope(p) { return this.rivales(p).length > 0; },
     otrosBloques(p) { return this.bloquesDe(p.sol).filter(o => o.ticket !== p.ticket).map(o => this.nombreBloque(o)).join(" y "); },
     ancla(clave) { return "c-" + clave.replace(/\D/g, ""); },
 
@@ -131,12 +144,14 @@ function panelValidador(datos, validador) {
         }))
         .sort((a, b) => a.clave.localeCompare(b.clave));
     },
-    // AC1: una tarjeta por solicitud mientras le quede algun bloque sin resolver,
-    // ordenadas por la fecha mas proxima que piden.
+    // AC1: una tarjeta por solicitud mientras le quede algun bloque sin tope por
+    // resolver, ordenadas por la fecha mas proxima que piden. Los bloques con
+    // tope se resuelven solo en su seccion, para no tener la misma accion en
+    // dos lugares.
     get pendientes() {
       const primera = s => s.bloques.map(b => b.fecha + b.inicio).sort()[0];
       return datos.solicitudes
-        .filter(s => this.bloquesDe(s).some(p => this.vivo(p)))
+        .filter(s => this.bloquesDe(s).some(p => this.vivo(p) && !this.conTope(p)))
         .sort((a, b) => primera(a).localeCompare(primera(b)));
     },
     get bloquesPendientes() { return pedidos.filter(p => this.vivo(p)).length; },
@@ -153,7 +168,7 @@ function panelValidador(datos, validador) {
     etiqueta(e) {
       return { pendiente: "Pendiente", en_revision: "En revisión", aprobada: "Aprobada",
                rechazada: "Rechazada", parcial: "Aprobada en parte",
-               aprobado: "Aprobado", rechazado: "Rechazado", competencia: "En competencia" }[e] || e;
+               aprobado: "Aprobado", rechazado: "Rechazado", competencia: "Con tope" }[e] || e;
     },
     porque(c) {
       const [a, b] = c.pedidos;
@@ -197,9 +212,10 @@ function panelValidador(datos, validador) {
       rivales.forEach(r => this.registrar(r, "rechazado", motivo, "El bloque se asignó a la solicitud #" + p.sol.id));
     },
     abrirRechazo(p) { this.error = ""; this.rechazando = p.ticket; },
-    // AC4: rechazar sin motivo no se puede.
-    rechazar(p) {
-      const motivo = (this.motivos[p.ticket] || "").trim();
+    // AC4: rechazar sin motivo no se puede. En un tope el motivo es el de la
+    // tarjeta (clave del bloque); sin tope, el de la fila (ticket).
+    rechazar(p, clave = p.ticket) {
+      const motivo = (this.motivos[clave] || "").trim();
       if (motivo.length < MINIMO_MOTIVO) {
         this.error = "Para rechazar escribe el motivo (mínimo " + MINIMO_MOTIVO + " caracteres): le llega al encargado.";
         return;
@@ -243,7 +259,7 @@ function panelValidador(datos, validador) {
       <ul class="leyenda">
         <li><i></i>libre</li>
         <li><i data-e="una"></i>una solicitud</li>
-        <li><i data-e="competencia"></i>en competencia</li>
+        <li><i data-e="competencia"></i>con tope</li>
         <li><i data-e="aprobado"></i>aprobado</li>
       </ul>
     </section>
@@ -260,20 +276,27 @@ function panelValidador(datos, validador) {
 
   <div class="resumen">
     <div><b x-text="bloquesPendientes"></b>bloques pendientes</div>
-    <div><b x-text="competencias.length"></b>en competencia</div>
+    <div><b x-text="competencias.length"></b>con tope</div>
     <div><b x-text="resueltos.length"></b>resueltos</div>
   </div>
 
   <p class="error" role="alert" x-show="error" x-text="error" x-cloak></p>
 
-  {# AC2 #}
+  <ul class="marcas" aria-label="Colores de los mini calendarios">
+    <li><i data-e="pendiente"></i>pedido pendiente</li>
+    <li><i data-e="competencia">2</i>con tope (el número es cuántas solicitudes chocan)</li>
+    <li><i data-e="aprobado"></i>aprobado</li>
+    <li><i data-e="rechazado"></i>rechazado</li>
+  </ul>
+
+  {# AC2. Los bloques con tope se resuelven solo aca. #}
   <section class="seccion" aria-labelledby="h-competencia">
     <div class="seccion-cab">
-      <h2 id="h-competencia">En competencia</h2>
+      <h2 id="h-competencia">Con tope</h2>
       <span class="cuenta" x-text="competencias.length"></span>
-      <p>Dos o más solicitudes piden el mismo bloque en la misma fecha. Aprobar una rechaza a las demás
-         <b>solo en ese bloque</b>, no en toda su solicitud. Están ordenadas por prioridad del área;
-         elegir y escribir el motivo es tuyo.</p>
+      <p>Dos o más solicitudes piden el mismo bloque en la misma fecha, y se resuelven solo aquí.
+         Aprobar una rechaza a las demás <b>solo en ese bloque</b>, no en toda su solicitud. Están
+         ordenadas por prioridad del área; elegir y escribir el motivo es tuyo.</p>
     </div>
     <p class="vacio" x-show="!competencias.length" x-cloak>Ningún bloque tiene dos solicitudes pendientes.</p>
 
@@ -284,21 +307,47 @@ function panelValidador(datos, validador) {
           <span class="cuenta" x-text="c.pedidos.length + ' solicitudes'"></span>
           <span class="porque" x-text="porque(c)"></span>
         </header>
-        <template x-for="p in c.pedidos" :key="p.ticket">
-          <div class="postulante">
-            <div class="quien-pide">
-              <span class="folio" x-text="'Solicitud #' + p.sol.id + ' · ' + p.ticket"></span>
-              <strong x-text="p.sol.encargado.nombre"></strong>
-              <span class="area"><span class="prio" x-text="'P' + area(p.sol).prioridad"></span><span x-text="area(p.sol).nombre"></span></span>
-            </div>
-            <p class="detalle" x-text="p.sol.motivo + ' · ' + p.sol.personas + ' persona(s)'"></p>
-            <p class="hermanos" x-show="p.de > 1">
-              Bloque <b x-text="p.n"></b> de <b x-text="p.de"></b> de la solicitud #<span x-text="p.sol.id"></span>.
-              También pide: <span x-text="otrosBloques(p)"></span>
-            </p>
-            <button class="btn activa" type="button" @click="aprobar(p)">Aprobar esta</button>
+        <div class="cuerpo">
+          <div class="postulantes">
+            <template x-for="p in c.pedidos" :key="p.ticket">
+              <div class="postulante">
+                <div class="quien-pide">
+                  <span class="folio" x-text="'Solicitud #' + p.sol.id + ' · ' + p.ticket"></span>
+                  <strong x-text="p.sol.encargado.nombre"></strong>
+                  <span class="area"><span class="prio" x-text="'P' + area(p.sol).prioridad"></span><span x-text="area(p.sol).nombre"></span></span>
+                </div>
+                <p class="detalle" x-text="p.sol.motivo + ' · ' + p.sol.personas + ' persona(s)'"></p>
+                <p class="hermanos" x-show="p.de > 1">
+                  Bloque <b x-text="p.n"></b> de <b x-text="p.de"></b> de la solicitud #<span x-text="p.sol.id"></span>.
+                  También pide: <span x-text="otrosBloques(p)"></span>
+                </p>
+                <span class="acciones">
+                  <button class="btn activa" type="button" @click="aprobar(p)">Aprobar esta</button>
+                  <button class="btn peligro" type="button" @click="rechazar(p, c.clave)">Rechazar</button>
+                </span>
+              </div>
+            </template>
           </div>
-        </template>
+          <div class="mini" role="img" :aria-label="'Tope del ' + nombreBloque(c.pedidos[0]) + ': ' + c.pedidos.length + ' solicitudes'">
+            <div class="mini-grilla" aria-hidden="true">
+              <span></span>
+              <template x-for="d in semanaDe(c.pedidos[0].fecha)" :key="d.iso">
+                <span class="mini-dia" x-text="d.inicial"></span>
+              </template>
+              <template x-for="h in jornada" :key="h.inicio">
+                <div class="fila-hora">
+                  <span class="mini-hora" x-text="h.inicio"></span>
+                  <template x-for="d in semanaDe(c.pedidos[0].fecha)" :key="d.iso">
+                    <span class="mini-celda" :data-e="estadoMini(c.pedidos, d.iso, h.inicio)"
+                          :title="tituloMini(c.pedidos, d, h)"
+                          x-text="topesMini(c.pedidos, d.iso, h.inicio)"></span>
+                  </template>
+                </div>
+              </template>
+            </div>
+            <p class="mini-pie" x-text="'semana del ' + semanaDe(c.pedidos[0].fecha)[0].dm"></p>
+          </div>
+        </div>
         <label class="motivo">
           <span>Motivo de la resolución</span>
           <input type="text" x-model="motivos[c.clave]"
@@ -308,21 +357,16 @@ function panelValidador(datos, validador) {
     </template>
   </section>
 
-  {# AC1 #}
+  {# AC1. Solo bloques que nadie mas pide. #}
   <section class="seccion" aria-labelledby="h-bandeja">
     <div class="seccion-cab">
-      <h2 id="h-bandeja">Bandeja de pendientes</h2>
+      <h2 id="h-bandeja">Sin tope</h2>
       <span class="cuenta" x-text="pendientes.length"></span>
-      <p>Una tarjeta por solicitud, con todos sus bloques. Cada bloque se resuelve por separado,
-         así que una solicitud puede quedar aprobada en parte.</p>
-      <ul class="marcas" aria-label="Colores del mini calendario">
-        <li><i data-e="pendiente"></i>pedido pendiente</li>
-        <li><i data-e="competencia"></i>en competencia</li>
-        <li><i data-e="aprobado"></i>aprobado</li>
-        <li><i data-e="rechazado"></i>rechazado</li>
-      </ul>
+      <p>Solicitudes con bloques que nadie más pide: se aprueban o rechazan aquí, cada bloque por
+         separado, así que una solicitud puede quedar aprobada en parte. Si además tiene un bloque
+         con tope, ese bloque aparece enlazado y se resuelve en «Con tope».</p>
     </div>
-    <p class="vacio" x-show="!pendientes.length" x-cloak>No quedan solicitudes pendientes.</p>
+    <p class="vacio" x-show="!pendientes.length" x-cloak>No quedan solicitudes sin tope pendientes.</p>
 
     <template x-for="s in pendientes" :key="s.id">
       <article class="tarjeta" :id="'sol-' + s.id">
@@ -352,8 +396,9 @@ function panelValidador(datos, validador) {
               <div class="fila-hora">
                 <span class="mini-hora" x-text="h.inicio"></span>
                 <template x-for="d in semanaDe(s.bloques[0].fecha)" :key="d.iso">
-                  <span class="mini-celda" :data-e="estadoMini(s, d.iso, h.inicio)"
-                        :title="estadoMini(s, d.iso, h.inicio) ? d.corto + ' ' + d.dm + ' ' + h.inicio + ': ' + etiqueta(estadoMini(s, d.iso, h.inicio)) : ''"></span>
+                  <span class="mini-celda" :data-e="estadoMini(bloquesDe(s), d.iso, h.inicio)"
+                        :title="tituloMini(bloquesDe(s), d, h)"
+                        x-text="topesMini(bloquesDe(s), d.iso, h.inicio)"></span>
                 </template>
               </div>
             </template>
@@ -372,19 +417,21 @@ function panelValidador(datos, validador) {
                     <span class="estado" :data-estado="resoluciones[p.ticket].estado"
                           x-text="etiqueta(resoluciones[p.ticket].estado)"></span>
                   </template>
-                  <template x-if="!resoluciones[p.ticket] && rivales(p).length">
-                    <a class="compite" :href="'#' + ancla(p.clave)"
-                       x-text="'En competencia con #' + rivales(p).map(r => r.sol.id).join(', #')"></a>
+                  <template x-if="!resoluciones[p.ticket] && conTope(p)">
+                    <span class="compite" x-text="'Tope con #' + rivales(p).map(r => r.sol.id).join(', #')"></span>
                   </template>
-                  <template x-if="!resoluciones[p.ticket] && !rivales(p).length">
+                  <template x-if="!resoluciones[p.ticket] && !conTope(p)">
                     <span class="estado" data-estado="pendiente">Pendiente</span>
                   </template>
                 </td>
                 <td class="der">
-                  <template x-if="!resoluciones[p.ticket] && rechazando !== p.ticket">
+                  {# Con tope no hay acciones aca: se resuelve en su seccion. #}
+                  <template x-if="!resoluciones[p.ticket] && conTope(p)">
+                    <a class="btn" :href="'#' + ancla(p.clave)">Ir al tope</a>
+                  </template>
+                  <template x-if="!resoluciones[p.ticket] && !conTope(p) && rechazando !== p.ticket">
                     <span class="acciones">
-                      {# Con rivales se aprueba desde "En competencia", donde se ven todos. #}
-                      <button class="btn activa" type="button" x-show="!rivales(p).length" @click="aprobar(p)">Aprobar</button>
+                      <button class="btn activa" type="button" @click="aprobar(p)">Aprobar</button>
                       <button class="btn peligro" type="button" @click="abrirRechazo(p)">Rechazar</button>
                     </span>
                   </template>
