@@ -59,6 +59,9 @@
   flex: 1; min-width: 14rem; padding: .4rem .55rem; font: inherit;
   border: 1px solid var(--borde); color: var(--tinta); background: var(--superficie);
 }
+/* El aviso de un tope va dentro de su tarjeta, pegado al motivo que falta. */
+.error.en-tarjeta { margin: 0; border-top: 1px solid var(--borde); }
+.motivo input.falta { border: 2px solid var(--alerta); }
 
 .ficha { display: grid; grid-template-columns: 7rem 1fr; gap: .25rem 1rem; margin: 0; padding: .7rem .9rem; font-size: .85rem; }
 .ficha dt { color: var(--tinta-suave); }

@@ -62,7 +62,7 @@ function panelValidador(datos, validador) {
   })));
 
   return {
-    resoluciones: {}, motivos: {}, rechazando: null, error: "",
+    resoluciones: {}, motivos: {}, rechazando: null, error: "", errorEn: null,
     jornada, semanaDe,
 
     // La semana del cuadro es la del bloque pendiente mas proximo. Con datos
@@ -195,34 +195,44 @@ function panelValidador(datos, validador) {
         orden: Object.keys(this.resoluciones).length,
       };
     },
+    // El aviso sale donde se hizo clic: en la tarjeta del tope (`clave`), o
+    // arriba si es una fila de "Sin tope". En el tope ademas deja el cursor en
+    // el motivo, que es lo que falta.
+    avisar(texto, clave = null) {
+      this.error = texto;
+      this.errorEn = clave;
+      if (clave) this.$nextTick(() => document.querySelector("#" + this.ancla(clave) + " .motivo input")?.focus());
+    },
+    limpiarAviso() { this.error = ""; this.errorEn = null; },
     // AC3 y AC6: se aprueba de a un pedido y a mano. Si el bloque tiene rivales,
     // el motivo es obligatorio porque les llega a quienes lo pierden.
     aprobar(p) {
-      this.error = "";
+      this.limpiarAviso();
       if (!this.vivo(p)) return;
       const rivales = this.rivales(p);
       const motivo = (this.motivos[p.clave] || "").trim();
       if (rivales.length && motivo.length < MINIMO_MOTIVO) {
-        this.error = "Ese bloque lo piden " + (rivales.length + 1) + " solicitudes: escribe el motivo " +
-                     "(mínimo " + MINIMO_MOTIVO + " caracteres). Le llega a quien no lo obtiene.";
+        this.avisar("Ese bloque lo piden " + (rivales.length + 1) + " solicitudes: escribe el motivo " +
+                    "(mínimo " + MINIMO_MOTIVO + " caracteres). Le llega a quien no lo obtiene.", p.clave);
         return;
       }
       this.registrar(p, "aprobado", motivo, "");
       // Pierden solo este bloque, no el resto de su solicitud.
       rivales.forEach(r => this.registrar(r, "rechazado", motivo, "El bloque se asignó a la solicitud #" + p.sol.id));
     },
-    abrirRechazo(p) { this.error = ""; this.rechazando = p.ticket; },
+    abrirRechazo(p) { this.limpiarAviso(); this.rechazando = p.ticket; },
     // AC4: rechazar sin motivo no se puede. En un tope el motivo es el de la
     // tarjeta (clave del bloque); sin tope, el de la fila (ticket).
     rechazar(p, clave = p.ticket) {
       const motivo = (this.motivos[clave] || "").trim();
       if (motivo.length < MINIMO_MOTIVO) {
-        this.error = "Para rechazar escribe el motivo (mínimo " + MINIMO_MOTIVO + " caracteres): le llega al encargado.";
+        this.avisar("Para rechazar escribe el motivo (mínimo " + MINIMO_MOTIVO + " caracteres): le llega al encargado.",
+                    clave === p.ticket ? null : clave);
         return;
       }
       this.registrar(p, "rechazado", motivo, "");
       this.rechazando = null;
-      this.error = "";
+      this.limpiarAviso();
     },
   };
 }
@@ -280,7 +290,7 @@ function panelValidador(datos, validador) {
     <div><b x-text="resueltos.length"></b>resueltos</div>
   </div>
 
-  <p class="error" role="alert" x-show="error" x-text="error" x-cloak></p>
+  <p class="error" role="alert" x-show="error && !errorEn" x-text="error" x-cloak></p>
 
   <ul class="marcas" aria-label="Colores de los mini calendarios">
     <li><i data-e="pendiente"></i>pedido pendiente</li>
@@ -348,9 +358,11 @@ function panelValidador(datos, validador) {
             <p class="mini-pie" x-text="'semana del ' + semanaDe(c.pedidos[0].fecha)[0].dm"></p>
           </div>
         </div>
+        <p class="error en-tarjeta" role="alert" x-show="errorEn === c.clave" x-text="error" x-cloak></p>
         <label class="motivo">
           <span>Motivo de la resolución</span>
-          <input type="text" x-model="motivos[c.clave]"
+          <input type="text" x-model="motivos[c.clave]" :class="{ falta: errorEn === c.clave }"
+                 @input="errorEn === c.clave && limpiarAviso()"
                  placeholder="Le llega a quien no obtiene el bloque (mínimo 10 caracteres)">
         </label>
       </article>
@@ -440,7 +452,7 @@ function panelValidador(datos, validador) {
                       <input type="text" x-model="motivos[p.ticket]" @keydown.enter.prevent="rechazar(p)"
                              placeholder="Motivo del rechazo (mínimo 10 caracteres)">
                       <button class="btn peligro" type="button" @click="rechazar(p)">Confirmar</button>
-                      <button class="btn" type="button" @click="rechazando = null; error = ''">Cancelar</button>
+                      <button class="btn" type="button" @click="rechazando = null; limpiarAviso()">Cancelar</button>
                     </span>
                   </template>
                 </td>
