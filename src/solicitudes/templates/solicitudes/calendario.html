@@ -45,7 +45,7 @@
         <!-- Panel de despliegue visual de bloques del día seleccionado -->
         <div id="panel-bloques" class="panel-bloques">
             {% if fecha_str %}
-                {% include "agenda/bloques_dia.html" with bloques=bloques_seleccionados fecha=fecha_seleccionada fecha_str=fecha_str %}
+                {% include "solicitudes/bloques_dia.html" with bloques=bloques_seleccionados fecha=fecha_seleccionada fecha_str=fecha_str %}
             {% else %}
                 <div class="mensaje-sin-seleccion">
                     <p>Selecciona un día en el calendario para consultar los bloques disponibles.</p>
@@ -366,8 +366,8 @@
                     // Indicador de carga
                     panelBloques.innerHTML = '<div class="cargando-bloques"><p>Buscando bloques para ' + fecha + '...</p></div>';
 
-                    // Consultar los Bloques definidos en agenda/models.py para la fecha seleccionada
-                    fetch(`/agenda/bloques/?fecha=${fecha}`)
+                    // Consultar los bloques a través de la aplicación solicitudes
+                    fetch(`{% url 'bloques_dia' %}?fecha=${encodeURIComponent(fecha)}`)
                         .then(response => {
                             if (!response.ok) {
                                 throw new Error('Error al consultar bloques');
