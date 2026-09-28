@@ -46,8 +46,8 @@
             {% endif %}
             <label for="select-mes" class="sr-only">Seleccionar mes</label>
             <select id="select-mes" name="month" class="select-personalizado">
-                {% for m_num, m_nombre in meses %}
-                    <option value="{{ m_num }}" {% if m_num == month %}selected{% endif %}>{{ m_nombre }}</option>
+                {% for m_num, m_nombre, habilitado in meses %}
+                    <option value="{{ m_num }}" {% if m_num == month %}selected{% endif %} {% if not habilitado %}disabled{% endif %}>{{ m_nombre }}</option>
                 {% endfor %}
             </select>
 

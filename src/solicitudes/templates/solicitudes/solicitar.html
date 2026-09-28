@@ -187,6 +187,11 @@
       {% endif %}
     </section>
 
+    {% comment %}
+    El :disabled es cortesia, para que se vea por que no se puede enviar. El que
+    realmente bloquea el envio sin aceptar es el required del campo.
+    {% endcomment %}
+
     <form method="post" action="{% url 'solicitar' %}?paso=3" novalidate>
       {% csrf_token %}
       <input type="hidden" name="paso" value="3">

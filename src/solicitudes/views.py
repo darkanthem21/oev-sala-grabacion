@@ -52,11 +52,12 @@ def _construir_calendario_contexto(request, year=None, month=None, fecha_str=Non
     """
     Construye el calendario mensual y su contexto de navegación para ser consumido
     tanto por la vista general de calendario como por el paso 1 del wizard de reserva.
+    No permite la navegación ni selección de meses anteriores al mes actual.
     """
-    FECHA_MINIMA = date(2023, 1, 1)
-    FECHA_MAXIMA = date(2028, 12, 31)
-
     ahora = datetime.now()
+    # La fecha mínima es el primer día del mes actual, impidiendo navegar a meses pasados
+    FECHA_MINIMA = date(ahora.year, ahora.month, 1)
+    FECHA_MAXIMA = date(2028, 12, 31)
 
     if year is None or month is None:
         try:
@@ -66,9 +67,9 @@ def _construir_calendario_contexto(request, year=None, month=None, fecha_str=Non
             year = ahora.year
             month = ahora.month
 
-    # Validar que la fecha solicitada esté dentro de los límites permitidos
+    # Validar que la fecha solicitada esté dentro de los límites permitidos (nunca meses pasados)
     fecha_solicitada = date(year, month, 1)
-    if fecha_solicitada < date(FECHA_MINIMA.year, FECHA_MINIMA.month, 1):
+    if fecha_solicitada < FECHA_MINIMA:
         year, month = FECHA_MINIMA.year, FECHA_MINIMA.month
     elif fecha_solicitada > date(FECHA_MAXIMA.year, FECHA_MAXIMA.month, 1):
         year, month = FECHA_MAXIMA.year, FECHA_MAXIMA.month
@@ -81,7 +82,11 @@ def _construir_calendario_contexto(request, year=None, month=None, fecha_str=Non
     if fecha_str:
         try:
             fecha_seleccionada = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-            bloques_seleccionados = obtener_bloques_dia(fecha_seleccionada)
+            if fecha_seleccionada < FECHA_MINIMA:
+                fecha_seleccionada = None
+                fecha_str = None
+            else:
+                bloques_seleccionados = obtener_bloques_dia(fecha_seleccionada)
         except ValueError:
             fecha_str = None
 
@@ -94,7 +99,7 @@ def _construir_calendario_contexto(request, year=None, month=None, fecha_str=Non
     mes_siguiente = month + 1 if month < 12 else 1
     anio_siguiente = year if month < 12 else year + 1
 
-    mostrar_anterior = date(anio_anterior, mes_anterior, 1) >= date(FECHA_MINIMA.year, FECHA_MINIMA.month, 1)
+    mostrar_anterior = date(anio_anterior, mes_anterior, 1) >= FECHA_MINIMA
     mostrar_siguiente = date(anio_siguiente, mes_siguiente, 1) <= date(FECHA_MAXIMA.year, FECHA_MAXIMA.month, 1)
 
     meses_espanol = [
@@ -103,6 +108,10 @@ def _construir_calendario_contexto(request, year=None, month=None, fecha_str=Non
         (9, 'Septiembre'), (10, 'Octubre'), (11, 'Noviembre'), (12, 'Diciembre')
     ]
     nombre_mes_actual = dict(meses_espanol)[month]
+    meses_contexto = [
+        (m_num, m_nombre, date(year, m_num, 1) >= FECHA_MINIMA)
+        for m_num, m_nombre in meses_espanol
+    ]
 
     return {
         "calendario": html_cal,
@@ -115,7 +124,7 @@ def _construir_calendario_contexto(request, year=None, month=None, fecha_str=Non
         "next_month": mes_siguiente,
         "mostrar_anterior": mostrar_anterior,
         "mostrar_siguiente": mostrar_siguiente,
-        "meses": meses_espanol,
+        "meses": meses_contexto,
         "anios_permitidos": range(FECHA_MINIMA.year, FECHA_MAXIMA.year + 1),
         "fecha_seleccionada": fecha_seleccionada,
         "fecha_str": fecha_str,

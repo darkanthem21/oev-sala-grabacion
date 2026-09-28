@@ -72,3 +72,16 @@ class CalendarioSolicitudesTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Día seleccionado: 20/09/2026")
         self.assertContains(response, "10:00 - 11:00")
+
+    def test_no_permite_navegar_a_mes_pasado(self):
+        url = reverse("calendario")
+        # Intentar acceder a un mes pasado (agosto 2026)
+        response = self.client.get(f"{url}?year=2026&month=8")
+        self.assertEqual(response.status_code, 200)
+        # Debe reajustarse al mes actual (Septiembre 2026)
+        self.assertContains(response, "Septiembre 2026")
+        # El botón de mes anterior debe estar deshabilitado
+        self.assertContains(response, 'class="btn-nav disabled" aria-disabled="true">&laquo; Anterior</span>')
+        # Las opciones de meses pasados en select-mes deben estar deshabilitadas
+        self.assertContains(response, 'disabled>Agosto</option>')
+
