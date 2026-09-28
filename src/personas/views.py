@@ -4,7 +4,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
@@ -20,27 +20,21 @@ ERROR_CREDENCIALES = "Correo o contraseña incorrectos."
 def destino_tras_login(usuario):
     """A dónde va alguien recién autenticado.
 
-    US-01 AC3 dice "panel principal de reservas", que es US-02 y todavía no
-    existe. Cuando exista, se cambia esta función y nada más.
-
-    Las puertas son dos desde el 08/09: `login` para solicitantes y
-    `login_gestion` para la administración. Ambas reusan `entrar`, así que la
-    autenticación, el bloqueo por intentos y la recuperación de clave viven en un
-    solo lugar; lo que cambia es la plantilla y a quién se deja pasar.
+    US-01 AC3 dice "panel principal de reservas": para el solicitante es el
+    formulario de US-02.
 
     Los roles ya son grupos de Django (US-08 AC6), así que alguien puede tener
     varios: el orden de abajo es la prioridad, no una clasificación. `is_staff`
     sigue contando como administrador porque el superusuario que crea el
     despliegue no pertenece a ningún grupo.
-
-    Validación (US-07) no tiene panel propio todavía y cae en el mismo marcador
-    de posición que el solicitante.
     """
     if usuario.is_staff or usuario.tiene_rol(Rol.ADMINISTRADOR):
         return reverse("panel_bloques")
+    if usuario.tiene_rol(Rol.VALIDADOR):
+        return reverse("panel_validador")
     if usuario.tiene_rol(Rol.APOYO):
         return reverse("panel_apoyo")
-    return reverse("panel")
+    return reverse("solicitar")
 
 
 def _con_error(request, form, mensaje, ruta):
@@ -116,5 +110,5 @@ def entrar(request, plantilla="personas/login.html", ruta="login", rol=None, tit
 
 @login_required
 def panel(request):
-    """Marcador de posición del panel de reservas (US-02)."""
-    return render(request, "personas/panel.html")
+    """La raíz lleva a cada uno a su panel, el mismo al que llega tras entrar."""
+    return redirect(destino_tras_login(request.user))

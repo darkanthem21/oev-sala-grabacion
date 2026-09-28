@@ -1,7 +1,8 @@
-from django.conf import settings
-from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render
+
+from configuracion.models import Parametros
+from personas.models import Rol
 
 from . import validacion
 from .forms import MAXIMO_ACOMPANANTES, MAXIMO_PERSONAS, AcompananteFormSet, SolicitudForm
@@ -60,10 +61,8 @@ def _contexto(form, formset, extra=None):
         "acepta_inicial": acepta_inicial,
         "maximo_personas": MAXIMO_PERSONAS,
         "maximo_acompanantes": MAXIMO_ACOMPANANTES,
-        # US-04 AC5 pide que el cliente edite este texto sin recompilar. Hasta
-        # que exista el modulo `configuracion` viaja por entorno, igual que los
-        # umbrales de bloqueo de US-01.
-        "terminos": settings.TERMINOS_Y_CONDICIONES,
+        # US-04 AC5: lo edita el administrador en la pestaña de reglas.
+        "terminos": Parametros.cargar().terminos,
     }
     base.update(extra or {})
     return base
@@ -105,9 +104,11 @@ def solicitar(request):
     })
 
 
-# US-07. El rol de validador todavia no es un grupo (eso es US-08), asi que por
-# ahora entra quien entra a la administracion, igual que el panel de bloques.
-@staff_member_required(login_url="login_gestion")
+def es_validador(usuario):
+    return usuario.is_authenticated and usuario.tiene_rol(Rol.VALIDADOR)
+
+
+@user_passes_test(es_validador, login_url="login_validacion")
 def panel_validador(request):
     """Bandeja del validador, con datos de prueba mientras no exista el modelo.
 
