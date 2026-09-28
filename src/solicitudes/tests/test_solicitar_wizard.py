@@ -246,4 +246,31 @@ class WizardClasesTestCase(TestCase):
             self.assertEqual(f_min, date(2026, 9, 1))
             self.assertEqual(f_max, date(2026, 9, 30))
 
+    def test_barra_superior_en_solicitar(self):
+        url = reverse("solicitar")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="barra-superior"')
+        self.assertContains(response, 'Facultad-color-negro.png')
+        self.assertContains(response, self.usuario.email)
+        self.assertContains(response, 'action="/logout/"')
+        self.assertContains(response, 'Cerrar sesión')
+
+    def test_barra_superior_en_sin_area(self):
+        usuario_sin_area = Usuario.objects.create_user(
+            email="sinarea@uach.cl",
+            first_name="Sin",
+            last_name="Area",
+            password="testpassword123",
+        )
+        self.client.force_login(usuario_sin_area)
+        url = reverse("solicitar")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "solicitudes/sin_area.html")
+        self.assertContains(response, 'class="barra-superior"')
+        self.assertContains(response, 'Facultad-color-negro.png')
+        self.assertContains(response, "sinarea@uach.cl")
+        self.assertContains(response, 'action="/logout/"')
+
 

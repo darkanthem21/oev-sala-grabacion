@@ -3,6 +3,10 @@
 {% block titulo %}Solicitud lista{% endblock %}
 {% block estilos %}<link rel="stylesheet" href="{% static 'solicitudes/solicitud.css' %}">{% endblock %}
 
+{% block barra_superior %}
+{% include "solicitudes/componentes/barra_superior.html" %}
+{% endblock %}
+
 {% block contenido %}
 <main class="hoja">
   <h1>Solicitud completa</h1>
