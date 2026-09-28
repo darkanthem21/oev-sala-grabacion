@@ -5,6 +5,7 @@ from django.urls import reverse
 
 from agenda.models import Bloque
 from personas.models import Area
+from solicitudes.wizard import PasoSolicitud, SolicitudWizard
 
 Usuario = get_user_model()
 
@@ -147,3 +148,73 @@ class SolicitarWizardTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         # Redirige internamente a paso 1
         self.assertContains(response, "Paso 1: Selecciona fecha y horario")
+
+
+class WizardClasesTestCase(TestCase):
+    def test_paso_solicitud_resolver(self):
+        self.assertEqual(PasoSolicitud.resolver(1), PasoSolicitud.HORARIO)
+        self.assertEqual(PasoSolicitud.resolver("2"), PasoSolicitud.DATOS)
+        self.assertEqual(PasoSolicitud.resolver(3), PasoSolicitud.CONFIRMACION)
+        self.assertEqual(PasoSolicitud.resolver("invalido"), PasoSolicitud.HORARIO)
+        self.assertEqual(PasoSolicitud.resolver(99), PasoSolicitud.HORARIO)
+        self.assertEqual(PasoSolicitud.resolver(None), PasoSolicitud.HORARIO)
+
+    def test_paso_solicitud_validar_acceso(self):
+        # Sesión vacía solo permite paso 1
+        self.assertEqual(PasoSolicitud.HORARIO.validar_acceso({}), PasoSolicitud.HORARIO)
+        self.assertEqual(PasoSolicitud.DATOS.validar_acceso({}), PasoSolicitud.HORARIO)
+        self.assertEqual(PasoSolicitud.CONFIRMACION.validar_acceso({}), PasoSolicitud.HORARIO)
+
+        # Con datos de paso 1, permite paso 1 y 2, pero no 3
+        sesion_paso1 = {"fecha": "2026-09-20", "bloques_ids": [1]}
+        self.assertEqual(PasoSolicitud.HORARIO.validar_acceso(sesion_paso1), PasoSolicitud.HORARIO)
+        self.assertEqual(PasoSolicitud.DATOS.validar_acceso(sesion_paso1), PasoSolicitud.DATOS)
+        self.assertEqual(PasoSolicitud.CONFIRMACION.validar_acceso(sesion_paso1), PasoSolicitud.DATOS)
+
+        # Con datos de paso 1 y 2, permite paso 3
+        sesion_paso2 = {
+            "fecha": "2026-09-20",
+            "bloques_ids": [1],
+            "area_id": 1,
+            "motivo": "Grabación",
+        }
+        self.assertEqual(PasoSolicitud.CONFIRMACION.validar_acceso(sesion_paso2), PasoSolicitud.CONFIRMACION)
+
+    def test_solicitud_wizard_operaciones_sesion(self):
+        session_mock = {}
+        wizard = SolicitudWizard(session_mock)
+
+        # Inicialmente vacío
+        self.assertEqual(wizard.datos, {})
+
+        # Guardar horario
+        wizard.guardar_horario("2026-09-20", [1, 2], "10:00 - 12:00")
+        self.assertEqual(wizard.datos["fecha"], "2026-09-20")
+        self.assertEqual(wizard.datos["bloques_ids"], [1, 2])
+        self.assertEqual(wizard.datos["bloques_texto"], "10:00 - 12:00")
+
+        # Guardar datos actividad
+        wizard.guardar_datos_actividad(
+            area_id=5,
+            area_nombre="Medicina",
+            motivo="Simulación clínica",
+            observaciones="Cámara cenital",
+            personas=2,
+            acompanantes=[{"nombre": "Juan Pérez", "correo": "juan@uach.cl"}],
+        )
+        self.assertEqual(wizard.datos["area_id"], 5)
+        self.assertEqual(wizard.datos["motivo"], "Simulación clínica")
+
+        # Obtener resumen estructurado
+        resumen = wizard.obtener_resumen()
+        self.assertEqual(resumen["fecha"], date(2026, 9, 20))
+        self.assertEqual(resumen["fecha_str"], "2026-09-20")
+        self.assertEqual(resumen["area_nombre"], "Medicina")
+        self.assertEqual(resumen["personas"], 2)
+        self.assertEqual(len(resumen["acompanantes"]), 1)
+
+        # Limpiar sesión
+        wizard.limpiar()
+        self.assertEqual(wizard.datos, {})
+        self.assertNotIn(SolicitudWizard.CLAVE_SESION, session_mock)
+
