@@ -54,16 +54,25 @@ TEMPLATES = [
     },
 ]
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_DB", "oev"),
-        "USER": os.environ.get("POSTGRES_USER", "oev"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "oev"),
-        "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": "5432",
+DB_ENGINE = os.environ.get("DB_ENGINE", "postgresql")
+if DB_ENGINE == "sqlite3":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("POSTGRES_DB", "oev"),
+            "USER": os.environ.get("POSTGRES_USER", "oev"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "oev"),
+            "HOST": os.environ.get("DB_HOST", "localhost"),
+            "PORT": "5432",
+        }
+    }
 
 LANGUAGE_CODE = "es-cl"
 TIME_ZONE = "America/Santiago"
@@ -75,7 +84,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "personas.Usuario"
 LOGIN_URL = "/login/"
-LOGIN_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = "/solicitar/"
 
 # US-01 AC5. Por entorno hasta que exista el modulo `configuracion`: el RNF 1
 # exige que el cliente pueda cambiar estos umbrales sin tocar el codigo.

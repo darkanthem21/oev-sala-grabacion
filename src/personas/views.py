@@ -5,9 +5,10 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import Usuario
 
@@ -16,22 +17,32 @@ from .models import Usuario
 ERROR_CREDENCIALES = "Correo o contraseña incorrectos."
 
 
-def destino_tras_login(usuario):
+def destino_tras_login(usuario, request=None):
     """A dónde va alguien recién autenticado.
 
-    US-01 AC3 dice "panel principal de reservas", que es US-02 y todavía no
-    existe. Cuando exista, se cambia esta función y nada más.
-
-    Es también el punto donde se decide el destino por rol, si se confirma que
-    los distintos tipos de usuario entran por la misma puerta. Si se decide que
-    entran por puertas distintas, se agrega otra URL que reusa `entrar`: la
-    autenticación no se duplica.
+    US-01 AC3: redirige al formulario / flujo de solicitud de reservas (US-02).
+    Si se proporciona `request` y contiene un parámetro `next` válido y seguro
+    (que no sea la raíz o el panel marcador), se redirige a esa dirección.
     """
-    return reverse("panel")
+    if request:
+        next_url = request.POST.get("next") or request.GET.get("next")
+        if next_url and next_url not in ("/", reverse("panel")):
+            if url_has_allowed_host_and_scheme(
+                next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                return next_url
+    return reverse("solicitar")
 
 
 def _con_error(request, form, mensaje):
-    return render(request, "personas/_formulario_ingreso.html", {"form": form, "error": mensaje})
+    next_url = request.POST.get("next") or request.GET.get("next") or ""
+    return render(
+        request,
+        "personas/_formulario_ingreso.html",
+        {"form": form, "error": mensaje, "next": next_url},
+    )
 
 
 def _registrar_fallo(usuario):
@@ -44,8 +55,16 @@ def _registrar_fallo(usuario):
 
 
 def entrar(request):
+    next_url = request.POST.get("next") or request.GET.get("next") or ""
+    if request.user.is_authenticated:
+        return redirect(destino_tras_login(request.user, request))
+
     if request.method != "POST":
-        return render(request, "personas/login.html", {"form": AuthenticationForm()})
+        return render(
+            request,
+            "personas/login.html",
+            {"form": AuthenticationForm(), "next": next_url},
+        )
 
     form = AuthenticationForm(request, data=request.POST)
     usuario = Usuario.objects.filter(email__iexact=request.POST.get("username", "")).first()
@@ -61,8 +80,10 @@ def entrar(request):
             entrante.bloqueado_hasta = None
             entrante.save(update_fields=["intentos_fallidos", "bloqueado_hasta"])
         login(request, entrante)
-        # 204 sin cuerpo: no hay nada que pegar, el navegador navega de verdad.
-        return HttpResponse(status=204, headers={"HX-Redirect": destino_tras_login(entrante)})
+        destino = destino_tras_login(entrante, request)
+        if request.headers.get("HX-Request"):
+            return HttpResponse(status=204, headers={"HX-Redirect": destino})
+        return redirect(destino)
 
     if usuario:
         _registrar_fallo(usuario)
@@ -71,5 +92,5 @@ def entrar(request):
 
 @login_required
 def panel(request):
-    """Marcador de posición del panel de reservas (US-02)."""
-    return render(request, "personas/panel.html")
+    """Marcador de posición del panel de reservas (US-02). Redirige a solicitar."""
+    return redirect("solicitar")

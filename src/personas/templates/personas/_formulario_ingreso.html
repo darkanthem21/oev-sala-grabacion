@@ -2,8 +2,18 @@
 htmx reemplaza este formulario cuando hay error: sin recargar y sin perder el
 correo escrito. Al entrar bien la vista responde 204 + HX-Redirect.
 {% endcomment %}
-<form id="ingreso" hx-post="{% url 'login' %}" hx-target="#ingreso" hx-swap="outerHTML">
+<form id="ingreso"
+      action="{% url 'login' %}"
+      method="post"
+      hx-post="{% url 'login' %}{% if next and next != '/' %}?next={{ next|urlencode }}{% elif request.GET.next and request.GET.next != '/' %}?next={{ request.GET.next|urlencode }}{% endif %}"
+      hx-target="#ingreso"
+      hx-swap="outerHTML">
   {% csrf_token %}
+  {% if next and next != '/' %}
+  <input type="hidden" name="next" value="{{ next }}">
+  {% elif request.GET.next and request.GET.next != '/' %}
+  <input type="hidden" name="next" value="{{ request.GET.next }}">
+  {% endif %}
 
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
