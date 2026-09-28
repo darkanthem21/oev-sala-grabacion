@@ -98,11 +98,14 @@
 .mes-actual {
     font-family: var(--fuente-titulo);
     margin: 0;
+    padding: 0;
+    border-bottom: none;
+    line-height: 1.2;
     color: var(--tinta);
     font-size: 1.05rem;
     font-weight: 700;
     letter-spacing: 0.02em;
-    min-width: 11rem;
+    min-width: 11.5rem;
     text-align: center;
 }
 

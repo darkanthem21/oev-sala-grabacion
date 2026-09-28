@@ -14,64 +14,8 @@
         <p class="subtitulo-calendario">Consulta los horarios habilitados y selecciona los bloques requeridos para tu actividad en la sala de grabación.</p>
     </header>
 
-    <!-- Controles de navegación de meses y selector rápido -->
-    <div class="controles-calendario">
-        <div class="navegacion-meses">
-            {% if mostrar_anterior %}
-                <a href="?year={{ prev_year }}&month={{ prev_month }}" class="btn-nav" aria-label="Ir al mes anterior">&laquo; Anterior</a>
-            {% else %}
-                <span class="btn-nav disabled" aria-disabled="true">&laquo; Anterior</span>
-            {% endif %}
-
-            <h2 class="mes-actual">{{ nombre_mes_actual }} {{ year }}</h2>
-
-            {% if mostrar_siguiente %}
-                <a href="?year={{ next_year }}&month={{ next_month }}" class="btn-nav" aria-label="Ir al mes siguiente">Siguiente &raquo;</a>
-            {% else %}
-                <span class="btn-nav disabled" aria-disabled="true">Siguiente &raquo;</span>
-            {% endif %}
-        </div>
-
-        <form method="GET" class="selector-rapido" aria-label="Navegación rápida de fecha">
-            <label for="select-mes" class="sr-only">Seleccionar mes</label>
-            <select id="select-mes" name="month" class="select-personalizado">
-                {% for m_num, m_nombre in meses %}
-                    <option value="{{ m_num }}" {% if m_num == month %}selected{% endif %}>{{ m_nombre }}</option>
-                {% endfor %}
-            </select>
-
-            <label for="select-anio" class="sr-only">Seleccionar año</label>
-            <select id="select-anio" name="year" class="select-personalizado">
-                {% for y in anios_permitidos %}
-                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
-                {% endfor %}
-            </select>
-
-            <button type="submit" class="btn-ir">Ir a fecha</button>
-        </form>
-    </div>
-
-    <!-- Grilla del calendario mensual con leyenda -->
-    <div class="calendario-wrapper">
-        <div class="calendario" role="region" aria-label="Calendario del mes">
-            {{ calendario|safe }}
-        </div>
-
-        <div class="leyenda-calendario" aria-label="Leyenda de disponibilidad">
-            <div class="leyenda-item">
-                <span class="leyenda-muestra muestra-disponible" aria-hidden="true"></span>
-                <span>Día disponible</span>
-            </div>
-            <div class="leyenda-item">
-                <span class="leyenda-muestra muestra-seleccionado" aria-hidden="true"></span>
-                <span>Día seleccionado</span>
-            </div>
-            <div class="leyenda-item">
-                <span class="leyenda-muestra muestra-no-disponible" aria-hidden="true"></span>
-                <span>Sin disponibilidad</span>
-            </div>
-        </div>
-    </div>
+    <!-- Componente del calendario dinámico con controles y leyenda -->
+    {% include "solicitudes/componentes/calendario_disponibilidad.html" %}
 
     <!-- Mensajes de estado del procesamiento -->
     {% if mensaje_confirmacion %}
@@ -88,7 +32,11 @@
     {% endif %}
 
     <!-- Formulario de selección y confirmación de bloques -->
-    <form method="POST" action="{% url 'calendario' %}{% if fecha_str %}?year={{ year }}&month={{ month }}&fecha={{ fecha_str }}{% else %}?year={{ year }}&month={{ month }}{% endif %}">
+    <form method="POST"
+          action="{% url 'calendario' %}{% if fecha_str %}?year={{ year }}&month={{ month }}&fecha={{ fecha_str }}{% else %}?year={{ year }}&month={{ month }}{% endif %}"
+          x-data="{ haySeleccion: {% if bloques_seleccionados_ids %}true{% else %}false{% endif %} }"
+          @change="haySeleccion = $el.querySelectorAll('input[name=bloques]:checked').length > 0"
+          @htmx:after-swap.camel="haySeleccion = $el.querySelectorAll('input[name=bloques]:checked').length > 0">
         {% csrf_token %}
         <input type="hidden" name="fecha" value="{{ fecha_str|default:'' }}">
 
@@ -104,7 +52,7 @@
         </div>
 
         <div class="pie-formulario">
-            <button type="submit" id="btn-confirmar" class="btn-accion" {% if not fecha_str or not bloques_seleccionados %}disabled{% endif %}>Confirmar Selección</button>
+            <button type="submit" id="btn-confirmar" class="btn-accion" :disabled="!haySeleccion" {% if not bloques_seleccionados_ids %}disabled{% endif %}>Confirmar Selección</button>
             {% if fecha_str and bloques_seleccionados %}
                 <span class="pista-accion">Puedes seleccionar uno o más bloques contiguos para tu grabación.</span>
             {% endif %}

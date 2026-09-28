@@ -72,7 +72,7 @@ class SolicitudForm(forms.Form):
         widget=forms.CheckboxInput(attrs={"x-model": "acepta"}),
     )
 
-    def __init__(self, *args, usuario=None, **kwargs):
+    def __init__(self, *args, usuario=None, exigir_terminos=True, **kwargs):
         super().__init__(*args, **kwargs)
         # US-02 AC1 y AC4: solo las areas a las que pertenece, y solo las
         # activas (US-05 AC3 saca un area del formulario sin borrar historial).
@@ -82,6 +82,9 @@ class SolicitudForm(forms.Form):
         if len(areas) == 1:
             self.fields["area"].initial = areas[0]
             self.fields["area"].empty_label = None
+
+        if not exigir_terminos and "acepta_terminos" in self.fields:
+            self.fields["acepta_terminos"].required = False
 
 
 class AcompananteForm(forms.Form):

@@ -20,6 +20,12 @@
 
   <dl class="ficha">
     <dt>Solicitante</dt><dd>{{ user.get_full_name|default:user.email }}</dd>
+    {% if solicitud.fecha %}
+      <dt>Fecha</dt><dd><strong>{{ solicitud.fecha|date:"l d \d\e F \d\e Y"|capfirst }}</strong></dd>
+    {% endif %}
+    {% if solicitud.bloques_texto %}
+      <dt>Horario</dt><dd><strong>{{ solicitud.bloques_texto }}</strong></dd>
+    {% endif %}
     <dt>Área académica</dt><dd>{{ solicitud.area }}</dd>
     <dt>Motivo</dt><dd>{{ solicitud.motivo }}</dd>
     <dt>Observaciones</dt><dd>{{ solicitud.observaciones|default:"—" }}</dd>

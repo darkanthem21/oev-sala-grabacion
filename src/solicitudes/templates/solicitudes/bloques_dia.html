@@ -1,5 +1,6 @@
 <div class="panel-bloques-contenido">
     {% if fecha_str %}
+        <input type="hidden" name="fecha" id="input-fecha-seleccionada" value="{{ fecha_str }}">
         <div class="encabezado-bloques">
             <h3 class="titulo-bloques">Bloques para el día {% if fecha %}{{ fecha|date:"d/m/Y" }}{% else %}{{ fecha_str }}{% endif %}</h3>
             <span class="total-bloques">{{ bloques|length }} bloque{{ bloques|length|pluralize }} encontrado{{ bloques|length|pluralize }}</span>

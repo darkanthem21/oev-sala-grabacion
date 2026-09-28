@@ -1,0 +1,84 @@
+<div id="calendario-componente" class="calendario-seccion">
+    <!-- Controles de navegación de meses y selector rápido -->
+    <div class="controles-calendario">
+        <div class="navegacion-meses">
+            {% if mostrar_anterior %}
+                <a href="?year={{ prev_year }}&month={{ prev_month }}{% if paso %}&paso={{ paso }}{% endif %}"
+                   class="btn-nav"
+                   hx-get="{% url 'calendario' %}?year={{ prev_year }}&month={{ prev_month }}"
+                   hx-target="#calendario-componente"
+                   hx-select="#calendario-componente"
+                   hx-swap="outerHTML"
+                   hx-push-url="false"
+                   aria-label="Ir al mes anterior">&laquo; Anterior</a>
+            {% else %}
+                <span class="btn-nav disabled" aria-disabled="true">&laquo; Anterior</span>
+            {% endif %}
+
+            <h2 class="mes-actual">{{ nombre_mes_actual }} {{ year }}</h2>
+
+            {% if mostrar_siguiente %}
+                <a href="?year={{ next_year }}&month={{ next_month }}{% if paso %}&paso={{ paso }}{% endif %}"
+                   class="btn-nav"
+                   hx-get="{% url 'calendario' %}?year={{ next_year }}&month={{ next_month }}"
+                   hx-target="#calendario-componente"
+                   hx-select="#calendario-componente"
+                   hx-swap="outerHTML"
+                   hx-push-url="false"
+                   aria-label="Ir al mes siguiente">Siguiente &raquo;</a>
+            {% else %}
+                <span class="btn-nav disabled" aria-disabled="true">Siguiente &raquo;</span>
+            {% endif %}
+        </div>
+
+        <form method="GET"
+              action="{% url 'calendario' %}"
+              class="selector-rapido"
+              hx-get="{% url 'calendario' %}"
+              hx-trigger="change"
+              hx-target="#calendario-componente"
+              hx-select="#calendario-componente"
+              hx-swap="outerHTML"
+              hx-push-url="false"
+              aria-label="Navegación rápida de fecha">
+            {% if paso %}
+                <input type="hidden" name="paso" value="{{ paso }}">
+            {% endif %}
+            <label for="select-mes" class="sr-only">Seleccionar mes</label>
+            <select id="select-mes" name="month" class="select-personalizado">
+                {% for m_num, m_nombre in meses %}
+                    <option value="{{ m_num }}" {% if m_num == month %}selected{% endif %}>{{ m_nombre }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="select-anio" class="sr-only">Seleccionar año</label>
+            <select id="select-anio" name="year" class="select-personalizado">
+                {% for y in anios_permitidos %}
+                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    <!-- Grilla del calendario mensual con leyenda -->
+    <div class="calendario-wrapper">
+        <div class="calendario" role="region" aria-label="Calendario del mes">
+            {{ calendario|safe }}
+        </div>
+
+        <div class="leyenda-calendario" aria-label="Leyenda de disponibilidad">
+            <div class="leyenda-item">
+                <span class="leyenda-muestra muestra-disponible" aria-hidden="true"></span>
+                <span>Día disponible</span>
+            </div>
+            <div class="leyenda-item">
+                <span class="leyenda-muestra muestra-seleccionado" aria-hidden="true"></span>
+                <span>Día seleccionado</span>
+            </div>
+            <div class="leyenda-item">
+                <span class="leyenda-muestra muestra-no-disponible" aria-hidden="true"></span>
+                <span>Sin disponibilidad</span>
+            </div>
+        </div>
+    </div>
+</div>
