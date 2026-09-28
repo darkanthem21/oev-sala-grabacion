@@ -1,6 +1,37 @@
-from datetime import datetime
+import calendar
+from datetime import date, datetime
 from enum import IntEnum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
+from django.conf import settings
+
+
+def obtener_limites_reserva(fecha_referencia: Optional[date] = None) -> Tuple[date, date]:
+    """
+    Calcula los límites inferior y superior de fechas permitidas para reservas.
+    - Límite inferior: primer día del mes actual (no se permite reservar en meses pasados).
+    - Límite superior: último día del mes correspondiente a la anticipación máxima permitida
+      (configurable desde el panel administrador o settings.MESES_ANTICIPACION_MAXIMA,
+      por defecto 4 meses de distancia hacia el futuro a partir del mes en curso).
+    """
+    if fecha_referencia is None:
+        fecha_referencia = date.today()
+
+    fecha_minima = date(fecha_referencia.year, fecha_referencia.month, 1)
+
+    meses_anticipacion = getattr(settings, "MESES_ANTICIPACION_MAXIMA", 4)
+    try:
+        meses_anticipacion = int(meses_anticipacion)
+    except (ValueError, TypeError):
+        meses_anticipacion = 4
+
+    total_meses = (fecha_referencia.year * 12) + (fecha_referencia.month - 1) + max(meses_anticipacion, 0)
+    max_year = total_meses // 12
+    max_month = (total_meses % 12) + 1
+    _, ultimo_dia = calendar.monthrange(max_year, max_month)
+    fecha_maxima = date(max_year, max_month, ultimo_dia)
+
+    return fecha_minima, fecha_maxima
 
 
 class PasoSolicitud(IntEnum):

@@ -90,6 +90,10 @@ EMAIL_BACKEND = os.environ.get(
 )
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-responder@uach.cl")
 
+# Anticipación máxima permitida para solicitar reservas (en meses de distancia hacia el futuro).
+# Configurable por entorno hasta que exista el módulo `configuracion` con panel administrador.
+MESES_ANTICIPACION_MAXIMA = int(os.environ.get("MESES_ANTICIPACION_MAXIMA", "4"))
+
 # US-02 AC10. US-04 AC5 exige que el cliente edite este texto sin recompilar.
 # Por entorno hasta que exista el modulo `configuracion`, igual que los umbrales
 # de bloqueo de US-01. El texto de abajo es un marcador: lo real lo redacta la

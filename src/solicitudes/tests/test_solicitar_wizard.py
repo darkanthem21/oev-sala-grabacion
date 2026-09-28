@@ -5,7 +5,7 @@ from django.urls import reverse
 
 from agenda.models import Bloque
 from personas.models import Area
-from solicitudes.wizard import PasoSolicitud, SolicitudWizard
+from solicitudes.wizard import PasoSolicitud, SolicitudWizard, obtener_limites_reserva
 
 Usuario = get_user_model()
 
@@ -59,6 +59,16 @@ class SolicitarWizardTestCase(TestCase):
         self.assertRedirects(response, f"{url}?paso=2")
         self.assertEqual(self.client.session.get("solicitud_reserva", {}).get("fecha"), "2026-09-20")
         self.assertEqual(self.client.session.get("solicitud_reserva", {}).get("bloques_ids"), [self.bloque.id])
+
+    def test_paso1_post_fecha_fuera_de_rango_muestra_error(self):
+        url = reverse("solicitar")
+        response = self.client.post(f"{url}?paso=1", {
+            "paso": "1",
+            "fecha": "2027-05-10",
+            "bloques": [str(self.bloque.id)],
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "La fecha seleccionada no está dentro del período permitido para reservas.")
 
     def test_paso2_muestra_resumen_horario(self):
         session = self.client.session
@@ -217,4 +227,23 @@ class WizardClasesTestCase(TestCase):
         wizard.limpiar()
         self.assertEqual(wizard.datos, {})
         self.assertNotIn(SolicitudWizard.CLAVE_SESION, session_mock)
+
+    def test_obtener_limites_reserva(self):
+        # Por defecto 4 meses de anticipación
+        f_min, f_max = obtener_limites_reserva(date(2026, 9, 28))
+        self.assertEqual(f_min, date(2026, 9, 1))
+        self.assertEqual(f_max, date(2027, 1, 31))
+
+        # Configuración personalizada de anticipación
+        with self.settings(MESES_ANTICIPACION_MAXIMA=2):
+            f_min, f_max = obtener_limites_reserva(date(2026, 9, 28))
+            self.assertEqual(f_min, date(2026, 9, 1))
+            self.assertEqual(f_max, date(2026, 11, 30))
+
+        # 0 meses (solo mes en curso)
+        with self.settings(MESES_ANTICIPACION_MAXIMA=0):
+            f_min, f_max = obtener_limites_reserva(date(2026, 9, 28))
+            self.assertEqual(f_min, date(2026, 9, 1))
+            self.assertEqual(f_max, date(2026, 9, 30))
+
 

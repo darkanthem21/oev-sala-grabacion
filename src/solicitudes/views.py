@@ -7,18 +7,20 @@ from django.urls import reverse
 
 from agenda.services import obtener_bloques_dia, obtener_bloques_mes
 from .forms import MAXIMO_ACOMPANANTES, MAXIMO_PERSONAS, AcompananteFormSet, SolicitudForm
-from .wizard import PasoSolicitud, SolicitudWizard
+from .wizard import PasoSolicitud, SolicitudWizard, obtener_limites_reserva
 
 
 class AgendaCalendar(calendar.HTMLCalendar):
     DIAS_SEMANA = ["LUN", "MAR", "MIE", "JUE", "VIE", "SÁB", "DOM"]
 
-    def __init__(self, bloques, year, month, fecha_seleccionada=None):
+    def __init__(self, bloques, year, month, fecha_seleccionada=None, fecha_minima=None, fecha_maxima=None):
         super().__init__()
         self.bloques = {b.fecha.day for b in bloques}
         self.year = year
         self.month = month
         self.fecha_seleccionada = fecha_seleccionada
+        self.fecha_minima = fecha_minima
+        self.fecha_maxima = fecha_maxima
 
     def formatweekday(self, day):
         return f'<th class="{self.cssclasses_weekday_head[day]}">{self.DIAS_SEMANA[day]}</th>'
@@ -29,10 +31,17 @@ class AgendaCalendar(calendar.HTMLCalendar):
         
         css_class = self.cssclasses[weekday]
         date_str = f"{self.year}-{self.month:02d}-{day:02d}"
+        dia_fecha = date(self.year, self.month, day)
+
+        es_valido = True
+        if self.fecha_minima and dia_fecha < self.fecha_minima:
+            es_valido = False
+        if self.fecha_maxima and dia_fecha > self.fecha_maxima:
+            es_valido = False
         
-        if day in self.bloques:
+        if day in self.bloques and es_valido:
             css_class += ' available dia-seleccionable'
-            if self.fecha_seleccionada and self.fecha_seleccionada == date(self.year, self.month, day):
+            if self.fecha_seleccionada and self.fecha_seleccionada == dia_fecha:
                 css_class += ' selected'
             return (
                 f'<td class="{css_class}" data-date="{date_str}">'
@@ -53,27 +62,25 @@ def _construir_calendario_contexto(request, year=None, month=None, fecha_str=Non
     """
     Construye el calendario mensual y su contexto de navegación para ser consumido
     tanto por la vista general de calendario como por el paso 1 del wizard de reserva.
-    No permite la navegación ni selección de meses anteriores al mes actual.
+    No permite la navegación ni selección de meses anteriores al mes actual ni posteriores
+    al límite de anticipación máxima configurado.
     """
-    ahora = datetime.now()
-    # La fecha mínima es el primer día del mes actual, impidiendo navegar a meses pasados
-    FECHA_MINIMA = date(ahora.year, ahora.month, 1)
-    FECHA_MAXIMA = date(2028, 12, 31)
+    fecha_minima, fecha_maxima = obtener_limites_reserva()
 
     if year is None or month is None:
         try:
-            year = int(request.GET.get('year', ahora.year))
-            month = int(request.GET.get('month', ahora.month))
+            year = int(request.GET.get('year', fecha_minima.year))
+            month = int(request.GET.get('month', fecha_minima.month))
         except (ValueError, TypeError):
-            year = ahora.year
-            month = ahora.month
+            year = fecha_minima.year
+            month = fecha_minima.month
 
-    # Validar que la fecha solicitada esté dentro de los límites permitidos (nunca meses pasados)
+    # Validar que la fecha solicitada esté dentro de los límites permitidos (nunca meses pasados ni fuera de rango)
     fecha_solicitada = date(year, month, 1)
-    if fecha_solicitada < FECHA_MINIMA:
-        year, month = FECHA_MINIMA.year, FECHA_MINIMA.month
-    elif fecha_solicitada > date(FECHA_MAXIMA.year, FECHA_MAXIMA.month, 1):
-        year, month = FECHA_MAXIMA.year, FECHA_MAXIMA.month
+    if fecha_solicitada < fecha_minima:
+        year, month = fecha_minima.year, fecha_minima.month
+    elif fecha_solicitada > date(fecha_maxima.year, fecha_maxima.month, 1):
+        year, month = fecha_maxima.year, fecha_maxima.month
 
     if fecha_str is None:
         fecha_str = request.POST.get('fecha') if request.method == 'POST' else request.GET.get('fecha')
@@ -83,7 +90,7 @@ def _construir_calendario_contexto(request, year=None, month=None, fecha_str=Non
     if fecha_str:
         try:
             fecha_seleccionada = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-            if fecha_seleccionada < FECHA_MINIMA:
+            if fecha_seleccionada < fecha_minima or fecha_seleccionada > fecha_maxima:
                 fecha_seleccionada = None
                 fecha_str = None
             else:
@@ -92,7 +99,14 @@ def _construir_calendario_contexto(request, year=None, month=None, fecha_str=Non
             fecha_str = None
 
     bloques = obtener_bloques_mes(year, month, disponible=True)
-    cal = AgendaCalendar(bloques, year, month, fecha_seleccionada=fecha_seleccionada)
+    cal = AgendaCalendar(
+        bloques,
+        year,
+        month,
+        fecha_seleccionada=fecha_seleccionada,
+        fecha_minima=fecha_minima,
+        fecha_maxima=fecha_maxima,
+    )
     html_cal = cal.formatmonth(year, month)
 
     mes_anterior = month - 1 if month > 1 else 12
@@ -100,8 +114,8 @@ def _construir_calendario_contexto(request, year=None, month=None, fecha_str=Non
     mes_siguiente = month + 1 if month < 12 else 1
     anio_siguiente = year if month < 12 else year + 1
 
-    mostrar_anterior = date(anio_anterior, mes_anterior, 1) >= FECHA_MINIMA
-    mostrar_siguiente = date(anio_siguiente, mes_siguiente, 1) <= date(FECHA_MAXIMA.year, FECHA_MAXIMA.month, 1)
+    mostrar_anterior = date(anio_anterior, mes_anterior, 1) >= fecha_minima
+    mostrar_siguiente = date(anio_siguiente, mes_siguiente, 1) <= date(fecha_maxima.year, fecha_maxima.month, 1)
 
     meses_espanol = [
         (1, 'Enero'), (2, 'Febrero'), (3, 'Marzo'), (4, 'Abril'),
@@ -110,7 +124,11 @@ def _construir_calendario_contexto(request, year=None, month=None, fecha_str=Non
     ]
     nombre_mes_actual = dict(meses_espanol)[month]
     meses_contexto = [
-        (m_num, m_nombre, date(year, m_num, 1) >= FECHA_MINIMA)
+        (
+            m_num,
+            m_nombre,
+            fecha_minima <= date(year, m_num, 1) <= date(fecha_maxima.year, fecha_maxima.month, 1)
+        )
         for m_num, m_nombre in meses_espanol
     ]
 
@@ -126,7 +144,7 @@ def _construir_calendario_contexto(request, year=None, month=None, fecha_str=Non
         "mostrar_anterior": mostrar_anterior,
         "mostrar_siguiente": mostrar_siguiente,
         "meses": meses_contexto,
-        "anios_permitidos": range(FECHA_MINIMA.year, FECHA_MAXIMA.year + 1),
+        "anios_permitidos": range(fecha_minima.year, fecha_maxima.year + 1),
         "fecha_seleccionada": fecha_seleccionada,
         "fecha_str": fecha_str,
         "bloques_seleccionados": bloques_seleccionados,
@@ -156,8 +174,11 @@ def calendario(request):
             except ValueError:
                 fecha_str = None
 
+        fecha_minima, fecha_maxima = obtener_limites_reserva()
         if not fecha_str or not fecha_obj:
             error_confirmacion = "Por favor, selecciona un día del calendario."
+        elif fecha_obj < fecha_minima or fecha_obj > fecha_maxima:
+            error_confirmacion = "La fecha seleccionada no está dentro del período permitido."
         elif not bloques_ids:
             error_confirmacion = f"Día seleccionado: {fecha_obj.strftime('%d/%m/%Y')}. Por favor, selecciona al menos un bloque disponible."
         else:
@@ -198,11 +219,15 @@ def bloques_dia(request):
     if fecha_str:
         try:
             fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-            bloques = obtener_bloques_dia(fecha)
-            # Sincronizar selección previa si existe en la sesión
-            solicitud_sesion = request.session.get("solicitud_reserva", {})
-            if solicitud_sesion.get("fecha") == fecha_str:
-                bloques_seleccionados_ids = solicitud_sesion.get("bloques_ids", [])
+            fecha_minima, fecha_maxima = obtener_limites_reserva()
+            if fecha < fecha_minima or fecha > fecha_maxima:
+                fecha = None
+            else:
+                bloques = obtener_bloques_dia(fecha)
+                # Sincronizar selección previa si existe en la sesión
+                solicitud_sesion = request.session.get("solicitud_reserva", {})
+                if solicitud_sesion.get("fecha") == fecha_str:
+                    bloques_seleccionados_ids = solicitud_sesion.get("bloques_ids", [])
         except ValueError:
             pass
 
@@ -298,21 +323,25 @@ def _manejar_paso_horario(request, wizard: SolicitudWizard):
         else:
             try:
                 fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-                bloques_dia_disp = obtener_bloques_dia(fecha_obj)
-                bloques_validos = [b for b in bloques_dia_disp if b.id in bloques_ids and b.disponible]
-                if not bloques_validos:
-                    error_paso = "Ninguno de los bloques seleccionados está disponible."
+                fecha_minima, fecha_maxima = obtener_limites_reserva()
+                if fecha_obj < fecha_minima or fecha_obj > fecha_maxima:
+                    error_paso = "La fecha seleccionada no está dentro del período permitido para reservas."
                 else:
-                    horas_texto = ", ".join(
-                        f"{b.hora_inicio.strftime('%H:%M')} - {b.hora_final.strftime('%H:%M')}"
-                        for b in bloques_validos
-                    )
-                    wizard.guardar_horario(
-                        fecha_str=fecha_str,
-                        bloques_ids=[b.id for b in bloques_validos],
-                        bloques_texto=horas_texto,
-                    )
-                    return redirect(f"{reverse('solicitar')}?paso={PasoSolicitud.DATOS.value}")
+                    bloques_dia_disp = obtener_bloques_dia(fecha_obj)
+                    bloques_validos = [b for b in bloques_dia_disp if b.id in bloques_ids and b.disponible]
+                    if not bloques_validos:
+                        error_paso = "Ninguno de los bloques seleccionados está disponible."
+                    else:
+                        horas_texto = ", ".join(
+                            f"{b.hora_inicio.strftime('%H:%M')} - {b.hora_final.strftime('%H:%M')}"
+                            for b in bloques_validos
+                        )
+                        wizard.guardar_horario(
+                            fecha_str=fecha_str,
+                            bloques_ids=[b.id for b in bloques_validos],
+                            bloques_texto=horas_texto,
+                        )
+                        return redirect(f"{reverse('solicitar')}?paso={PasoSolicitud.DATOS.value}")
             except ValueError:
                 error_paso = "La fecha seleccionada no es válida."
     else:
