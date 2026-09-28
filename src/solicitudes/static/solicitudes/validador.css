@@ -1,0 +1,151 @@
+/* US-07. Solo variables de marca.css: ningun color literal (docs/estilo.md).
+ * El cascaron (techo, panel, .btn) viene de css/panel.css. */
+
+/* Los datos son de prueba y tiene que notarse: nadie deberia creer que esta
+ * aprobando algo de verdad. */
+.prueba {
+  border: 1px solid var(--borde); border-left: 3px solid var(--precaucion);
+  background: var(--superficie); padding: .7rem .9rem; margin-bottom: 1.25rem; font-size: .88rem;
+}
+.prueba p { margin: .2rem 0 0; }
+.prueba code { font-size: .8rem; }
+
+.resumen { display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.resumen div { font-size: .8rem; color: var(--tinta-suave); }
+.resumen b { display: block; font-family: var(--fuente-titulo); font-size: 1.4rem; color: var(--tinta); }
+
+/* El naranja de marca da 3.5:1: va de filete, el texto sigue en tinta. */
+.error {
+  border-left: 3px solid var(--alerta); background: var(--superficie);
+  padding: .6rem .75rem; margin: 0 0 1.25rem; font-size: .9rem;
+}
+
+.seccion { margin-bottom: 2.5rem; }
+.seccion-cab {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: .6rem;
+  border-bottom: 1px solid var(--borde); padding-bottom: .5rem; margin-bottom: 1rem;
+}
+.seccion-cab h2 { margin: 0; font-size: 1rem; }
+.seccion-cab p { flex-basis: 100%; margin: 0; font-size: .85rem; color: var(--tinta-suave); max-width: 80ch; }
+.cuenta { font-size: .75rem; border: 1px solid var(--borde); padding: 0 .4rem; color: var(--tinta-suave); }
+
+.tarjeta { background: var(--superficie); border: 1px solid var(--borde); margin-bottom: 1rem; }
+.tarjeta-cab {
+  display: flex; align-items: center; flex-wrap: wrap; gap: .6rem;
+  padding: .6rem .9rem; border-bottom: 1px solid var(--borde); background: var(--fondo);
+}
+.bloque { font-family: var(--fuente-titulo); font-weight: 700; font-size: .9rem; }
+.porque { margin-left: auto; font-size: .8rem; color: var(--tinta-suave); max-width: 50ch; text-align: right; }
+.folio { font-size: .75rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+.rol { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--tinta-suave); }
+.area { font-size: .85rem; display: inline-flex; align-items: center; gap: .35rem; }
+.prio { font-size: .7rem; font-weight: 700; border: 1px solid var(--accion); color: var(--accion); padding: 0 .3rem; }
+
+.postulante {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2rem 1rem; align-items: center;
+  padding: .7rem .9rem; border-bottom: 1px solid var(--borde);
+}
+.postulante > .btn { grid-column: 2; grid-row: 1 / span 3; }
+.quien-pide { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
+.detalle, .hermanos { margin: 0; font-size: .83rem; color: var(--tinta-suave); }
+/* Lo que el mockup no mostraba: que dos filas son la misma solicitud. */
+.hermanos { border-left: 3px solid var(--info); padding-left: .5rem; color: var(--tinta); }
+
+.motivo { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; padding: .7rem .9rem; font-size: .83rem; }
+.motivo input, .rechazo input {
+  flex: 1; min-width: 14rem; padding: .4rem .55rem; font: inherit;
+  border: 1px solid var(--borde); color: var(--tinta); background: var(--superficie);
+}
+
+.ficha { display: grid; grid-template-columns: 7rem 1fr; gap: .25rem 1rem; margin: 0; padding: .7rem .9rem; font-size: .85rem; }
+.ficha dt { color: var(--tinta-suave); }
+.ficha dd { margin: 0; }
+
+.tabla { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.tabla th {
+  text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--tinta-suave); padding: .4rem .9rem; border-bottom: 1px solid var(--borde);
+}
+.tarjeta .tabla th { border-top: 1px solid var(--borde); }
+.tabla td { padding: .45rem .9rem; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+.tabla tr:last-child td { border-bottom: 0; }
+.der, .tabla th.der { text-align: right; }
+
+/* Los estados son RELLENOS o filetes: el texto encima siempre en tinta. */
+.estado {
+  font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  padding: .05rem .4rem; border: 1px solid var(--borde); color: var(--tinta-suave); white-space: nowrap;
+}
+.estado[data-estado="aprobado"], .estado[data-estado="aprobada"] { background: var(--exito-suave); border-color: var(--exito-suave); color: var(--tinta); }
+.estado[data-estado="rechazado"], .estado[data-estado="rechazada"] { border-color: var(--alerta); color: var(--tinta); }
+.estado[data-estado="parcial"], .estado[data-estado="en_revision"] { border-color: var(--precaucion); color: var(--tinta); }
+.compite { font-size: .8rem; color: var(--tinta); border-left: 3px solid var(--alerta); padding-left: .4rem; }
+
+.acciones, .rechazo { display: inline-flex; gap: .4rem; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.btn.peligro { color: var(--tinta); border-color: var(--alerta); }
+.btn.peligro:hover { background: var(--fondo); }
+.suave { color: var(--tinta-suave); }
+
+/* --- Tablero: la semana a un lado, el trabajo al otro --- */
+.tablero { display: grid; grid-template-columns: minmax(16rem, 19rem) minmax(0, 1fr); gap: 2rem; align-items: start; }
+.semana-col { position: sticky; top: 1rem; }
+@media (max-width: 62rem) {
+  .tablero { grid-template-columns: minmax(0, 1fr); }
+  .semana-col { position: static; }
+}
+
+.semana { background: var(--superficie); border: 1px solid var(--borde); }
+.semana-cab { padding: .6rem .8rem; border-bottom: 1px solid var(--borde); background: var(--fondo); }
+.semana-cab h2 { margin: 0; font-size: .9rem; }
+.semana-cab p { margin: .1rem 0 0; font-size: .78rem; color: var(--tinta-suave); }
+
+.cuadricula { display: grid; grid-template-columns: 2.6rem repeat(5, minmax(0, 1fr)); gap: 3px; padding: .7rem; }
+/* Alpine necesita un solo elemento por vuelta del x-for: la fila existe para
+ * eso, y display: contents la saca de la grilla. */
+.fila-hora { display: contents; }
+.dia { text-align: center; font-size: .7rem; line-height: 1.25; color: var(--tinta-suave); padding-bottom: .15rem; }
+.dia b { display: block; text-transform: uppercase; letter-spacing: .05em; font-family: var(--fuente-titulo); color: var(--tinta); }
+.hora {
+  display: flex; align-items: center; justify-content: flex-end; padding-right: .3rem;
+  font-size: .68rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums;
+}
+.celda {
+  min-height: 2.1rem; padding: 0; cursor: pointer;
+  border: 1px solid var(--borde); background: var(--fondo); color: var(--tinta);
+  font: 700 .75rem var(--fuente-texto); font-variant-numeric: tabular-nums;
+}
+.celda:disabled { cursor: default; }
+.celda:not(:disabled):hover { outline: 2px solid var(--accion); outline-offset: -2px; }
+
+.leyenda {
+  display: flex; flex-wrap: wrap; gap: .3rem .8rem; margin: 0; padding: .55rem .8rem .7rem;
+  list-style: none; border-top: 1px solid var(--borde); font-size: .72rem; color: var(--tinta-suave);
+}
+.leyenda li, .marcas li { display: inline-flex; align-items: center; gap: .3rem; }
+.leyenda i, .marcas i { display: block; width: .8rem; height: .8rem; border: 1px solid var(--borde); background: var(--fondo); }
+
+/* Estados de la semana: libre, una solicitud, en competencia, aprobado. */
+.celda[data-e="una"], .leyenda i[data-e="una"] { background: var(--superficie); border-color: var(--tinta-suave); }
+.celda[data-e="competencia"], .leyenda i[data-e="competencia"] { background: var(--superficie); border: 2px solid var(--alerta); }
+.celda[data-e="aprobado"], .leyenda i[data-e="aprobado"] { background: var(--exito-suave); border-color: var(--exito-suave); }
+
+/* --- Mini calendario de cada solicitud --- */
+.cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: start; }
+@media (max-width: 40rem) { .cuerpo { grid-template-columns: minmax(0, 1fr); } }
+.mini { padding: .7rem .9rem; }
+.mini-grilla { display: grid; grid-template-columns: 2.3rem repeat(5, 1rem); gap: 2px; align-items: center; }
+.mini-dia { font-size: .6rem; text-align: center; color: var(--tinta-suave); font-family: var(--fuente-titulo); font-weight: 700; }
+.mini-hora { font-size: .58rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+.mini-celda { display: block; width: 1rem; height: 1rem; background: var(--fondo); border: 1px solid var(--borde); }
+.mini-pie { margin: .3rem 0 0; font-size: .65rem; color: var(--tinta-suave); text-align: right; }
+
+.marcas { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: .3rem .9rem; margin: 0; padding: 0; list-style: none; font-size: .75rem; color: var(--tinta-suave); }
+
+/* Estados de un bloque pedido: pendiente, en competencia, aprobado, rechazado. */
+.mini-celda[data-e="pendiente"], .marcas i[data-e="pendiente"] { background: var(--superficie); border: 2px solid var(--accion); }
+.mini-celda[data-e="competencia"], .marcas i[data-e="competencia"] { background: var(--superficie); border: 2px solid var(--alerta); }
+.mini-celda[data-e="aprobado"], .marcas i[data-e="aprobado"] { background: var(--exito-suave); border-color: var(--exito-suave); }
+.mini-celda[data-e="rechazado"], .marcas i[data-e="rechazado"] {
+  background: repeating-linear-gradient(135deg, var(--borde) 0 2px, var(--superficie) 2px 4px);
+  border-color: var(--alerta);
+}
