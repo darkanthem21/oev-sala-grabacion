@@ -1,9 +1,7 @@
-{% extends "base.html" %}
-{% load static %}
+{% extends "solicitudes/_base.html" %}
 {% block titulo %}Solicitar reserva{% endblock %}
-{% block estilos %}<link rel="stylesheet" href="{% static 'solicitudes/solicitud.css' %}">{% endblock %}
 
-{% block contenido %}
+{% block hoja %}
 {% comment %}
 Alpine solo maneja lo que se ve: cuantas filas de acompanante mostrar y si el
 boton esta habilitado. Ninguna regla vive aca; todas se revalidan en la vista,
@@ -68,11 +66,11 @@ que es la que puede negarse de verdad.
       {{ formset.management_form }}
       {% for fila in formset %}
         {% comment %}
-        Se pintan siempre todas las filas y se ocultan las que sobran: asi el
-        indice del formset nunca se mueve y no hay que reconstruirlo en
-        JavaScript.
+        Se pintan todas las filas para que el índice del formset no se mueva.
+        Las que sobran van ocultas y deshabilitadas, así lo escrito en ellas no se envía.
         {% endcomment %}
-        <fieldset class="acompanante" x-cloak x-show="personas > {{ forloop.counter }}">
+        <fieldset class="acompanante" x-cloak x-show="personas > {{ forloop.counter }}"
+                  :disabled="personas <= {{ forloop.counter }}">
           <legend>Acompañante {{ forloop.counter }}</legend>
           <div class="par">
             <div>

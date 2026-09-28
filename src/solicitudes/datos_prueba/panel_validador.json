@@ -10,11 +10,10 @@
     {"inicio": "17:10", "termino": "18:40"}
   ],
   "areas": [
-    {"id": 1, "nombre": "Decanato", "prioridad": 1},
+    {"id": 1, "nombre": "Instituto de Electricidad y Electrónica", "prioridad": 4},
     {"id": 2, "nombre": "Educación Continua Online", "prioridad": 2},
     {"id": 3, "nombre": "Instituto de Informática", "prioridad": 3},
-    {"id": 4, "nombre": "Instituto de Obras Civiles", "prioridad": 3},
-    {"id": 5, "nombre": "Instituto de Diseño y Métodos Industriales", "prioridad": 4}
+    {"id": 4, "nombre": "Instituto de Obras Civiles", "prioridad": 3}
   ],
   "solicitudes": [
     {
@@ -65,9 +64,9 @@
     {
       "id": 144,
       "encargado": {"nombre": "Carla Díaz", "correo": "carla.diaz@prueba.local"},
-      "area": 1,
-      "motivo": "Saludo de bienvenida del decano",
-      "observaciones": "Se graba con el decano y su equipo de comunicaciones.",
+      "area": 2,
+      "motivo": "Bienvenida al Diplomado en Ciencia de Datos",
+      "observaciones": "Se graba con la dirección del programa y su equipo de comunicaciones.",
       "personas": 5,
       "acompanantes": [
         {"nombre": "Rodrigo Silva", "correo": "rodrigo.silva@prueba.local"},
@@ -83,8 +82,8 @@
     {
       "id": 146,
       "encargado": {"nombre": "Ruth Vera", "correo": "ruth.vera@prueba.local"},
-      "area": 5,
-      "motivo": "Taller de prototipado rápido",
+      "area": 1,
+      "motivo": "Taller de mediciones en circuitos eléctricos",
       "observaciones": "El taller ya se aplazó dos veces.",
       "personas": 4,
       "acompanantes": [

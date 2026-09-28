@@ -94,19 +94,3 @@ EMAIL_BACKEND = os.environ.get(
 )
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-responder@uach.cl")
 
-# US-02 AC10. US-04 AC5 exige que el cliente edite este texto sin recompilar.
-# Por entorno hasta que exista el modulo `configuracion`, igual que los umbrales
-# de bloqueo de US-01. El texto de abajo es un marcador: lo real lo redacta la
-# Oficina de Educacion Virtual.
-TERMINOS_Y_CONDICIONES = os.environ.get(
-    "TERMINOS_Y_CONDICIONES",
-    "La sala de grabación es un recurso compartido de la Oficina de Educación "
-    "Virtual.\n"
-    "Quien solicita se compromete a: presentarse puntualmente en el bloque "
-    "reservado; usar la sala solo para la actividad declarada en el motivo; "
-    "no exceder la cantidad de personas declarada; dejar el equipamiento y el "
-    "mobiliario en el estado en que los encontró; y avisar con anticipación si "
-    "no va a ocupar la reserva.\n"
-    "El incumplimiento queda registrado en el check-out y puede derivar en una "
-    "sanción que suspende temporalmente la posibilidad de pedir nuevas reservas.",
-)
