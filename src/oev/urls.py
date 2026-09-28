@@ -1,16 +1,19 @@
 from django.contrib import admin
 from django.contrib.auth import views as auth
-from django.urls import path
+from django.urls import include, path
 from django.views.generic import RedirectView
 
 from agenda import views as agenda
 from configuracion import views as configuracion
 from personas import views
 from personas.models import Rol
+from solicitudes import views as solicitudes
 from uso import views as uso
 
 urlpatterns = [
     path("", views.panel, name="panel"),
+    path("solicitar/", include("solicitudes.urls")),
+    path("validador/", solicitudes.panel_validador, name="panel_validador"),
     path("login/", views.entrar, name="login"),
     path("logout/", auth.LogoutView.as_view(next_page="login"), name="logout"),
     # US-01 AC6: las cuatro vistas de recuperación las trae Django, con enlace

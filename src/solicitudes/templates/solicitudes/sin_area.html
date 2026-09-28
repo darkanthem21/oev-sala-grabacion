@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Sin área académica{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'solicitudes/solicitud.css' %}">{% endblock %}
+
+{% block contenido %}
+<main class="hoja">
+  <h1>No puedes solicitar todavía</h1>
+  {% comment %}
+  US-05 AC4: toda solicitud se vincula a un area. Sin area asignada no hay a que
+  vincularla, y decirlo es mejor que ofrecer un desplegable vacio.
+  {% endcomment %}
+  <p class="sub">
+    Tu cuenta no tiene ningún área académica activa asignada, y toda solicitud
+    tiene que quedar vinculada a un área. Pide al administrador que te asocie a
+    la tuya.
+  </p>
+</main>
+{% endblock %}
