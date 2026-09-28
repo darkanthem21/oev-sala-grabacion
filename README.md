@@ -78,5 +78,3 @@ Convenciones dentro de cada módulo, cuando aparezca el código:
 - Nada de credenciales, ni archivos `.env`, ni volcados de base de datos.
 - Nada de datos personales reales de la contraparte ni de usuarios.
 - Cómo se trabaja: `CONTRIBUTING.md`.
-
-Despliegue "DEBUG=1 POSTGRES_DB=oev_formulario ./.venv/bin/python src/manage.py runserver" dentro del CD
