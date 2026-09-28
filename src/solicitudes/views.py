@@ -9,6 +9,8 @@ from .forms import MAXIMO_ACOMPANANTES, MAXIMO_PERSONAS, AcompananteFormSet, Sol
 
 
 class AgendaCalendar(calendar.HTMLCalendar):
+    DIAS_SEMANA = ["LUN", "MAR", "MIE", "JUE", "VIE", "SÁB", "DOM"]
+
     def __init__(self, bloques, year, month, fecha_seleccionada=None):
         super().__init__()
         self.bloques = {b.fecha.day for b in bloques}
@@ -16,17 +18,21 @@ class AgendaCalendar(calendar.HTMLCalendar):
         self.month = month
         self.fecha_seleccionada = fecha_seleccionada
 
+    def formatweekday(self, day):
+        return f'<th class="{self.cssclasses_weekday_head[day]}">{self.DIAS_SEMANA[day]}</th>'
+
     def formatday(self, day, weekday):
         if day == 0:
             return '<td class="noday">&nbsp;</td>'
         
         css_class = self.cssclasses[weekday]
+        date_str = f"{self.year}-{self.month:02d}-{day:02d}"
+        
         if day in self.bloques:
             css_class += ' available dia-seleccionable'
-        
-        date_str = f"{self.year}-{self.month:02d}-{day:02d}"
-        if self.fecha_seleccionada and self.fecha_seleccionada == date(self.year, self.month, day):
-            css_class += ' selected'
+            if self.fecha_seleccionada and self.fecha_seleccionada == date(self.year, self.month, day):
+                css_class += ' selected'
+            return f'<td class="{css_class}" data-date="{date_str}"><a href="?year={self.year}&month={self.month}&fecha={date_str}" class="dia-enlace">{day}</a></td>'
         
         return f'<td class="{css_class}" data-date="{date_str}">{day}</td>'
 
@@ -56,8 +62,11 @@ def calendario(request):
     elif fecha_solicitada > date(FECHA_MAXIMA.year, FECHA_MAXIMA.month, 1):
         year, month = FECHA_MAXIMA.year, FECHA_MAXIMA.month
 
-    # Bloques del día seleccionado (si se pasó en el query param fecha)
-    fecha_str = request.GET.get('fecha')
+    # Bloques del día seleccionado (si se pasó en el query param o POST fecha)
+    fecha_str = request.POST.get('fecha') if request.method == 'POST' else request.GET.get('fecha')
+    if not fecha_str and request.method == 'POST':
+        fecha_str = request.GET.get('fecha')
+
     fecha_seleccionada = None
     bloques_seleccionados = []
     if fecha_str:
@@ -66,6 +75,35 @@ def calendario(request):
             bloques_seleccionados = obtener_bloques_dia(fecha_seleccionada)
         except ValueError:
             fecha_str = None
+
+    mensaje_confirmacion = None
+    error_confirmacion = None
+    bloques_seleccionados_ids = []
+
+    if request.method == "POST":
+        bloques_ids = request.POST.getlist("bloques")
+        bloques_seleccionados_ids = [int(b) for b in bloques_ids if b.isdigit()]
+
+        if not fecha_str or not fecha_seleccionada:
+            error_confirmacion = "Por favor, selecciona un día del calendario."
+        elif not bloques_seleccionados_ids:
+            error_confirmacion = f"Día seleccionado: {fecha_seleccionada.strftime('%d/%m/%Y')}. Por favor, selecciona al menos un bloque disponible."
+        else:
+            bloques_disponibles = [
+                b for b in bloques_seleccionados
+                if b.id in bloques_seleccionados_ids and b.disponible
+            ]
+            if not bloques_disponibles:
+                error_confirmacion = "Ninguno de los bloques seleccionados está disponible."
+            else:
+                horas_texto = ", ".join(
+                    f"{b.hora_inicio.strftime('%H:%M')} - {b.hora_final.strftime('%H:%M')}"
+                    for b in bloques_disponibles
+                )
+                mensaje_confirmacion = (
+                    f"Día seleccionado: {fecha_seleccionada.strftime('%d/%m/%Y')}. "
+                    f"Bloque(s) seleccionado(s): {horas_texto}."
+                )
 
     # Consumir bloques disponibles para el mes y año desde el proveedor agenda
     bloques = obtener_bloques_mes(year, month, disponible=True)
@@ -108,6 +146,9 @@ def calendario(request):
         "fecha_seleccionada": fecha_seleccionada,
         "fecha_str": fecha_str,
         "bloques_seleccionados": bloques_seleccionados,
+        "bloques_seleccionados_ids": bloques_seleccionados_ids,
+        "mensaje_confirmacion": mensaje_confirmacion,
+        "error_confirmacion": error_confirmacion,
     })
 
 

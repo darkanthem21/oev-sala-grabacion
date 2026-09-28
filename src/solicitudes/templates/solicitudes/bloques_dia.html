@@ -1,35 +1,46 @@
 <div class="panel-bloques-contenido">
     {% if fecha_str %}
         <div class="encabezado-bloques">
-            <h3 class="titulo-bloques">Bloques para el día {{ fecha_str }}</h3>
+            <h3 class="titulo-bloques">Bloques para el día {% if fecha %}{{ fecha|date:"d/m/Y" }}{% else %}{{ fecha_str }}{% endif %}</h3>
             <span class="total-bloques">{{ bloques|length }} bloque{{ bloques|length|pluralize }} encontrado{{ bloques|length|pluralize }}</span>
         </div>
 
         {% if bloques %}
             <div class="grilla-bloques">
                 {% for bloque in bloques %}
-                    <div class="tarjeta-bloque {% if bloque.disponible %}disponible bloque-seleccionable{% else %}no-disponible{% endif %}"
-                         {% if bloque.disponible %}
-                         data-id="{{ bloque.id }}"
-                         data-hora="{{ bloque.hora_inicio|time:'H:i' }} - {{ bloque.hora_final|time:'H:i' }}"
-                         role="button"
-                         tabindex="0"
-                         aria-pressed="false"
-                         title="Haz clic para seleccionar este bloque"
-                         {% endif %}>
-                        <div class="bloque-hora">
-                            <span class="icono-reloj">&#128337;</span>
-                            <strong>{{ bloque.hora_inicio|time:"H:i" }} - {{ bloque.hora_final|time:"H:i" }}</strong>
-                        </div>
-                        <div class="bloque-estado">
-                            {% if bloque.disponible %}
+                    {% if bloque.disponible %}
+                        <label class="tarjeta-bloque disponible bloque-seleccionable"
+                               for="bloque-{{ bloque.id }}"
+                               data-id="{{ bloque.id }}"
+                               data-hora="{{ bloque.hora_inicio|time:'H:i' }} - {{ bloque.hora_final|time:'H:i' }}"
+                               aria-pressed="false"
+                               title="Haz clic para seleccionar este bloque">
+                            <input type="checkbox"
+                                   name="bloques"
+                                   id="bloque-{{ bloque.id }}"
+                                   value="{{ bloque.id }}"
+                                   class="bloque-checkbox"
+                                   {% if bloques_seleccionados_ids and bloque.id in bloques_seleccionados_ids %}checked{% endif %}>
+                            <div class="bloque-hora">
+                                <span class="icono-reloj">&#128337;</span>
+                                <strong>{{ bloque.hora_inicio|time:"H:i" }} - {{ bloque.hora_final|time:"H:i" }}</strong>
+                            </div>
+                            <div class="bloque-estado">
                                 <span class="badge badge-disponible">Disponible</span>
-                                <span class="badge badge-seleccionado" style="display: none;">Seleccionado &#10003;</span>
-                            {% else %}
+                                <span class="badge badge-seleccionado">Seleccionado</span>
+                            </div>
+                        </label>
+                    {% else %}
+                        <div class="tarjeta-bloque no-disponible">
+                            <div class="bloque-hora">
+                                <span class="icono-reloj">&#128337;</span>
+                                <strong>{{ bloque.hora_inicio|time:"H:i" }} - {{ bloque.hora_final|time:"H:i" }}</strong>
+                            </div>
+                            <div class="bloque-estado">
                                 <span class="badge badge-no-disponible">No disponible</span>
-                            {% endif %}
+                            </div>
                         </div>
-                    </div>
+                    {% endif %}
                 {% endfor %}
             </div>
         {% else %}

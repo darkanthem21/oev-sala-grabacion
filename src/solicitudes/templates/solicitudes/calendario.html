@@ -49,21 +49,33 @@
             {{ calendario|safe }}
         </div>
 
-        <!-- Panel de despliegue visual de bloques del día seleccionado -->
-        <div id="panel-bloques" class="panel-bloques" data-bloques-url="{% url 'bloques_dia' %}">
-            {% if fecha_str %}
-                {% include "solicitudes/bloques_dia.html" with bloques=bloques_seleccionados fecha=fecha_seleccionada fecha_str=fecha_str %}
-            {% else %}
-                <div class="mensaje-sin-seleccion">
-                    <p>Selecciona un día en el calendario para consultar los bloques disponibles.</p>
-                </div>
-            {% endif %}
-        </div>
-        
-        <button id="btn-confirmar" class="btn-accion">Confirmar Selección</button>
-    </div>
-{% endblock %}
+        {% if mensaje_confirmacion %}
+            <div class="aviso" role="status">
+                <p>{{ mensaje_confirmacion }}</p>
+            </div>
+        {% endif %}
+        {% if error_confirmacion %}
+            <div class="error" role="alert">
+                <p>{{ error_confirmacion }}</p>
+            </div>
+        {% endif %}
 
-{% block scripts %}
-<script src="{% static 'solicitudes/calendario.js' %}" defer></script>
+        <!-- Formulario de selección de bloques procesado por Django -->
+        <form method="POST" action="{% url 'calendario' %}{% if fecha_str %}?year={{ year }}&month={{ month }}&fecha={{ fecha_str }}{% else %}?year={{ year }}&month={{ month }}{% endif %}">
+            {% csrf_token %}
+            <input type="hidden" name="fecha" value="{{ fecha_str|default:'' }}">
+            
+            <div id="panel-bloques" class="panel-bloques">
+                {% if fecha_str %}
+                    {% include "solicitudes/bloques_dia.html" with bloques=bloques_seleccionados fecha=fecha_seleccionada fecha_str=fecha_str bloques_seleccionados_ids=bloques_seleccionados_ids %}
+                {% else %}
+                    <div class="mensaje-sin-seleccion">
+                        <p>Selecciona un día en el calendario para consultar los bloques disponibles.</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <button type="submit" id="btn-confirmar" class="btn-accion" {% if not fecha_str or not bloques_seleccionados %}disabled{% endif %}>Confirmar Selección</button>
+        </form>
+    </div>
 {% endblock %}

@@ -1,30 +1,55 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;500&display=swap');
+/* Solo variables de marca.css: ningun color literal (docs/estilo.md). */
 
 .calendario-contenedor {
-    max-width: 800px;
-    margin: 0 auto;
-    font-family: 'Roboto', sans-serif; 
-    color: #2a4451; 
+    max-width: 50rem;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    box-sizing: border-box;
+    font-family: var(--fuente-texto);
+    color: var(--tinta);
 }
 
 .titulo-calendario {
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--fuente-titulo);
     font-weight: 700;
     text-align: center;
-    margin-bottom: 30px;
-    color: #006699; 
+    margin-bottom: 2rem;
+    color: var(--accion);
 }
+
+/* --- Avisos y confirmaciones de Django --- */
+.aviso {
+    border-left: 4px solid var(--acento);
+    background: var(--fondo);
+    padding: 0.75rem 1rem;
+    margin-top: 1.5rem;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    color: var(--tinta);
+}
+.aviso p { margin: 0; }
+
+.error {
+    border-left: 4px solid var(--alerta);
+    background: var(--fondo);
+    padding: 0.75rem 1rem;
+    margin-top: 1.5rem;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    color: var(--tinta);
+}
+.error p { margin: 0; }
 
 /* --- Estilos de Controles de Navegación --- */
 .controles-calendario {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    margin-bottom: 20px;
-    background: #f8fafc;
-    padding: 15px;
-    border-radius: 8px;
-    border: 1px solid #dbd5d0;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    background: var(--superficie);
+    padding: 1rem;
+    border-radius: 4px;
+    border: 1px solid var(--borde);
 }
 
 .navegacion-meses {
@@ -34,61 +59,66 @@
 }
 
 .mes-actual {
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--fuente-titulo);
     margin: 0;
-    color: #2a4451;
+    color: var(--tinta);
     font-size: 1.2rem;
     text-transform: uppercase;
 }
 
 .btn-nav {
-    padding: 8px 16px;
-    background-color: #0097a6; /* Teal corporativo */
-    color: white;
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background-color: var(--accion);
+    color: var(--superficie);
     text-decoration: none;
     border-radius: 4px;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--fuente-titulo);
     font-size: 0.9rem;
+    font-weight: 700;
     transition: background-color 0.2s;
 }
 
 .btn-nav:hover:not(.disabled) {
-    background-color: #006699; /* Azul oscuro corporativo al pasar el cursor */
+    background-color: var(--tinta);
 }
 
 .btn-nav.disabled {
-    background-color: #dbd5d0;
+    background-color: var(--borde);
     cursor: not-allowed;
-    color: #68abc2;
+    color: var(--tinta-suave);
 }
 
 .selector-rapido {
     display: flex;
     justify-content: center;
-    gap: 10px;
+    gap: 0.75rem;
 }
 
 .select-personalizado {
-    padding: 8px;
-    border: 1px solid #68abc2;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--borde);
     border-radius: 4px;
-    font-family: 'Roboto', sans-serif;
-    color: #2a4451;
-    outline: none;
+    font-family: var(--fuente-texto);
+    background-color: var(--superficie);
+    color: var(--tinta);
 }
 
 .btn-ir {
-    padding: 8px 15px;
-    background-color: #516e80;
-    color: white;
+    padding: 0.5rem 1rem;
+    background-color: var(--accion);
+    color: var(--superficie);
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--fuente-titulo);
+    font-weight: 700;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
 }
 
 .btn-ir:hover { 
-    background-color: #2a4451; 
+    background-color: var(--tinta); 
 }
 
 /* --- Estilos del Calendario (Tabla) --- */
@@ -97,11 +127,11 @@
     border-spacing: 0;
     width: 100%; 
     table-layout: fixed; 
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(42, 68, 81, 0.1);
+    background: var(--superficie);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgb(42 68 81 / 0.08);
     overflow: hidden;
-    border: 1px solid #dbd5d0; 
+    border: 1px solid var(--borde); 
 }
 
 .calendario table th.month {
@@ -109,23 +139,41 @@
 }
 
 .calendario th { 
-    background-color: #516e80; 
-    padding: 15px; 
+    background-color: var(--tinta-suave); 
+    padding: 0.9rem 0.5rem; 
     text-align: center; 
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--fuente-titulo);
     font-weight: 700;
-    color: #ffffff;
+    color: var(--superficie);
     text-transform: uppercase;
     font-size: 0.85rem;
-    border-bottom: 3px solid #2a4451;
+    border-bottom: 3px solid var(--tinta);
 }
 
 .calendario td { 
-    border: 1px solid #dbd5d0; 
-    padding: 20px 10px; 
+    border: 1px solid var(--borde); 
+    padding: 0; 
     text-align: center; 
     font-size: 1.1rem;
+    color: var(--tinta);
     transition: all 0.2s ease;
+}
+
+.calendario td:not(.dia-seleccionable) {
+    padding: 1.25rem 0.5rem;
+}
+
+.calendario td.dia-seleccionable a.dia-enlace {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 1.25rem 0.5rem;
+    color: inherit;
+    text-decoration: none;
+    font-weight: inherit;
 }
 
 .calendario td.dia-seleccionable {
@@ -133,49 +181,55 @@
 }
 
 .calendario td:not(.noday):not(.available) {
-    color: #516e80;
-    background-color: #f9f9f9;
+    color: var(--tinta-suave);
+    background-color: var(--superficie);
+    opacity: 0.6;
 }
 
-.calendario td.dia-seleccionable:hover {
-    background-color: #68abc2;
-    color: #ffffff;
-    transform: scale(1.02);
-    z-index: 1;
-    box-shadow: 0 2px 8px rgba(0, 151, 166, 0.3);
-    border-radius: 4px;
+.calendario td.noday {
+    background-color: var(--fondo);
+    opacity: 0.35;
 }
 
 .calendario .available { 
-    background-color: #ebf7fc; 
-    color: #006699; 
+    background-color: var(--fondo); 
+    color: var(--accion); 
     font-weight: 500; 
     position: relative;
 }
 
+.calendario td.dia-seleccionable:hover {
+    background-color: var(--acento);
+    color: var(--superficie);
+    transform: scale(1.02);
+    z-index: 1;
+    box-shadow: 0 2px 8px rgb(0 151 166 / 0.3);
+    border-radius: 4px;
+}
+
 .calendario td.dia-seleccionable.selected,
 .calendario .available.selected {
-    background-color: #0097a6 !important; 
-    color: #ffffff !important;
+    background-color: var(--accion) !important; 
+    color: var(--superficie) !important;
     border-radius: 4px;
-    box-shadow: inset 0 0 0 2px #006699;
-    font-weight: bold;
+    box-shadow: inset 0 0 0 2px var(--acento);
+    font-weight: 700;
 }
 
 /* --- Panel y tarjetas de bloques --- */
 .panel-bloques {
-    margin-top: 25px;
-    background: #ffffff;
-    border: 1px solid #dbd5d0;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 4px 12px rgba(42, 68, 81, 0.08);
+    margin-top: 1.5rem;
+    background: var(--superficie);
+    border: 1px solid var(--borde);
+    border-radius: 4px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 12px rgb(42 68 81 / 0.08);
 }
 
 .mensaje-sin-seleccion, .sin-bloques, .cargando-bloques {
     text-align: center;
-    padding: 25px;
-    color: #516e80;
+    padding: 1.5rem;
+    color: var(--tinta-suave);
     font-size: 1rem;
 }
 
@@ -183,23 +237,23 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 2px solid #ebf7fc;
-    padding-bottom: 12px;
-    margin-bottom: 20px;
+    border-bottom: 1px solid var(--borde);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.25rem;
 }
 
 .titulo-bloques {
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--fuente-titulo);
     font-size: 1.15rem;
-    color: #006699;
+    color: var(--accion);
     margin: 0;
 }
 
 .total-bloques {
     font-size: 0.85rem;
-    color: #516e80;
-    background: #ebf7fc;
-    padding: 4px 10px;
+    color: var(--tinta-suave);
+    background: var(--fondo);
+    padding: 0.25rem 0.6rem;
     border-radius: 12px;
     font-weight: 500;
 }
@@ -207,50 +261,71 @@
 .grilla-bloques {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 15px;
+    gap: 1rem;
 }
 
 .tarjeta-bloque {
-    border: 1px solid #dbd5d0;
-    border-radius: 6px;
-    padding: 14px;
+    border: 1px solid var(--borde);
+    border-radius: 4px;
+    padding: 0.9rem;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    background: #ffffff;
+    gap: 0.6rem;
+    background: var(--superficie);
     transition: all 0.2s ease;
 }
 
+.bloque-checkbox {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
 .tarjeta-bloque.disponible {
-    border-left: 5px solid #0097a6;
+    border-left: 4px solid var(--acento);
     cursor: pointer;
     user-select: none;
+    position: relative;
 }
 
 .tarjeta-bloque.disponible:hover {
-    box-shadow: 0 3px 10px rgba(0, 151, 166, 0.2);
-    border-color: #0097a6;
+    box-shadow: 0 3px 10px rgb(0 151 166 / 0.2);
+    border-color: var(--acento);
     transform: translateY(-2px);
 }
 
+.tarjeta-bloque.disponible:has(.bloque-checkbox:focus-visible) {
+    outline: 2px solid var(--acento);
+    outline-offset: 2px;
+}
+
+.tarjeta-bloque.disponible:has(.bloque-checkbox:checked),
 .tarjeta-bloque.disponible.selected {
-    background-color: #e6f6f8;
-    border-color: #0097a6;
-    box-shadow: 0 0 0 2px #0097a6, 0 4px 12px rgba(0, 151, 166, 0.25);
+    background-color: var(--fondo);
+    border-color: var(--acento);
+    box-shadow: 0 0 0 2px var(--acento), 0 4px 12px rgb(0 151 166 / 0.25);
     transform: translateY(-2px);
 }
 
+.tarjeta-bloque .badge-seleccionado {
+    display: none;
+}
+
+.tarjeta-bloque:has(.bloque-checkbox:checked) .badge-disponible,
 .tarjeta-bloque.disponible.selected .badge-disponible {
     display: none;
 }
 
+.tarjeta-bloque:has(.bloque-checkbox:checked) .badge-seleccionado,
 .tarjeta-bloque.disponible.selected .badge-seleccionado {
     display: inline-block !important;
 }
 
 .tarjeta-bloque.no-disponible {
-    border-left: 5px solid #dd5829;
-    background-color: #fafafa;
+    border-left: 4px solid var(--alerta);
+    background-color: var(--fondo);
     opacity: 0.75;
     cursor: not-allowed;
     user-select: none;
@@ -258,20 +333,20 @@
 
 .bloque-hora {
     font-size: 1.05rem;
-    color: #2a4451;
+    color: var(--tinta);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
 .icono-reloj {
     font-size: 1.1rem;
-    color: #516e80;
+    color: var(--tinta-suave);
 }
 
 .badge {
     display: inline-block;
-    padding: 3px 10px;
+    padding: 0.2rem 0.6rem;
     border-radius: 4px;
     font-size: 0.8rem;
     font-weight: 500;
@@ -281,42 +356,48 @@
 }
 
 .badge-disponible {
-    background-color: #ebf7fc;
-    color: #006699;
-    border: 1px solid #68abc2;
+    background-color: var(--fondo);
+    color: var(--accion);
+    border: 1px solid var(--info);
 }
 
 .badge-seleccionado {
-    background-color: #0097a6;
-    color: #ffffff;
-    border: 1px solid #006699;
+    background-color: var(--acento);
+    color: var(--superficie);
+    border: 1px solid var(--accion);
     font-weight: 600;
 }
 
 .badge-no-disponible {
-    background-color: #fdf2e9;
-    color: #dd5829;
-    border: 1px solid #e3994c;
+    background-color: var(--fondo);
+    color: var(--tinta);
+    border: 1px solid var(--alerta);
 }
 
 .btn-accion {
     display: block;
     width: 100%;
-    margin-top: 25px;
-    padding: 16px;
-    background-color: #dd5829; 
-    color: white;
+    box-sizing: border-box;
+    margin-top: 1.5rem;
+    padding: 0.85rem;
+    background-color: var(--accion); 
+    color: var(--superficie);
     border: none;
-    border-radius: 6px;
-    font-family: 'Montserrat', sans-serif;
-    font-size: 1.1rem;
+    border-radius: 4px;
+    font-family: var(--fuente-titulo);
+    font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.3s, transform 0.1s;
+    transition: background-color 0.2s, transform 0.1s;
 }
 
-.btn-accion:hover { 
-    background-color: #c24d24; 
+.btn-accion:hover:not(:disabled) { 
+    background-color: var(--tinta); 
+}
+
+.btn-accion:disabled {
+    background-color: var(--tinta-suave);
+    cursor: not-allowed;
 }
 
 .btn-accion:active { 
