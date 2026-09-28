@@ -7,11 +7,17 @@ from agenda.models import Bloque
 
 class CalendarioSolicitudesTestCase(TestCase):
     def setUp(self):
-        self.bloque = Bloque.objects.create(
+        self.bloque_disponible = Bloque.objects.create(
             fecha=date(2026, 9, 20),
             hora_inicio=time(10, 0),
             hora_final=time(11, 0),
             disponible=True,
+        )
+        self.bloque_ocupado = Bloque.objects.create(
+            fecha=date(2026, 9, 20),
+            hora_inicio=time(11, 0),
+            hora_final=time(12, 0),
+            disponible=False,
         )
 
     def test_vista_calendario(self):
@@ -29,3 +35,7 @@ class CalendarioSolicitudesTestCase(TestCase):
         self.assertTemplateUsed(response, "solicitudes/bloques_dia.html")
         self.assertContains(response, "10:00 - 11:00")
         self.assertContains(response, "Disponible")
+        self.assertContains(response, "bloque-seleccionable")
+        self.assertContains(response, f'data-id="{self.bloque_disponible.id}"')
+        self.assertContains(response, 'aria-pressed="false"')
+        self.assertContains(response, "No disponible")

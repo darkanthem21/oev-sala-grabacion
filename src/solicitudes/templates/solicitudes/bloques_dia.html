@@ -8,7 +8,15 @@
         {% if bloques %}
             <div class="grilla-bloques">
                 {% for bloque in bloques %}
-                    <div class="tarjeta-bloque {% if bloque.disponible %}disponible{% else %}no-disponible{% endif %}">
+                    <div class="tarjeta-bloque {% if bloque.disponible %}disponible bloque-seleccionable{% else %}no-disponible{% endif %}"
+                         {% if bloque.disponible %}
+                         data-id="{{ bloque.id }}"
+                         data-hora="{{ bloque.hora_inicio|time:'H:i' }} - {{ bloque.hora_final|time:'H:i' }}"
+                         role="button"
+                         tabindex="0"
+                         aria-pressed="false"
+                         title="Haz clic para seleccionar este bloque"
+                         {% endif %}>
                         <div class="bloque-hora">
                             <span class="icono-reloj">&#128337;</span>
                             <strong>{{ bloque.hora_inicio|time:"H:i" }} - {{ bloque.hora_final|time:"H:i" }}</strong>
@@ -16,6 +24,7 @@
                         <div class="bloque-estado">
                             {% if bloque.disponible %}
                                 <span class="badge badge-disponible">Disponible</span>
+                                <span class="badge badge-seleccionado" style="display: none;">Seleccionado &#10003;</span>
                             {% else %}
                                 <span class="badge badge-no-disponible">No disponible</span>
                             {% endif %}
