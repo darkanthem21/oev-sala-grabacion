@@ -27,6 +27,8 @@ class CalendarioSolicitudesTestCase(TestCase):
         self.assertTemplateUsed(response, "solicitudes/calendario.html")
         self.assertContains(response, "Calendario de Disponibilidad")
         self.assertContains(response, "Septiembre 2026")
+        self.assertContains(response, "solicitudes/calendario.css")
+        self.assertContains(response, "solicitudes/calendario.js")
 
     def test_vista_bloques_dia(self):
         url = reverse("bloques_dia")
