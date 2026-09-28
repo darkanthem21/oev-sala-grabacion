@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Solicitud lista{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'solicitudes/solicitud.css' %}">{% endblock %}
+
+{% block contenido %}
+<main class="hoja">
+  <h1>Solicitud completa</h1>
+
+  {% comment %}
+  Honestidad con quien prueba la pantalla: el formulario valida entero, pero
+  todavia no hay donde guardarlo. El numero de solicitud y el estado PENDIENTE
+  (US-14 AC6) llegan cuando se cierre la decision Solicitud/Ticket y exista el
+  modelo.
+  {% endcomment %}
+  <div class="aviso" role="status">
+    Esta pantalla es la vista previa de T4: los datos se validaron pero
+    <strong>todavía no se guardan</strong>. Falta el modelo de datos.
+  </div>
+
+  <dl class="ficha">
+    <dt>Solicitante</dt><dd>{{ user.get_full_name|default:user.email }}</dd>
+    <dt>Área académica</dt><dd>{{ solicitud.area }}</dd>
+    <dt>Motivo</dt><dd>{{ solicitud.motivo }}</dd>
+    <dt>Observaciones</dt><dd>{{ solicitud.observaciones|default:"—" }}</dd>
+    <dt>Personas en sala</dt><dd>{{ solicitud.personas }}</dd>
+  </dl>
+
+  {% if acompanantes %}
+    <h2>Acompañantes</h2>
+    <ul class="lista">
+      {% for persona in acompanantes %}
+        <li>{{ persona.nombre }} · {{ persona.correo }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <p><a href="{% url 'solicitar' %}">Hacer otra solicitud</a></p>
+</main>
+{% endblock %}
