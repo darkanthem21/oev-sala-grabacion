@@ -57,10 +57,11 @@
 .bloqueado-m { background: var(--rayado-bloqueo); box-shadow: inset 0 0 0 1px var(--borde); }
 
 /* --- bloqueos (US-17) --- */
-/* El rayado dice "no disponible" sin depender del color, y deja leer el texto
- * encima porque las dos franjas son claras. */
-.mes { --rayado-bloqueo: repeating-linear-gradient(135deg, var(--fondo) 0 6px, var(--superficie) 6px 12px); }
-.leyenda { --rayado-bloqueo: repeating-linear-gradient(135deg, var(--fondo) 0 3px, var(--superficie) 3px 6px); }
+/* Líneas oblicuas en rojo pastel: el día bloqueado se reconoce de lejos, y la
+ * forma dice "no disponible" también a quien no distingue el color. Las franjas
+ * son claras y más angostas que el blanco, así el número y los avisos se leen. */
+.mes { --rayado-bloqueo: repeating-linear-gradient(135deg, var(--alerta-suave) 0 4px, var(--superficie) 4px 11px); }
+.leyenda { --rayado-bloqueo: repeating-linear-gradient(135deg, var(--alerta-suave) 0 2px, var(--superficie) 2px 5px); }
 .dia.bloqueado { background: var(--rayado-bloqueo); }
 /* Lo que se está por bloquear, mientras el editor está abierto. */
 .dia.elegida { box-shadow: inset 0 0 0 2px var(--accion); }
