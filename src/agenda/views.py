@@ -24,6 +24,10 @@ JORNADA_MINIMA = (8 * 60, 19 * 60)
 # en la administración de Django, igual que el de los parámetros.
 ULTIMOS = 15
 
+# Cuántas semanas hacia adelante ofrece la vista semanal para bloquear un bloque.
+# Más lejos se bloquea desde la mensual.
+SEMANAS_PARA_BLOQUEAR = 12
+
 
 def _fecha(texto, por_defecto):
     """La fecha llega por la barra de direcciones y cualquiera puede escribirla."""
@@ -189,6 +193,24 @@ def _estado_bloqueo(formulario):
     }
 
 
+def _proximas(hoy):
+    """Las próximas fechas de cada día de la semana, para bloquear un bloque desde
+    la vista semanal. Un día ya bloqueado entero va marcado, porque ahí no queda
+    nada que bloquear."""
+    hasta = hoy + timedelta(weeks=SEMANAS_PARA_BLOQUEAR)
+    bloqueos = bloqueos_por_fecha(hoy, hasta)
+    por_dia = {d: [] for d in Dia.values}
+    fecha = hoy
+    while fecha < hasta:
+        if fecha.weekday() in por_dia:
+            por_dia[fecha.weekday()].append({
+                "fecha": fecha,
+                "entero": any(b.bloque_id is None for b in bloqueos.get(fecha, [])),
+            })
+        fecha += timedelta(days=1)
+    return [{"numero": d, "fechas": fechas} for d, fechas in por_dia.items()]
+
+
 def _registro():
     """US-17 AC6: los últimos bloqueos y levantamientos, cada uno con quién, cuándo
     y por qué. Un bloqueo levantado aparece dos veces, una por cada acción."""
@@ -285,6 +307,7 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
         "aviso_mes": aviso_mes,
         "hecho": hecho,
         "registro": _registro() if vista == "mes" else [],
+        "proximas": _proximas(hoy) if vista == "semana" else [],
     }
 
 
@@ -367,11 +390,20 @@ def _responder_mes(request, listo=False, **extra):
     """
     datos = request.POST.copy()
     datos["vista"] = "mes"
+    # Desde la vista semanal no llega el mes que se estaba mirando, así que se
+    # muestra el de la fecha bloqueada.
+    datos.setdefault("desde", datos.get("bq-desde", ""))
+    contexto = _contexto(datos, **extra)
+    direccion = f"{reverse('panel_bloques')}?vista=mes&desde={contexto['foco']:%Y-%m-%d}"
     if request.headers.get("HX-Request"):
-        return render(request, "agenda/_calendario.html", _contexto(datos, **extra))
+        respuesta = render(request, "agenda/_calendario.html", contexto)
+        # Que la barra de direcciones diga lo que se ve, y recargar no vuelva a
+        # la vista semanal.
+        respuesta["HX-Push-Url"] = direccion
+        return respuesta
     if listo:
-        return redirect(f"{reverse('panel_bloques')}?vista=mes&desde={datos.get('desde', '')}")
-    return render(request, "agenda/bloques.html", _contexto(datos, **extra))
+        return redirect(direccion)
+    return render(request, "agenda/bloques.html", contexto)
 
 
 def _personas(reservas):

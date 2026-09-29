@@ -31,14 +31,18 @@
          const i = this.minutoDe(e)
          this.agregar(dian, dia, this.hora(i), this.hora(Math.min(i + 90, this.desde + this.largo)))
        },
-       elegir(pk, dia, i, f) {
+       /* `dian` también va con un bloque elegido: el editor de bloqueos lo usa
+          para ofrecer solo las fechas de ese día de la semana. */
+       elegir(pk, dia, i, f, dian) {
          if (this.elegido === pk) { this.cerrar(); return }
-         this.elegido = pk; this.dian = null; this.dia = dia; this.ini = i; this.fin = f
+         this.elegido = pk; this.dian = dian; this.dia = dia; this.ini = i; this.fin = f; this.bloqueando = false
        },
        agregar(dian, dia, i, f) {
-         this.elegido = null; this.dian = dian; this.dia = dia; this.ini = i; this.fin = f
+         this.elegido = null; this.dian = dian; this.dia = dia; this.ini = i; this.fin = f; this.bloqueando = false
        },
-       cerrar() { this.elegido = null; this.dian = null },
+       cerrar() { this.elegido = null; this.dian = null; this.bloqueando = false },
+       /* US-17 en la vista semanal: bloquear el bloque elegido en una fecha. */
+       bloqueando: false,
 
        /* US-17, vista mensual. `bq` es la fecha elegida para bloquear y
           `levantando` el bloqueo abierto para levantarlo. */
@@ -346,7 +350,7 @@
                         style="top: {{ bloque.posicion }}%; height: {{ bloque.largo }}%"
                         :class="elegido === {{ bloque.pk }} ? 'elegido' : ''"
                         :aria-pressed="elegido === {{ bloque.pk }}"
-                        @click="elegir({{ bloque.pk }}, '{{ dia.fecha|date:"l" }}', '{{ bloque.inicio|time:"H:i" }}', '{{ bloque.termino|time:"H:i" }}')"
+                        @click="elegir({{ bloque.pk }}, '{{ dia.fecha|date:"l" }}', '{{ bloque.inicio|time:"H:i" }}', '{{ bloque.termino|time:"H:i" }}', {{ dia.numero }})"
                         {% comment %}`mouseleave` de la rejilla no se dispara al entrar
                         a un hijo, así que sin esto el aviso queda congelado al recorrer
                         los bloques.{% endcomment %}
@@ -380,7 +384,7 @@
       </form>
     {% endif %}
 
-    <form class="editor" x-show="abierto" x-cloak
+    <form class="editor" x-show="abierto && !bloqueando" x-cloak
           method="post" action="{% url 'editar_bloque' %}"
           hx-post="{% url 'editar_bloque' %}" hx-target="#calendario" hx-swap="outerHTML">
       {% csrf_token %}
@@ -406,9 +410,60 @@
           <button class="btn peligro" type="submit" name="accion" value="quitar" x-show="elegido !== null"
                   hx-post="{% url 'editar_bloque' %}" hx-include="closest form"
                   hx-vals='{"accion": "quitar"}'>Quitar de la jornada</button>
+          <button class="btn" type="button" x-show="elegido !== null"
+                  @click="bloqueando = true">Bloquear una fecha</button>
           <button class="btn" type="button" @click="cerrar()">Cancelar</button>
         </div>
       </div>
+    </form>
+
+    {% comment %}US-17. Quitar saca el bloque de todas las semanas; bloquear lo deja
+    fuera solo en una fecha. La fecha se elige de una lista con los próximos días de
+    la semana del bloque, así no se puede pedir un martes para un bloque de los
+    jueves. Se envía sin `desde`, y la respuesta es la vista mensual de esa fecha,
+    que es la que muestra el bloqueo y avisa si le quita la sala a una reserva.{% endcomment %}
+    <form class="editor" x-show="bloqueando && elegido !== null" x-cloak
+          method="post" action="{% url 'editar_bloqueo' %}"
+          hx-post="{% url 'editar_bloqueo' %}" hx-target="#calendario" hx-swap="outerHTML">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="bloquear">
+      <input type="hidden" name="vista" value="mes">
+      <input type="hidden" name="bq-modo" value="bloque">
+      <input type="hidden" name="bq-bloque" :value="elegido ?? ''">
+
+      <p class="que">Bloquear el bloque de los <strong x-text="dia"></strong>
+        (<span x-text="ini + '–' + fin"></span>) en una fecha. La jornada no cambia: solo esa fecha
+        queda sin sala.</p>
+
+      <div class="campos">
+        {% for dia in proximas %}
+          <label x-show="dian === {{ dia.numero }}">Fecha
+            <select name="bq-desde" :disabled="dian !== {{ dia.numero }}">
+              {% for f in dia.fechas %}
+                <option value="{{ f.fecha|date:'Y-m-d' }}" {% if f.entero %}disabled{% endif %}>{{ f.fecha|date:"l j \d\e F" }}{% if f.entero %} (bloqueado todo el día){% endif %}</option>
+              {% endfor %}
+            </select>
+          </label>
+        {% endfor %}
+      </div>
+
+      <fieldset class="opciones">
+        <legend>Motivo</legend>
+        {% for valor, etiqueta in motivos %}
+          <label><input type="radio" name="bq-motivo" value="{{ valor }}" required> {{ etiqueta|capfirst }}</label>
+        {% endfor %}
+      </fieldset>
+
+      <div class="campos">
+        <label class="ancho">Detalle, opcional. Lo ve el solicitante.
+          <input type="text" name="bq-detalle" maxlength="120"
+                 placeholder="Ej.: cambio de focos, ceremonia de titulación"></label>
+        <div class="acciones">
+          <button class="btn activa" type="submit">Bloquear esa fecha</button>
+          <button class="btn" type="button" @click="bloqueando = false">Volver</button>
+        </div>
+      </div>
+      <p class="pista">Para un día completo, varios días o una fecha más lejana, usa la vista mensual.</p>
     </form>
   {% endif %}
 </div>
