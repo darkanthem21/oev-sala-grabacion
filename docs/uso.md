@@ -17,7 +17,7 @@ desde el sitio; las otras dos las conoce quien las usa.
 
 | Rol | Dirección |
 |---|---|
-| Solicitante | `/login/` |
+| Solicitante | `/solicitante/entrar/` |
 | Administrador | `/configuracion/entrar/` |
 | Personal de apoyo | `/apoyo/entrar/` |
 
@@ -30,8 +30,8 @@ desde el sitio; las otras dos las conoce quien las usa.
 1. Abre la dirección de tu rol.
 2. Escribe tu correo institucional y tu contraseña. Marca **Ver contraseña** si
    quieres revisar lo que escribiste.
-3. Pulsa **Iniciar sesión**. El sistema te lleva al panel que corresponde a tu
-   rol.
+3. Pulsa **Iniciar sesión**. El sistema te lleva al panel de esa puerta. Si
+   tienes más de un rol, la puerta por la que entras decide a qué panel llegas.
 
 ![Pantalla de inicio de sesión](uso/us-01/ingreso.jpg)
 

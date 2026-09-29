@@ -83,7 +83,7 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "personas.Usuario"
-LOGIN_URL = "/login/"
+LOGIN_URL = "login_solicitante"
 LOGIN_REDIRECT_URL = "/"
 
 # US-01 AC6. Todavía no hay relay institucional, así que por defecto el correo
