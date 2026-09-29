@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "configuracion",
     "solicitudes",
     "uso",
+    "notificaciones",
 ]
 
 MIDDLEWARE = [
