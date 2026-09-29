@@ -72,7 +72,7 @@ def es_solicitante(usuario):
     return usuario.is_authenticated and usuario.tiene_rol(Rol.SOLICITANTE)
 
 
-@user_passes_test(es_solicitante, login_url="login")
+@user_passes_test(es_solicitante, login_url="login_solicitante")
 def solicitar(request):
     """T4 - formulario de solicitud de reserva (US-02).
 

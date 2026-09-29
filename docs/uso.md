@@ -17,7 +17,7 @@ desde el sitio; las otras dos las conoce quien las usa.
 
 | Rol | Dirección |
 |---|---|
-| Solicitante | `/login/` |
+| Solicitante | `/solicitante/entrar/` |
 | Administrador | `/configuracion/entrar/` |
 | Personal de apoyo | `/apoyo/entrar/` |
 
