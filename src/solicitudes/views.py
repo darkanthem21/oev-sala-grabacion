@@ -1,4 +1,4 @@
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render
 
 from configuracion.models import Parametros
@@ -68,7 +68,11 @@ def _contexto(form, formset, extra=None):
     return base
 
 
-@login_required
+def es_solicitante(usuario):
+    return usuario.is_authenticated and usuario.tiene_rol(Rol.SOLICITANTE)
+
+
+@user_passes_test(es_solicitante, login_url="login")
 def solicitar(request):
     """T4 - formulario de solicitud de reserva (US-02).
 
