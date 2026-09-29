@@ -4,6 +4,7 @@ from datetime import date, time, timedelta
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ValidationError
+from django.db.models.functions import Coalesce
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -11,12 +12,17 @@ from django.utils import timezone
 from django.utils.formats import date_format
 from django.views.decorators.http import require_POST
 
-from .forms import BloqueForm
-from .models import Bloque, Dia, minutos, plantilla_semanal
+from . import services
+from .forms import MODOS, BloqueForm, BloqueoForm, LevantarForm
+from .models import Bloque, Bloqueo, Dia, Motivo, bloqueos_por_fecha, minutos, plantilla_semanal
 
 # Piso de la rejilla: sin esto un día con un solo bloque se dibujaría ocupando
 # toda la jornada y los días dejarían de ser comparables.
 JORNADA_MINIMA = (8 * 60, 19 * 60)
+
+# Cuántas acciones muestra el registro de bloqueos. El historial completo está
+# en la administración de Django, igual que el de los parámetros.
+ULTIMOS = 15
 
 
 def _fecha(texto, por_defecto):
@@ -136,15 +142,68 @@ def _proximo(bloques):
     return {"inicio": f"{inicio:%H:%M}", "termino": _hhmm(min(minutos(inicio) + 90, 23 * 60 + 55))}
 
 
-def _dia(fecha, plantilla, foco=None):
+def _dia(fecha, plantilla, foco=None, bloqueos=None, hoy=None):
     bloques = plantilla[fecha.weekday()]
+    del_dia = (bloqueos or {}).get(fecha, [])
     return {
         "fecha": fecha,
         "numero": fecha.weekday(),
         "fuera": foco is not None and fecha.month != foco.month,
         "bloques": bloques,
         "proximo": _proximo(bloques),
+        # US-17: solo la vista mensual los usa, porque es la que tiene fechas.
+        "bloqueos": del_dia,
+        "entero": any(b.bloque_id is None for b in del_dia),
+        "pasado": hoy is not None and fecha < hoy,
     }
+
+
+def _estado_bloqueo(formulario):
+    """Con qué arranca el editor de bloqueos.
+
+    Sale de lo que mandó el navegador, sin limpiar, y va al x-data de Alpine.
+    Por eso cada valor se revisa antes: una fecha o un modo inventados romperían
+    el JavaScript de la página.
+    """
+    if formulario is None or not formulario.is_bound:
+        return {"abierto": False, "fecha": "", "hasta": "", "modo": "dia",
+                "bloque": None, "motivo": "", "detalle": ""}
+
+    def dato(campo):
+        return formulario.data.get(formulario.add_prefix(campo), "")
+
+    fecha, hasta = _fecha(dato("desde"), None), _fecha(dato("hasta"), None)
+    try:
+        bloque = int(dato("bloque"))
+    except ValueError:
+        bloque = None
+    return {
+        "abierto": True,
+        "fecha": fecha.isoformat() if fecha else "",
+        "hasta": hasta.isoformat() if hasta else "",
+        "modo": dato("modo") if dato("modo") in dict(MODOS) else "dia",
+        "bloque": bloque,
+        "motivo": dato("motivo") if dato("motivo") in Motivo.values else "",
+        # Este no va al x-data: la plantilla lo escribe en el value del campo.
+        "detalle": dato("detalle"),
+    }
+
+
+def _registro():
+    """US-17 AC6: los últimos bloqueos y levantamientos, cada uno con quién, cuándo
+    y por qué. Un bloqueo levantado aparece dos veces, una por cada acción."""
+    recientes = Bloqueo.objects.select_related(
+        "bloque", "bloqueado_por", "levantado_por"
+    ).order_by(Coalesce("levantado_en", "bloqueado_en").desc())[:ULTIMOS]
+    acciones = []
+    for bloqueo in recientes:
+        acciones.append({"cuando": bloqueo.bloqueado_en, "accion": "Bloqueo", "bloqueo": bloqueo,
+                         "motivo": bloqueo.razon, "quien": bloqueo.bloqueado_por})
+        if bloqueo.levantado_en:
+            acciones.append({"cuando": bloqueo.levantado_en, "accion": "Levantamiento",
+                             "bloqueo": bloqueo, "motivo": bloqueo.motivo_levantamiento,
+                             "quien": bloqueo.levantado_por})
+    return sorted(acciones, key=lambda a: a["cuando"], reverse=True)[:ULTIMOS]
 
 
 # Lo que la plantilla mete en el x-data de Alpine. Sin nada elegido va la palabra
@@ -168,9 +227,11 @@ def _elegido(bloque):
     }
 
 
-def _contexto(datos, error=None, elegido=None, quitado=None, choca=None):
+def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
+              bloqueo=None, afectadas=(), levantando=None, aviso_mes=None, hecho=None):
     """Todo lo que necesita el calendario. Lo comparten la vista que lo muestra
-    y la que guarda un bloque, porque las dos dibujan la misma rejilla."""
+    y las que guardan un bloque o un bloqueo, porque todas dibujan la misma
+    rejilla."""
     # US-02 AC7: la vista por defecto es la mensual, pedida por el cliente.
     vista = datos.get("vista")
     if vista not in ("mes", "semana"):
@@ -183,6 +244,8 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None):
     largo = hasta - desde
     _ubicar(plantilla, desde, largo)
     fechas = _semana(foco)
+    mes = _mes(foco)
+    bloqueos = bloqueos_por_fecha(mes[0][0], mes[-1][-1]) if vista == "mes" else {}
 
     return {
         "pestana": "bloques",
@@ -199,7 +262,7 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None):
         "largo_min": largo,
         "cabeceras": _cabeceras(plantilla),
         "dias": [_dia(fecha, plantilla) for fecha in fechas],
-        "semanas": [[_dia(f, plantilla, foco) for f in s] for s in _mes(foco)],
+        "semanas": [[_dia(f, plantilla, foco, bloqueos, hoy) for f in s] for s in mes],
         "anterior": _correr(foco, vista, -1),
         "siguiente": _correr(foco, vista, +1),
         "error": error,
@@ -208,6 +271,20 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None):
         "quitado": quitado,
         # El bloque contra el que se chocó, para señalarlo en la rejilla.
         "choca": choca.pk if choca is not None else None,
+        # US-17, vista mensual. Los bloqueos del mes sin repetir, para el panel
+        # de cada uno; uno de varios días aparece en varias celdas.
+        "bloqueos_mes": list({b.pk: b for bs in bloqueos.values() for b in bs}.values()),
+        "jornada": [{"numero": d, "bloques": plantilla[d]} for d in Dia.values],
+        "motivos": Motivo.choices,
+        "modos": MODOS,
+        "bq": _estado_bloqueo(bloqueo),
+        "bq_errores": _mensaje(bloqueo) if bloqueo is not None and bloqueo.is_bound else None,
+        "afectadas": afectadas,
+        "confirmadas": ",".join(r.codigo for r in afectadas),
+        "levantando": levantando,
+        "aviso_mes": aviso_mes,
+        "hecho": hecho,
+        "registro": _registro() if vista == "mes" else [],
     }
 
 
@@ -279,3 +356,66 @@ def editar_bloque(request):
         return _responder(request, elegido=bloque)
     # `cruce()` de nuevo solo en el camino del error, para señalar el otro.
     return _responder(request, error=_mensaje(formulario), elegido=bloque, choca=bloque.cruce())
+
+
+def _responder_mes(request, listo=False, **extra):
+    """Como `_responder`, pero para la vista mensual, que es la que tiene fechas.
+
+    Sin htmx una advertencia o un error no pueden ir en una redirección, así
+    que se dibuja la página entera. Solo lo que ya quedó hecho redirige, para
+    que recargar no bloquee dos veces.
+    """
+    datos = request.POST.copy()
+    datos["vista"] = "mes"
+    if request.headers.get("HX-Request"):
+        return render(request, "agenda/_calendario.html", _contexto(datos, **extra))
+    if listo:
+        return redirect(f"{reverse('panel_bloques')}?vista=mes&desde={datos.get('desde', '')}")
+    return render(request, "agenda/bloques.html", _contexto(datos, **extra))
+
+
+def _personas(reservas):
+    cuantas = len({r.correo for r in reservas})
+    return "1 persona" if cuantas == 1 else f"{cuantas} personas"
+
+
+@staff_member_required(login_url="login_gestion")
+@require_POST
+def editar_bloqueo(request):
+    """Bloquea la sala en unas fechas, o levanta un bloqueo (US-17).
+
+    Si el bloqueo le quita la sala a reservas aprobadas, la primera vez no se
+    guarda: vuelve con la lista para que el administrador la vea (AC4). Al
+    confirmar, el navegador devuelve los códigos que se le mostraron, y si ya no
+    son los mismos se le vuelve a mostrar la lista antes de avisar a nadie.
+    """
+    if request.POST.get("accion") == "levantar":
+        bloqueo = get_object_or_404(Bloqueo, pk=request.POST.get("bloqueo"))
+        formulario = LevantarForm(request.POST)
+        if not formulario.is_valid():
+            return _responder_mes(request, levantando=bloqueo.pk, aviso_mes=_mensaje(formulario))
+        try:
+            services.levantar(bloqueo, request.user, formulario.cleaned_data["motivo"])
+        except ValidationError as error:
+            return _responder_mes(request, aviso_mes=" ".join(error.messages))
+        return _responder_mes(
+            request, listo=True,
+            hecho=f"Levantaste el bloqueo por {bloqueo.get_motivo_display()}. La sala vuelve a "
+                  f"estar disponible {bloqueo.periodo}, {bloqueo.alcance}.",
+        )
+
+    formulario = BloqueoForm(request.POST)
+    if not formulario.is_valid():
+        return _responder_mes(request, bloqueo=formulario)
+
+    bloqueo = formulario.save(commit=False)
+    afectadas = services.afectadas(bloqueo)
+    vistas = {c for c in request.POST.get("confirmadas", "").split(",") if c}
+    if afectadas and {r.codigo for r in afectadas} != vistas:
+        return _responder_mes(request, bloqueo=formulario, afectadas=afectadas)
+
+    services.bloquear(bloqueo, request.user, afectadas)
+    hecho = f"Bloqueaste la sala {bloqueo.periodo}, {bloqueo.alcance} ({bloqueo.razon})."
+    if afectadas:
+        hecho += f" Se le avisó por correo a {_personas(afectadas)}."
+    return _responder_mes(request, listo=True, hecho=hecho)
