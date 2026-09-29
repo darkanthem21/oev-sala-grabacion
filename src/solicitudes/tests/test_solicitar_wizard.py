@@ -5,6 +5,7 @@ from django.urls import reverse
 
 from agenda.models import Bloque
 from personas.models import Area
+from solicitudes.models import Acompanante, Solicitud, SolicitudBloque
 from solicitudes.wizard import PasoSolicitud, SolicitudWizard, obtener_limites_reserva
 
 Usuario = get_user_model()
@@ -151,6 +152,45 @@ class SolicitarWizardTestCase(TestCase):
         # La sesion debe haberse limpiado
         self.assertNotIn("solicitud_reserva", self.client.session)
 
+        # Debe haberse guardado en la base de datos
+        self.assertEqual(Solicitud.objects.count(), 1)
+        solicitud = Solicitud.objects.first()
+        self.assertEqual(solicitud.solicitante, self.usuario)
+        self.assertEqual(solicitud.area, self.area)
+        self.assertEqual(solicitud.motivo, "Grabación de cápsula educativa")
+        self.assertEqual(solicitud.estado_validacion, Solicitud.EstadoValidacion.PENDIENTE)
+        self.assertEqual(solicitud.estado_confirmacion, Solicitud.EstadoConfirmacion.NO_HABILITADA)
+        self.assertEqual(solicitud.total_personas, 1)
+        self.assertEqual(solicitud.bloques.count(), 1)
+        self.assertEqual(solicitud.bloques.first(), self.bloque)
+
+    def test_paso3_con_acompanantes_guarda_acompanantes_y_bloques(self):
+        session = self.client.session
+        session["solicitud_reserva"] = {
+            "fecha": "2026-09-20",
+            "bloques_ids": [self.bloque.id],
+            "bloques_texto": "10:00 - 11:00",
+            "area_id": self.area.id,
+            "area_nombre": "Informática",
+            "motivo": "Cápsula con invitados",
+            "personas": 3,
+            "acompanantes": [
+                {"nombre": "Acompañante Uno", "correo": "uno@uach.cl"},
+                {"nombre": "Acompañante Dos", "correo": "dos@uach.cl"},
+            ],
+        }
+        session.save()
+
+        url = reverse("solicitar")
+        response = self.client.post(f"{url}?paso=3", {"paso": "3", "acepta_terminos": "1"})
+        self.assertEqual(response.status_code, 200)
+
+        solicitud = Solicitud.objects.get(motivo="Cápsula con invitados")
+        self.assertEqual(solicitud.total_personas, 3)
+        self.assertEqual(solicitud.acompanantes.count(), 2)
+        self.assertTrue(solicitud.acompanantes.filter(correo="uno@uach.cl").exists())
+        self.assertTrue(solicitud.acompanantes.filter(correo="dos@uach.cl").exists())
+
     def test_salto_a_paso_invalido_redirige_a_paso1(self):
         url = reverse("solicitar")
         # Intentar acceder a paso 3 sin sesion
@@ -247,12 +287,22 @@ class WizardClasesTestCase(TestCase):
             self.assertEqual(f_max, date(2026, 9, 30))
 
     def test_barra_superior_en_solicitar(self):
+        area = Area.objects.create(nombre="Test Area Barra", activa=True)
+        usuario = Usuario.objects.create_user(
+            email="barra_solicitar@uach.cl",
+            first_name="Docente",
+            last_name="Barra",
+            password="testpassword123",
+        )
+        usuario.areas.add(area)
+        self.client.force_login(usuario)
+
         url = reverse("solicitar")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'class="barra-superior"')
         self.assertContains(response, 'Facultad-color-negro.png')
-        self.assertContains(response, self.usuario.email)
+        self.assertContains(response, usuario.email)
         self.assertContains(response, 'action="/logout/"')
         self.assertContains(response, 'Cerrar sesión')
 

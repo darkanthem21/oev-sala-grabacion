@@ -35,15 +35,6 @@ class SolicitudForm(forms.Form):
         }),
         error_messages={"required": "El motivo es obligatorio."},
     )
-    observaciones = forms.CharField(
-        label="Observaciones y requerimientos técnicos",
-        required=False,
-        max_length=500,
-        widget=forms.Textarea(attrs={
-            "rows": 3,
-            "placeholder": "Opcional: iluminación, micrófonos, apoyo técnico…",
-        }),
-    )
     personas = forms.IntegerField(
         label=f"Cantidad de personas en sala (máximo {MAXIMO_PERSONAS})",
         min_value=1,

@@ -2,11 +2,14 @@ import calendar
 from datetime import date, datetime
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
 from agenda.services import obtener_bloques_dia, obtener_bloques_mes
+from personas.models import Area
 from .forms import MAXIMO_ACOMPANANTES, MAXIMO_PERSONAS, AcompananteFormSet, SolicitudForm
+from .models import Acompanante, Solicitud, SolicitudBloque
 from .wizard import PasoSolicitud, SolicitudWizard, obtener_limites_reserva
 
 
@@ -432,13 +435,38 @@ def _manejar_paso_confirmacion(request, wizard: SolicitudWizard):
         if not acepta:
             error_terminos = "Tienes que aceptar los términos y condiciones para enviar la solicitud."
         else:
+            with transaction.atomic():
+                area = Area.objects.get(id=reserva_info["area_id"])
+                solicitud = Solicitud.objects.create(
+                    solicitante=request.user,
+                    area=area,
+                    motivo=reserva_info["motivo"],
+                    estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
+                    estado_confirmacion=Solicitud.EstadoConfirmacion.NO_HABILITADA,
+                )
+
+                for ac in reserva_info.get("acompanantes", []):
+                    Acompanante.objects.create(
+                        solicitud=solicitud,
+                        nombre=ac["nombre"],
+                        correo=ac["correo"],
+                    )
+
+                for b_id in reserva_info.get("bloques_ids", []):
+                    SolicitudBloque.objects.create(
+                        solicitud=solicitud,
+                        bloque_id=b_id,
+                    )
+
+                solicitud.full_clean()
+
             solicitud_datos = {
+                "id": solicitud.id,
                 "fecha": reserva_info["fecha"],
                 "bloques_texto": reserva_info["bloques_texto"],
                 "area": reserva_info["area_nombre"],
                 "motivo": reserva_info["motivo"],
-                "observaciones": reserva_info["observaciones"],
-                "personas": reserva_info["personas"],
+                "personas": solicitud.total_personas,
             }
             acompanantes_datos = reserva_info["acompanantes"]
 
@@ -446,6 +474,7 @@ def _manejar_paso_confirmacion(request, wizard: SolicitudWizard):
 
             return render(request, "solicitudes/enviada.html", {
                 "solicitud": solicitud_datos,
+                "solicitud_obj": solicitud,
                 "acompanantes": acompanantes_datos,
             })
 
