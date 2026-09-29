@@ -18,7 +18,8 @@ ERROR_CREDENCIALES = "Correo o contraseña incorrectos."
 
 
 def destino_tras_login(usuario):
-    """A dónde va alguien recién autenticado.
+    """A qué panel lleva la raíz `/` a alguien ya autenticado. Tras entrar
+    manda la puerta (`destino`), no esto.
 
     US-01 AC3 dice "panel principal de reservas": para el solicitante es el
     formulario de US-02.
@@ -64,17 +65,16 @@ def _puede_pasar(usuario, rol):
     En la de administración vale también `is_staff`, porque el superusuario del
     despliegue no pertenece a ningún grupo y quedaría afuera de su propia puerta.
     """
-    if rol is None:
-        return True
     if rol == Rol.ADMINISTRADOR and usuario.is_staff:
         return True
     return usuario.tiene_rol(rol)
 
 
-def entrar(request, plantilla="personas/login.html", ruta="login", rol=None, titulo=None):
-    """Las puertas del sistema. Cada una cambia la plantilla, el encabezado y a
-    quién deja pasar. La autenticación, el bloqueo por intentos y la recuperación
-    de clave son las mismas para todas."""
+def entrar(request, rol, destino, plantilla="personas/login.html", ruta="login", titulo=None):
+    """Las puertas del sistema. Cada una cambia la plantilla, el encabezado, a
+    quién deja pasar y a qué panel lo lleva (`destino`, nombre de URL). La
+    autenticación, el bloqueo por intentos y la recuperación de clave son las
+    mismas para todas."""
     contexto = {"form": AuthenticationForm(), "ruta": ruta, "titulo": titulo}
     if request.method != "POST":
         return render(request, plantilla, contexto)
@@ -101,7 +101,7 @@ def entrar(request, plantilla="personas/login.html", ruta="login", rol=None, tit
             entrante.save(update_fields=["intentos_fallidos", "bloqueado_hasta"])
         login(request, entrante)
         # 204 sin cuerpo porque no hay nada que pegar; el navegador navega.
-        return HttpResponse(status=204, headers={"HX-Redirect": destino_tras_login(entrante)})
+        return HttpResponse(status=204, headers={"HX-Redirect": reverse(destino)})
 
     if usuario:
         _registrar_fallo(usuario)
@@ -110,5 +110,5 @@ def entrar(request, plantilla="personas/login.html", ruta="login", rol=None, tit
 
 @login_required
 def panel(request):
-    """La raíz lleva a cada uno a su panel, el mismo al que llega tras entrar."""
+    """La raíz lleva a cada uno a su panel, por la prioridad de sus roles."""
     return redirect(destino_tras_login(request.user))

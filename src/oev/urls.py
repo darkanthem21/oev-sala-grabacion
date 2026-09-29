@@ -14,7 +14,12 @@ urlpatterns = [
     path("", views.panel, name="panel"),
     path("solicitar/", include("solicitudes.urls")),
     path("validador/", solicitudes.panel_validador, name="panel_validador"),
-    path("login/", views.entrar, name="login"),
+    path(
+        "login/",
+        views.entrar,
+        {"rol": Rol.SOLICITANTE, "destino": "solicitar"},
+        name="login",
+    ),
     path("logout/", auth.LogoutView.as_view(next_page="login"), name="logout"),
     # US-01 AC6: las cuatro vistas de recuperación las trae Django, con enlace
     # firmado y sin tabla propia. Nosotros solo ponemos las plantillas.
@@ -34,27 +39,27 @@ urlpatterns = [
     # cascarón con las pestañas es una plantilla compartida.
     # US-08 AC4: una puerta por rol, ninguna enlazada desde el sitio público.
     # Todas reusan `entrar`, así que comparten autenticación, bloqueo por intentos
-    # y recuperación de clave. Lo que cambia es el encabezado y el grupo que dejan
-    # pasar.
+    # y recuperación de clave. Lo que cambia es el encabezado, el grupo que dejan
+    # pasar y el panel al que llevan.
     path(
         "configuracion/entrar/",
         views.entrar,
         {"plantilla": "personas/gestion.html", "ruta": "login_gestion",
-         "rol": Rol.ADMINISTRADOR, "titulo": "Administración"},
+         "rol": Rol.ADMINISTRADOR, "destino": "panel_bloques", "titulo": "Administración"},
         name="login_gestion",
     ),
     path(
         "validacion/entrar/",
         views.entrar,
         {"plantilla": "personas/gestion.html", "ruta": "login_validacion",
-         "rol": Rol.VALIDADOR, "titulo": "Validación"},
+         "rol": Rol.VALIDADOR, "destino": "panel_validador", "titulo": "Validación"},
         name="login_validacion",
     ),
     path(
         "apoyo/entrar/",
         views.entrar,
         {"plantilla": "personas/gestion.html", "ruta": "login_apoyo",
-         "rol": Rol.APOYO, "titulo": "Personal de apoyo"},
+         "rol": Rol.APOYO, "destino": "panel_apoyo", "titulo": "Personal de apoyo"},
         name="login_apoyo",
     ),
     path("apoyo/", uso.bloques, name="panel_apoyo"),
