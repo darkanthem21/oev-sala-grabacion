@@ -14,89 +14,27 @@
 <main class="hoja {% if paso == 1 %}hoja-calendario{% endif %}"
       {% if paso == 2 %}x-data="{ personas: {{ personas_inicial }} }"{% elif paso == 3 %}x-data="{ acepta: {{ acepta_inicial|yesno:'true,false' }} }"{% endif %}>
 
-  <!-- Indicador visual del progreso del flujo multipaso (3 pasos simétricos) -->
-  <nav class="indicador-pasos" aria-label="Progreso de la solicitud">
-    <ol class="pasos-lista">
-      <li class="paso-item {% if paso == 1 %}activo{% elif paso > 1 %}completado{% endif %}">
-        <span class="paso-num">1</span>
-        <span class="paso-texto">Horario y disponibilidad</span>
-      </li>
-      <li class="paso-item {% if paso == 2 %}activo{% elif paso > 2 %}completado{% endif %}">
-        <span class="paso-num">2</span>
-        <span class="paso-texto">Datos de la actividad</span>
-      </li>
-      <li class="paso-item {% if paso == 3 %}activo{% endif %}">
-        <span class="paso-num">3</span>
-        <span class="paso-texto">Confirmación</span>
-      </li>
-    </ol>
-  </nav>
+  {% comment %}
+  US-17 AC7: qué horarios no se pueden pedir y por qué, para que nadie pida uno
+  bloqueado sin saberlo. Cuando el formulario tenga su calendario (US-02), el
+  bloqueo se marca ahí y esta lista puede irse.
+  {% endcomment %}
+  {% if bloqueos %}
+    <aside class="bloqueos" aria-labelledby="h-bloqueos">
+      <h2 id="h-bloqueos">La sala no estará disponible</h2>
+      <ul>
+        {% for b in bloqueos %}
+          <li><strong>{{ b.periodo|capfirst }}</strong>, {{ b.alcance }}. {{ b.razon }}.</li>
+        {% endfor %}
+      </ul>
+    </aside>
+  {% endif %}
 
-  {% if paso == 1 %}
-    <h1>Paso 1: Selecciona fecha y horario</h1>
-    <p class="sub">Elige un día habilitado en el calendario y selecciona los bloques de tiempo requeridos para tu actividad.</p>
-
-    {% if error_paso %}
-      <div class="error" role="alert">
-        <p>{{ error_paso }}</p>
-      </div>
-    {% endif %}
-
-    <!-- Componente del calendario con navegación dinámica HTMX -->
-    {% include "solicitudes/componentes/calendario_disponibilidad.html" %}
-
-    <form method="POST" action="{% url 'solicitar' %}?paso=1" id="form-paso1"
-          x-data="{ haySeleccion: {% if bloques_seleccionados_ids %}true{% else %}false{% endif %} }"
-          @change="haySeleccion = $el.querySelectorAll('input[name=bloques]:checked').length > 0"
-          @htmx:after-swap.camel="haySeleccion = $el.querySelectorAll('input[name=bloques]:checked').length > 0">
-      {% csrf_token %}
-      <input type="hidden" name="paso" value="1">
-      <input type="hidden" name="fecha" id="input-fecha-seleccionada" value="{{ fecha_str|default:'' }}">
-
-      <div id="panel-bloques" class="panel-bloques">
-        {% if fecha_str %}
-          {% include "solicitudes/bloques_dia.html" with bloques=bloques_seleccionados fecha=fecha_seleccionada fecha_str=fecha_str bloques_seleccionados_ids=bloques_seleccionados_ids %}
-        {% else %}
-          <div class="mensaje-sin-seleccion">
-            <svg class="icono-estado-vacio" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            <p>Selecciona un día en el calendario para consultar los bloques disponibles.</p>
-          </div>
-        {% endif %}
-      </div>
-
-      <div class="acciones-paso">
-        {% if puede_cambiar_area %}
-          <a href="{% url 'solicitar_area' %}?cambiar=1" class="btn-secundario">
-            <svg class="icono-btn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
-            <span>Cambiar área</span>
-          </a>
-        {% else %}
-          <div></div>
-        {% endif %}
-        <button type="submit" class="btn-accion" :disabled="!haySeleccion" {% if not bloques_seleccionados_ids %}disabled{% endif %}>
-          <span>Continuar a datos de la actividad</span>
-          <svg class="icono-btn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </button>
-      </div>
-    </form>
-
-  {% elif paso == 2 %}
-    <h1>Paso 2: Datos de la actividad</h1>
-    <p class="sub">Completa los detalles de la grabación y quiénes ingresarán a la sala.</p>
-
-    <!-- Ficha resumen del horario seleccionado en el Paso 1 -->
-    <div class="tarjeta-resumen-horario">
-      <div class="horario-icono" aria-hidden="true">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-      </div>
-      <div class="horario-datos">
-        <strong>{{ reserva.fecha|date:"l d \d\e F \d\e Y"|capfirst }}</strong>
-        <span>Bloques: {{ reserva.bloques_texto }}</span>
-      </div>
-      <a href="{% url 'solicitar' %}?paso=1" class="btn-enlace-horario" role="button" title="Modificar fecha y bloques">
-        <svg class="icono-btn" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-        <span>Cambiar horario</span>
-      </a>
+  {% if errores or form.non_field_errors or formset.non_form_errors %}
+    <div class="error" role="alert">
+      {% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}
+      {% for e in formset.non_form_errors %}<p>{{ e }}</p>{% endfor %}
+      {% for e in errores %}<p>{{ e }}</p>{% endfor %}
     </div>
 
     {% if errores or form.non_field_errors or formset.non_form_errors %}

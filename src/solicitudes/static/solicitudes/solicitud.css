@@ -222,6 +222,17 @@
 .lista { margin: 0 0 1.5rem; padding-left: 1.1rem; font-size: .9rem; }
 
 /* --- Envio y Navegación de Pasos --- */
+
+/* US-17 AC7. El filete es el mismo color que marca un bloqueo en el panel del
+ * administrador y en el del validador. */
+.bloqueos {
+  border-left: 3px solid var(--destacado); background: var(--fondo);
+  padding: .6rem .75rem; margin-bottom: 1.75rem; font-size: .9rem;
+}
+.hoja .bloqueos h2 { margin: 0 0 .35rem; padding: 0; border: 0; font-size: .9rem; }
+.bloqueos ul { margin: 0; padding-left: 1.1rem; }
+
+/* --- Envio --- */
 .hoja button {
   width: 100%; padding: .7rem; border: 0; border-radius: 3px; cursor: pointer;
   background: var(--accion); color: var(--superficie);
