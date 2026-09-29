@@ -1,48 +1,61 @@
-<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cierre de uso · Sala de Grabación</title>
-<style>
-:root{--blue:#0754d8;--ink:#102c50;--muted:#64748b;--line:#dfe5fa;--soft:#eef1ff;--panel:#fdfdff;--aqua:#dcf6f4;--coral:#bd786e;--green:#77d64f}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--aqua);color:var(--ink);font:15px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:hidden}
-body:before,body:after{content:"";position:fixed;z-index:-1;border-radius:50%;pointer-events:none}body:before{width:360px;height:360px;left:-210px;bottom:-145px;background:linear-gradient(135deg,#77e445,#dcf279)}body:after{width:310px;height:310px;right:-160px;top:28%;background:radial-gradient(circle,var(--green) 0 9px,transparent 10px) 0 0/56px 56px}
-header{max-width:1120px;margin:auto;padding:28px 24px 14px}h1{margin:0;font-size:clamp(1.7rem,4vw,2.5rem);letter-spacing:-.035em;color:#123c4a}header p{margin:5px 0;color:var(--muted)}main{max-width:1000px;margin:0 auto;padding:0 20px 36px}.card{background:rgba(255,255,255,.96);border:1px solid #253b531c;box-shadow:0 16px 45px #14324d19;border-radius:16px;padding:clamp(18px,4vw,32px)}
-.topline{display:flex;justify-content:space-between;gap:12px;font-size:.75rem;font-weight:750;color:var(--blue);text-transform:uppercase;letter-spacing:.04em}.bar{height:6px;background:#e7eaff;border-radius:9px;margin:10px 0 24px;overflow:hidden}.bar span{display:block;height:100%;background:var(--blue);border-radius:inherit;transition:width .25s}.step-tag{font-size:.76rem;color:var(--blue);font-weight:700}.step-title{font-size:1.15rem;margin:5px 0 18px}.booking{padding:16px;background:#f0f2ff;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}.booking small,.label{display:block;font-size:.7rem;letter-spacing:.055em;text-transform:uppercase;color:#516b96;font-weight:750}.booking strong{font-size:1.18rem}.time{font-size:.83rem;color:#445b82}.status{padding:7px 12px;background:#dfe7ff;border-radius:9px;font-size:.78rem;white-space:nowrap}
-h3{font-size:.95rem;margin:20px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--line)}.question{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;padding:13px 10px;border-bottom:1px solid #edf0fa}.question:last-child{border-bottom:0}.choices{display:flex;gap:14px;white-space:nowrap}.choices label{display:flex;align-items:center;gap:5px;font-size:.82rem;cursor:pointer}input[type=radio]{accent-color:var(--blue)}.field{margin:14px 8px}.field textarea,.field input[type=time]{width:100%;border:1px solid #dce3f6;border-radius:8px;background:#edf0ff;padding:12px;color:var(--ink);font:inherit}.field textarea{min-height:75px;resize:vertical}.field textarea:focus,.field input:focus{outline:2px solid #95b3ff}.upload{border:1px dashed #e35b58;color:#b43e3b;border-radius:8px;padding:15px;text-align:center;background:#fffafa;font-weight:700;cursor:pointer}.upload input{display:none}.upload small{display:block;font-size:.75rem;font-weight:500;margin-top:3px}.preview{max-width:100%;max-height:230px;display:block;margin:12px auto;border-radius:8px}.warn{color:#ba4643;font-size:.77rem;margin:7px 8px}.footer{display:flex;justify-content:space-between;gap:12px;margin-top:25px}.btn{border:0;border-radius:8px;padding:12px 20px;font:inherit;font-weight:750;cursor:pointer}.btn:disabled{opacity:.45;cursor:not-allowed}.prev{background:#e6eaff;color:#27446d}.next,.finish{background:var(--blue);color:white}.next:hover,.finish:hover{background:#0344b4}.finish{flex:1}.hidden{display:none!important}.summary{background:#f4f6ff;padding:18px;border-radius:12px;margin-top:16px}.summary h3{margin-top:0}.summary p{margin:7px 0}.done{padding:32px;text-align:center}.done .check{font-size:3rem;color:#2b9b64}.error{color:#b43e3b;font-size:.85rem;min-height:1.2em;margin-top:9px}.footnote{max-width:1000px;margin:12px auto;padding:0 22px;color:#526477;font-size:.8rem}
-@media(max-width:600px){header{padding:20px 18px 10px}.question{grid-template-columns:1fr}.choices{padding-left:3px}.booking{align-items:flex-start;flex-direction:column}.footer .btn{padding:11px 13px}.topline{font-size:.66rem}}
-</style>
-</head>
-<body>
-<header><h1>Check List del Personal de Apoyo</h1><p>Cierre de uso · Sala de Grabación</p></header>
-<main><section class="card" id="app">
-<div class="topline"><span id="stepCounter">Paso 1 de 4</span><span id="percent">25% completado</span></div><div class="bar"><span id="progress" style="width:25%"></span></div>
-<div id="formView">
-<div class="step-tag" id="sectionLabel">Sección 1: Estado e Integridad</div><h2 class="step-title" id="sectionTitle">Revisión de la sala</h2>
-<div class="booking"><div><small>Reserva de sala</small><strong>Sala Virtual</strong><div class="time">◷ &nbsp;09:00 – 12:00</div></div><div class="status">● &nbsp;Estado: En progreso</div></div>
-<div id="stepContent"></div>
-<div class="footer"><button class="btn prev" id="back">Anterior</button><button class="btn next" id="forward">Siguiente →</button><button class="btn finish hidden" id="submit">Finalizar y enviar reporte</button></div><div class="error" id="error" role="alert"></div>
-</div>
-<div id="doneView" class="done hidden"><div class="check">✓</div><h2>Revisión finalizada</h2><p>El reporte de cierre quedó registrado en este navegador.</p><div id="summary" class="summary"></div><button class="btn prev" onclick="location.reload()">Volver al inicio</button></div>
-</section></main><p class="footnote">Prototipo visual basado en la propuesta de la presentación. Los datos se guardan solo en este navegador; el envío a la OEV requiere conectarlo a un sistema o servidor.</p>
-<script>
-const steps=[
- {label:'Sección 1: Estado e Integridad',title:'Integridad de la sala',group:'Integridad de la Sala',questions:['Paredes y paneles acústicos sin daños','Puerta y sellos acústicos funcionando']},
- {label:'Sección 2: Orden y Limpieza',title:'Orden y limpieza',group:'Orden y Limpieza',questions:['Sala despejada de basura y objetos personales','Mobiliario (sillas, mesas) en su posición original']},
- {label:'Sección 3: Equipamiento Técnico',title:'Equipos y cables',group:'Equipos y Cables',questions:['Micrófonos y cables enrollados correctamente','Consola y periféricos apagados/protegidos','¿Algún equipo o cable presenta daños?']},
- {label:'Sección 4: Cumplimiento y Cierre',title:'Cumplimiento de horario y entrega',group:'Cumplimiento de Horario',questions:['¿El ingreso fue a la hora prevista?','¿La desocupación fue a la hora prevista?'],time:true,photo:true}
-];let current=0;const answers={};let photoUrl='';
-const q=(s)=>document.querySelector(s);
-function render(){let s=steps[current],pct=Math.round((current+1)/steps.length*100);q('#stepCounter').textContent=`Paso ${current+1} de ${steps.length}`;q('#percent').textContent=`${pct}% completado`;q('#progress').style.width=pct+'%';q('#sectionLabel').textContent=s.label;q('#sectionTitle').textContent=s.title;q('#back').disabled=current===0;q('#forward').classList.toggle('hidden',current===steps.length-1);q('#submit').classList.toggle('hidden',current!==steps.length-1);q('#error').textContent='';let html=`<h3>${s.group}</h3>`;
-s.questions.forEach((item,i)=>{let key=`${current}-${i}`,val=answers[key]||'';html+=`<div class="question"><span>${item}</span><div class="choices"><label><input type="radio" name="${key}" value="si" ${val==='si'?'checked':''}>Sí</label><label><input type="radio" name="${key}" value="no" ${val==='no'?'checked':''}>No</label></div></div>`});
-if(current===0||current===1||current===2)html+=`<div class="field"><label class="label" for="obs${current}">Observaciones</label><textarea id="obs${current}" placeholder="Describe cualquier detalle relevante...">${answers['obs'+current]||''}</textarea></div>`;
-if(current===0||current===2)html+=`<div class="warn">Si registras un daño, agrega una fotografía en el paso de cierre.</div>`;
-if(s.time)html+=`<div class="field"><label class="label" for="arrive">Hora efectiva de salida</label><input id="arrive" type="time" value="${answers.arrive||''}"></div><div class="field"><label class="label" for="closeobs">Observaciones (opcional)</label><textarea id="closeobs" placeholder="Detalles adicionales...">${answers.closeobs||''}</textarea></div><div class="field"><span class="label">Foto de fidelidad / entrega</span><label class="upload">▧ &nbsp;Tomar o adjuntar fotografía final<small>Captura el estado general de la sala al finalizar la inspección.</small><input type="file" id="photo" accept="image/*" capture="environment"></label><img id="preview" class="preview ${photoUrl?'':'hidden'}" src="${photoUrl}" alt="Vista previa de la fotografía"><button type="button" id="removePhoto" class="btn prev ${photoUrl?'':'hidden'}">Quitar foto</button></div>`;
-q('#stepContent').innerHTML=html;
-s.questions.forEach((_,i)=>document.querySelectorAll(`input[name="${current}-${i}"]`).forEach(el=>el.addEventListener('change',e=>answers[`${current}-${i}`]=e.target.value)));
-const obs=q('#obs'+current);if(obs)obs.addEventListener('input',()=>answers['obs'+current]=obs.value);const cobs=q('#closeobs');if(cobs)cobs.addEventListener('input',()=>answers.closeobs=cobs.value);const time=q('#arrive');if(time)time.addEventListener('input',()=>answers.arrive=time.value);
-const file=q('#photo');if(file)file.addEventListener('change',()=>{const f=file.files[0];if(f){if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=URL.createObjectURL(f);q('#preview').src=photoUrl;q('#preview').classList.remove('hidden');q('#removePhoto').classList.remove('hidden')}});const rm=q('#removePhoto');if(rm)rm.addEventListener('click',()=>{photoUrl='';q('#preview').classList.add('hidden');rm.classList.add('hidden');q('#photo').value=''});
-}
-function validate(){const s=steps[current];for(let i=0;i<s.questions.length;i++)if(!answers[`${current}-${i}`])return 'Responde todas las preguntas antes de continuar.';if(current===3&&!answers.arrive)return 'Indica la hora efectiva de salida.';return ''}
-q('#back').onclick=()=>{if(current>0){current--;render()}};q('#forward').onclick=()=>{let e=validate();if(e){q('#error').textContent=e;return}current++;render()};q('#submit').onclick=()=>{let e=validate();if(e){q('#error').textContent=e;return}const report={reserva:'Sala Virtual',horario:'09:00–12:00',horaSalida:answers.arrive,finalizado:new Date().toLocaleString('es-CL'),respuestas:answers,fotografiaAdjunta:!!photoUrl};localStorage.setItem('reporteCierreSala',JSON.stringify(report));q('#formView').classList.add('hidden');q('#doneView').classList.remove('hidden');q('#summary').innerHTML=`<h3>Resumen del cierre</h3><p><b>Sala:</b> Sala Virtual</p><p><b>Hora de salida:</b> ${answers.arrive}</p><p><b>Fotografía:</b> ${photoUrl?'Adjunta':'No adjunta'}</p><p><b>Registro:</b> ${report.finalizado}</p>`};render();
-</script></body></html>
+{% extends "base.html" %}
+{% load static %}
+
+{% block titulo %}Cierre de uso{% endblock %}
+
+{% block estilos %}
+  <link rel="stylesheet" href="{% static 'css/checklist.css' %}">
+{% endblock %}
+
+{% block contenido %}
+<header class="checklist-cabecera">
+  <div class="titulo-principal">
+    <img class="marca-principal" src="{% static 'img/Facultad-color-negro.png' %}"
+         alt="Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile">
+    <h1>Personal de Apoyo: Integridad de sala</h1>
+  </div>
+  <p>Cierre de uso · Sala de Grabación</p>
+</header>
+
+<main class="checklist">
+  <section class="tarjeta" id="app">
+    <div class="topline">
+      <span id="stepCounter">Paso 1 de 4</span>
+      <span id="percent">25% completado</span>
+    </div>
+    <div class="barra"><span id="progress" style="width:25%"></span></div>
+
+    <div id="formView">
+      <div class="etiqueta-paso" id="sectionLabel">Sección 1: Estado e Integridad</div>
+      <h2 class="titulo-paso" id="sectionTitle">Revisión de la sala</h2>
+      <div class="reserva">
+        <div>
+          <small>Reserva de sala</small>
+          <strong>Sala Virtual</strong>
+          <div class="hora">09:00 - 12:00</div>
+        </div>
+        <div class="estado">Estado: En progreso</div>
+      </div>
+      <div id="stepContent"></div>
+      <div class="acciones">
+        <button class="btn anterior" id="back">Anterior</button>
+        <button class="btn siguiente" id="forward">Siguiente</button>
+        <button class="btn finalizar hidden" id="submit">Finalizar y enviar reporte</button>
+      </div>
+      <div class="error" id="error" role="alert"></div>
+    </div>
+
+    <div id="doneView" class="listo hidden">
+      <div class="check">✓</div>
+      <h2>Revisión finalizada</h2>
+      <p>El reporte de cierre quedó registrado en este navegador.</p>
+      <div id="summary" class="resumen"></div>
+      <button class="btn anterior" onclick="location.reload()">Volver al inicio</button>
+    </div>
+  </section>
+</main>
+
+<p class="nota">Prototipo visual basado en la propuesta de la presentación. Los datos se guardan solo en este navegador; el envío a la OEV requiere conectarlo a un sistema o servidor.</p>
+
+<script src="{% static 'js/checklist.js' %}"></script>
+{% endblock %}

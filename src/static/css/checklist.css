@@ -1,0 +1,283 @@
+/* Pantalla de cierre de uso. Solo variables de marca.css, ningún color literal. */
+* { box-sizing: border-box; }
+
+.checklist-cabecera {
+  max-width: 62.5rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 1rem;
+}
+
+.titulo-principal {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+}
+
+.marca-principal {
+  width: 4.25rem;
+  height: auto;
+  flex: 0 0 auto;
+}
+
+.checklist-cabecera h1 {
+  margin: 0;
+  color: var(--tinta);
+  font-size: clamp(1.7rem, 4vw, 2.5rem);
+}
+
+.checklist-cabecera p {
+  margin: .35rem 0 0 calc(4.25rem + .85rem);
+  color: var(--tinta-suave);
+}
+
+.checklist {
+  max-width: 62.5rem;
+  margin: 0 auto;
+  padding: 0 1.25rem 2.25rem;
+}
+
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  padding: clamp(1.1rem, 4vw, 2rem);
+}
+
+.topline {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  color: var(--accion);
+  font-family: var(--fuente-titulo);
+  font-size: .75rem;
+}
+
+.barra {
+  height: .4rem;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  margin: .7rem 0 1.5rem;
+  overflow: hidden;
+}
+
+.barra span {
+  display: block;
+  height: 100%;
+  background: var(--accion);
+  transition: width .25s;
+}
+
+.etiqueta-paso {
+  color: var(--accion);
+  font-family: var(--fuente-titulo);
+  font-size: .78rem;
+}
+
+.titulo-paso {
+  margin: .35rem 0 1.1rem;
+  font-size: 1.15rem;
+}
+
+.reserva {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .8rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+}
+
+.reserva small,
+.label {
+  display: block;
+  color: var(--tinta-suave);
+  font-family: var(--fuente-titulo);
+  font-size: .7rem;
+  text-transform: uppercase;
+}
+
+.reserva strong { font-size: 1.18rem; }
+.hora { color: var(--tinta-suave); font-size: .85rem; }
+
+.estado {
+  padding: .45rem .75rem;
+  background: var(--info);
+  color: var(--tinta);
+  font-size: .78rem;
+  white-space: nowrap;
+}
+
+h3 {
+  margin: 1.25rem 0 .5rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--borde);
+  font-size: .95rem;
+}
+
+.pregunta {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: .75rem;
+  padding: .8rem .6rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.pregunta:last-child { border-bottom: 0; }
+.pregunta.no { align-items: start; }
+.opciones { display: flex; gap: .9rem; white-space: nowrap; }
+
+.opciones label {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .86rem;
+  cursor: pointer;
+}
+
+input[type="radio"] { accent-color: var(--accion); }
+
+.observacion-no {
+  grid-column: 1 / -1;
+  margin-top: .25rem;
+}
+
+.observacion-no .label {
+  margin-top: .75rem;
+}
+
+.foto-integridad {
+  margin-top: .9rem;
+  padding: .85rem;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+}
+
+.foto-integridad .label {
+  margin-top: 0;
+}
+
+.requisito {
+  display: block;
+  margin-top: .2rem;
+  color: var(--tinta-suave);
+  font-size: .75rem;
+}
+
+.campo { margin: .9rem .5rem; }
+
+.campo textarea,
+.campo input[type="time"],
+.observacion-no textarea {
+  width: 100%;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  padding: .75rem;
+  color: var(--tinta);
+  font: inherit;
+}
+
+.campo textarea,
+.observacion-no textarea {
+  min-height: 4.8rem;
+  resize: vertical;
+}
+
+.subida {
+  display: block;
+  border: 1px dashed var(--alerta);
+  padding: .95rem;
+  color: var(--tinta);
+  text-align: center;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.subida input { display: none; }
+
+.subida small {
+  display: block;
+  margin-top: .2rem;
+  color: var(--tinta-suave);
+  font-size: .75rem;
+  font-weight: 400;
+}
+
+.preview {
+  display: block;
+  max-width: 100%;
+  max-height: 14.5rem;
+  margin: .75rem auto;
+  border: 1px solid var(--borde);
+}
+
+.acciones {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-top: 1.6rem;
+}
+
+.btn {
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  color: var(--accion);
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn:hover { border-color: var(--accion); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.siguiente,
+.finalizar {
+  background: var(--accion);
+  border-color: var(--accion);
+  color: var(--superficie);
+}
+
+.finalizar { flex: 1; }
+.hidden { display: none !important; }
+
+.resumen {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+}
+
+.resumen h3 { margin-top: 0; }
+.resumen p { margin: .45rem 0; }
+.listo { padding: 2rem; text-align: center; }
+.listo .check { color: var(--exito); font-size: 3rem; }
+
+.error {
+  min-height: 1.2em;
+  margin-top: .6rem;
+  color: var(--alerta);
+  font-size: .85rem;
+}
+
+.nota {
+  max-width: 62.5rem;
+  margin: .75rem auto;
+  padding: 0 1.4rem;
+  color: var(--tinta-suave);
+  font-size: .8rem;
+}
+
+@media (max-width: 40rem) {
+  .checklist-cabecera { padding: 1.25rem 1.1rem .65rem; }
+  .titulo-principal { align-items: flex-start; }
+  .marca-principal { width: 3.25rem; }
+  .checklist-cabecera p { margin-left: 0; }
+  .checklist { padding: 0 1rem 2rem; }
+  .pregunta { grid-template-columns: 1fr; }
+  .opciones { padding-left: .2rem; }
+  .reserva { align-items: flex-start; flex-direction: column; }
+  .acciones .btn { padding: 0 .8rem; }
+  .topline { font-size: .68rem; }
+}
