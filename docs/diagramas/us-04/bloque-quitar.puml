@@ -10,8 +10,8 @@ participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as V <<dominio>>
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
 A -> N ++ : POST /configuracion/bloques/editar/ → editar_bloque(request)
-N -> N : accion = request.POST.get("accion", "guardar")
-N -> V ++ : get_object_or_404(Bloque, pk=request.POST.get("bloque"))
+N -> N : $comentario("qué se pide; si no viene, es guardar")\naccion = request.POST.get("accion", "guardar")
+N -> V ++ : $comentario("el bloque elegido, o 404 si no existe")\nget_object_or_404(Bloque, pk=request.POST.get("bloque"))
 V -> D ++ : SELECT agenda_bloque
 return fila
 return bloque

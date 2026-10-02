@@ -11,15 +11,15 @@ participant "<b>personas</b>\n<size:11>personas/models.py</size>" as V <<dominio
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
 P -> N ++ : POST /solicitante/entrar/\n→ entrar(request, rol=Rol.SOLICITANTE, destino="solicitar")
-N -> N : form = AuthenticationForm(request, data=request.POST)
-N -> V ++ : Usuario.objects.filter(email__iexact=correo).first()
+N -> N : $comentario("el formulario de ingreso de Django, con lo enviado")\nform = AuthenticationForm(request, data=request.POST)
+N -> V ++ : $comentario("la cuenta con ese correo, sin distinguir mayúsculas")\nUsuario.objects.filter(email__iexact=correo).first()
 V -> D ++ : SELECT personas_usuario
 return fila
 return usuario
 N -> V ++ : usuario.esta_bloqueado
 return False
 N -> A ++ : form.is_valid()
-A -> V ++ : Usuario._default_manager.get_by_natural_key(correo)
+A -> V ++ : $comentario("la cuenta con ese correo exacto")\nUsuario._default_manager.get_by_natural_key(correo)
 V -> D ++ : SELECT personas_usuario
 return fila
 return user
@@ -53,7 +53,7 @@ else es solicitante
   V --> N : True
   N --> N : True
   opt tenía intentos fallidos o un bloqueo vencido
-    N -> N : entrante.intentos_fallidos = 0\nentrante.bloqueado_hasta = None
+    N -> N : $comentario("borra los intentos fallidos y el bloqueo vencido")\nentrante.intentos_fallidos = 0\nentrante.bloqueado_hasta = None
     N -> V ++ : entrante.save()
     V -> D ++ : UPDATE personas_usuario
     deactivate D

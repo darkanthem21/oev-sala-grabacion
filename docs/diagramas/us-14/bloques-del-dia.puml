@@ -11,7 +11,7 @@ participant "<b>bloques_apoyo.json</b>\n<size:11>uso/datos_prueba/</size>" as J 
 
 A -> N ++ : GET /apoyo/?fecha=AAAA-MM-DD → bloques(request)
 N -> N : hoy = timezone.localdate()
-N -> N : fecha = date.fromisoformat(request.GET.get("fecha", ""))
+N -> N : $comentario("la fecha que viene en la dirección")\nfecha = date.fromisoformat(request.GET.get("fecha", ""))
 opt falta la fecha o no se puede leer
   N -> N : fecha = hoy
   note right of N : AC3. Una fecha mal escrita\nno es un error.
@@ -38,7 +38,7 @@ note right of V
   deja el check-out completado, pendiente o sin
   check-out (no ha terminado o se canceló).
 end note
-V -> V : sorted(bloques, key=lambda b: b["inicio"])
+V -> V : $comentario("en el orden en que van a llegar (AC1)")\nsorted(bloques, key=lambda b: b["inicio"])
 return bloques
 N --> A : 200 · uso/bloques.html
 deactivate N

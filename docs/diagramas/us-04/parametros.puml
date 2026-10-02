@@ -14,7 +14,7 @@ N -> C ++ : Parametros.cargar()
 C -> D ++ : SELECT configuracion_parametros
 return fila
 return parametros
-N -> N : formulario = ParametrosForm(request.POST, instance=parametros)
+N -> N : $comentario("el formulario con lo enviado, sobre los parámetros guardados")\nformulario = ParametrosForm(request.POST, instance=parametros)
 N -> N ++ : formulario.is_valid()
 N -> C ++ : self.instance.full_clean()
 note right of C
@@ -25,7 +25,7 @@ end note
 alt formulario con errores
   C --> N -- : ValidationError
   N --> N -- : False
-  N -> C ++ : CambioParametro.objects.select_related("quien")[:ULTIMOS]
+  N -> C ++ : $comentario("los últimos cambios de la bitácora, con quién los hizo")\nCambioParametro.objects.select_related("quien")[:ULTIMOS]
   C -> D ++ : SELECT configuracion_cambioparametro ⋈ personas_usuario
   return filas
   return historial
@@ -44,7 +44,7 @@ else formulario válido
     deactivate D
     deactivate C
     deactivate N
-    C -> C ++ : CambioParametro.objects.bulk_create(cambios)
+    C -> C ++ : $comentario("guarda las filas de la bitácora de una vez")\nCambioParametro.objects.bulk_create(cambios)
     C -> D ++ : INSERT configuracion_cambioparametro
     deactivate D
     return cambios
