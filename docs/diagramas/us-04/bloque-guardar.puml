@@ -1,0 +1,77 @@
+@startuml bloque-guardar
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Agregar o cambiar un bloque (US-04)
+
+actor "Administrador" as A
+participant "<b>agenda.views</b>\n<size:11>agenda/views.py</size>\n<size:11>agenda/forms.py</size>" as N <<presentación>>
+participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : POST /configuracion/bloques/editar/ → editar_bloque(request)
+N -> N : accion = request.POST.get("accion", "guardar")
+N -> N : pk = request.POST.get("bloque")\ndia = request.POST.get("dia")
+break agregar uno nuevo con un día fuera de lunes a viernes
+  N --> A : 400 · "Día fuera de la semana laboral"
+end
+alt cambiar un bloque existente
+  N -> V ++ : get_object_or_404(Bloque, pk=pk)
+  V -> D ++ : SELECT agenda_bloque
+  return fila
+  return bloque
+else agregar uno nuevo
+  N -> N : bloque = Bloque(dia=int(dia))
+end
+
+N -> N : formulario = BloqueForm(request.POST, instance=bloque)
+N -> N ++ : formulario.is_valid()
+N -> V ++ : self.instance.full_clean()
+V -> V ++ : otro = self.cruce()
+V -> D ++ : SELECT agenda_bloque
+return fila
+return otro
+note right of V
+  El cruce se valida en el modelo:
+  declararlo en la base necesitaría
+  una extensión de Postgres.
+end note
+
+alt formulario con errores
+  V --> N -- : ValidationError
+  N --> N -- : False
+  N -> V ++ : bloque.cruce()
+  V -> D ++ : SELECT agenda_bloque
+  return fila
+  return choca
+  note right of N
+    Se busca el otro bloque para marcarlo en la rejilla.
+    Si el error era otro (hora vacía, término antes
+    del inicio), no hay cruce y choca queda en None.
+  end note
+else formulario válido
+  N --> N : True
+  N -> N ++ : formulario.save()
+  N -> V ++ : self.instance.save()
+  V -> D ++ : INSERT o UPDATE agenda_bloque
+  deactivate D
+  deactivate V
+  deactivate N
+end
+
+N -> N ++ : _responder(request, …)
+alt pedido con htmx
+  N -> N ++ : _contexto(request.POST, …)
+  N -> V ++ : plantilla_semanal()
+  V -> D ++ : SELECT agenda_bloque WHERE activo
+  return filas
+  return plantilla
+  return contexto
+  N --> A : 200 · agenda/_calendario.html
+else sin htmx
+  N --> A : 302 · /configuracion/bloques/?vista=semana&desde=…
+  note left of N : Así recargar no\nreenvía el POST.
+end
+deactivate N
+deactivate N
+@enduml

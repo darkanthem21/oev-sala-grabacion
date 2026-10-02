@@ -1,22 +1,45 @@
 @startuml bloques-del-dia
 !include ../estilo.iuml
-title Ver los bloques del día (US-14)
 hide footbox
-autonumber "<b>0."
+autonumber
+title Ver los bloques del día (US-14)
 
 actor "Personal de apoyo" as A
-participant "Vista del personal de apoyo" as N <<presentación>>
-participant Uso as V <<dominio>>
-participant "Base de datos" as J <<persistencia>>
+participant "<b>uso.views</b>\n<size:11>uso/views.py</size>" as N <<presentación>>
+participant "<b>uso</b>\n<size:11>uso/services.py</size>" as V <<dominio>>
+participant "<b>bloques_apoyo.json</b>\n<size:11>uso/datos_prueba/</size>" as J <<persistencia>>
 
-note over J : Hoy son datos de prueba:\nun JSON con reservas simuladas
-
-A -> N : Abre la vista o elige otra fecha
-N -> V : Solicita los bloques de la fecha
-V -> J : Obtiene las reservas de ese día
-V -> V : Descarta las pendientes y marca las canceladas
-V -> V : Determina el estado del check-out
-V -> V : Ordena por hora de inicio
-V --> N : Devuelve la lista de bloques
-N --> A : Muestra solicitante, área, personas y check-out
+A -> N ++ : GET /apoyo/?fecha=AAAA-MM-DD → bloques(request)
+N -> N : hoy = timezone.localdate()
+N -> N : fecha = date.fromisoformat(request.GET.get("fecha", ""))
+opt falta la fecha o no se puede leer
+  N -> N : fecha = hoy
+  note right of N : AC3. Una fecha mal escrita\nno es un error.
+end
+N -> N ++ : _enviados(request)
+return enviados
+N -> V ++ : bloques_del_dia(fecha, enviados)
+V -> V : ahora = timezone.localtime()
+V -> V ++ : _tickets()
+V -> J ++ : json.load(archivo)
+return tickets
+return tickets
+note right of V
+  Datos de prueba: Solicitud y Ticket aún no tienen
+  tablas. Cuando las tengan cambia solo _tickets().
+  Las fechas del JSON son relativas a hoy (en_dias).
+end note
+loop cada ticket de esa fecha aprobado, confirmado o cancelado
+  V -> V ++ : _armar(t, enviados, ahora)
+  return bloque
+end
+note right of V
+  Los cancelados se listan marcados (AC5). _armar
+  deja el check-out completado, pendiente o sin
+  check-out (no ha terminado o se canceló).
+end note
+V -> V : sorted(bloques, key=lambda b: b["inicio"])
+return bloques
+N --> A : 200 · uso/bloques.html
+deactivate N
 @enduml

@@ -1,0 +1,28 @@
+@startuml cuenta-bloqueada
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Cuenta bloqueada (US-01)
+
+actor "Solicitante" as P
+participant "<b>personas.views</b>\n<size:11>personas/views.py</size>" as N <<presentación>>
+participant "<b>personas</b>\n<size:11>personas/models.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+P -> N ++ : POST /solicitante/entrar/\n→ entrar(request, rol=Rol.SOLICITANTE, destino="solicitar")
+N -> N : form = AuthenticationForm(request, data=request.POST)
+N -> V ++ : Usuario.objects.filter(email__iexact=correo).first()
+V -> D ++ : SELECT personas_usuario
+return fila
+return usuario
+N -> V ++ : usuario.esta_bloqueado
+return True
+N -> N : minutos = max(1, int((usuario.bloqueado_hasta - timezone.now())\n.total_seconds() // 60) + 1)
+N --> P : 200 · personas/_formulario_ingreso.html\ncon "Cuenta bloqueada. Vuelve a intentar en {minutos} minutos."
+note left of N
+  No revisa la clave ni suma intentos.
+  El bloqueo es temporal, para que nadie
+  pueda dejar a otro fuera a propósito.
+end note
+deactivate N
+@enduml
