@@ -1,0 +1,43 @@
+@startuml checkout-entrar
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Entrar al check-out (US-14)
+
+actor "Personal de apoyo" as A
+participant "<b>uso.views</b>\n<size:11>uso/views.py</size>" as N <<presentación>>
+participant "<b>uso</b>\n<size:11>uso/services.py</size>" as V <<dominio>>
+participant "<b>bloques_apoyo.json</b>\n<size:11>uso/datos_prueba/</size>" as J <<persistencia>>
+
+A -> N ++ : GET /apoyo/checkout/<codigo>/ → checkout(request, codigo)
+N -> N ++ : _enviados(request)
+return enviados
+N -> V ++ : buscar(codigo, enviados)
+V -> V : ahora = timezone.localtime()
+V -> V ++ : _tickets()
+V -> J ++ : json.load(archivo)
+return tickets
+return tickets
+opt algún ticket visible tiene ese código
+  V -> V ++ : _armar(t, enviados, ahora)
+  return bloque
+end
+return bloque
+
+break no existe, no ha terminado o se canceló
+  N --> A : 404
+  note right of N
+    Igual que escribir la dirección a mano:
+    el botón solo aparece si terminó.
+  end note
+end
+N -> N : volver = f"{reverse('panel_apoyo')}?fecha={bloque['fecha']:%Y-%m-%d}"
+N -> N : registro = enviados.get(codigo)
+N --> A : 200 · uso/checkout.html
+note right of N
+  La plantilla muestra quién y cuándo si el
+  check-out está completado, o el botón para
+  registrarlo si está pendiente.
+end note
+deactivate N
+@enduml

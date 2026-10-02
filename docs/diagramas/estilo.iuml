@@ -1,83 +1,24 @@
-' Colores de las capas del diagrama de arquitectura.
+' Un color por capa: presentación, dominio y persistencia.
 skinparam dpi 200
 hide stereotype
 skinparam shadowing false
-skinparam defaultFontName Roboto
 skinparam sequenceMessageAlign left
 skinparam responseMessageBelowArrow true
-skinparam maxMessageSize 420
-
 <style>
-root {
-  FontName Roboto
-  FontColor #1F2D3D
-  LineColor #52606D
-  BackGroundColor #FFFFFF
-}
-title {
-  FontSize 20
-  FontStyle bold
-  Margin 10 0 18 0
-  LineColor transparent
-  BackGroundColor transparent
-}
+root { FontName "Noto Sans"; FontColor #1F2933; LineColor #9AA5B1; BackGroundColor #FFFFFF }
+title { FontSize 18; FontStyle bold; FontColor #123F6D; Margin 6 0 16 0; LineColor transparent; BackGroundColor transparent }
 sequenceDiagram {
-  FontSize 13
-  participant, actor, database {
-    FontSize 14
-    FontStyle bold
-    RoundCorner 12
-    LineThickness 1.5
-    Padding 10
-  }
-  actor {
-    BackGroundColor #F5F7FA
-    LineColor #52606D
-  }
-  stereotype {
-    FontSize 11
-    FontStyle italic
-    FontColor #52606D
-  }
-  lifeLine {
-    LineColor #B8C2CC
-    LineStyle 5-4
-  }
-  arrow {
-    LineColor #334E68
-    LineThickness 1.2
-  }
-  group {
-    LineColor #829AB1
-    LineThickness 1.2
-    BackGroundColor #FFFFFF
-  }
-  groupHeader {
-    FontStyle bold
-    FontColor #243B53
-    BackGroundColor #D9E2EC
-    LineColor #829AB1
-  }
-  separator {
-    LineColor #829AB1
-  }
-  note {
-    BackGroundColor #FFFDF3
-    LineColor #D6B656
-    FontSize 12
-    FontStyle italic
-  }
-  .presentación {
-    BackGroundColor #FFF2CC
-    LineColor #D6B656
-  }
-  .dominio {
-    BackGroundColor #E1D5E7
-    LineColor #9673A6
-  }
-  .persistencia {
-    BackGroundColor #D5E8D4
-    LineColor #82B366
-  }
+  FontSize 12
+  participant, actor, database { FontSize 13; RoundCorner 4; LineThickness 1; Padding 8 }
+  actor { BackGroundColor #FFFFFF; LineColor #52606D }
+  lifeLine { LineColor #8FA3B8; LineThickness 1; LineStyle 4-4; BackGroundColor #D3E0EE }
+  arrow { FontName "JetBrainsMono NF"; FontSize 11; LineColor #123F6D; LineThickness 1 }
+  group { LineColor #9AA5B1; LineThickness 1; BackGroundColor transparent }
+  groupHeader { FontName "JetBrainsMono NF"; FontSize 11; FontColor #123F6D; BackGroundColor #EEF2F6; LineColor #9AA5B1 }
+  separator { LineColor #9AA5B1 }
+  note { FontSize 11; BackGroundColor #FDF8E7; LineColor #CDBB7A }
+  .presentación { BackGroundColor #E6EEF7; LineColor #123F6D }
+  .dominio { BackGroundColor #EFEBF5; LineColor #4C3F78 }
+  .persistencia { BackGroundColor #E8F2EB; LineColor #2F5E3C }
 }
 </style>
