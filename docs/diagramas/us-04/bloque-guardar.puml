@@ -10,8 +10,8 @@ participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as V <<dominio>>
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
 A -> N ++ : POST /configuracion/bloques/editar/ → editar_bloque(request)
-N -> N : accion = request.POST.get("accion", "guardar")
-N -> N : pk = request.POST.get("bloque")\ndia = request.POST.get("dia")
+N -> N : $comentario("qué se pide; si no viene, es guardar")\naccion = request.POST.get("accion", "guardar")
+N -> N : $comentario("el bloque a cambiar (vacío si es nuevo) y su día")\npk = request.POST.get("bloque")\ndia = request.POST.get("dia")
 break agregar uno nuevo con un día fuera de lunes a viernes
   N --> A : 400 · "Día fuera de la semana laboral"
 end
@@ -24,7 +24,7 @@ else agregar uno nuevo
   N -> N : bloque = Bloque(dia=int(dia))
 end
 
-N -> N : formulario = BloqueForm(request.POST, instance=bloque)
+N -> N : $comentario("el formulario con las horas enviadas, sobre ese bloque")\nformulario = BloqueForm(request.POST, instance=bloque)
 N -> N ++ : formulario.is_valid()
 N -> V ++ : self.instance.full_clean()
 V -> V ++ : otro = self.cruce()

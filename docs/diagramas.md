@@ -2,37 +2,29 @@
 
 ## Comportamiento
 
-Cada línea de vida es una parte del código con el nombre que tiene ahí
-(`<app>.views` en presentación, la app en dominio, la base o los datos de prueba
-en persistencia) y el archivo que la implementa debajo; el color es su capa. Las
-flechas son las llamadas del código, escritas como en la línea donde ocurren:
-entre partes, la función con sus argumentos, abreviados cuando no cambian lo que
-pasa (dentro de un formulario, `self.instance` es el modelo que se le pasó);
-hacia la base, solo la operación SQL y la tabla que toca. Cada llamada abre una
-barra de activación en quien la recibe, también cuando es de la misma parte. El
-retorno lleva el nombre de la variable donde queda lo que vuelve, y lo que
-vuelve de la base se rotula `fila` o `filas` aunque venga vacío: los casos
-alternativos van en la guarda del `alt`, no en la flecha. Cuando lo que vuelve
-decide un `alt`, cada rama lleva su propia vuelta, primero la que corta
-(`False`, o `ValidationError` si una validación falla) y después la que sigue
-(`True`). Lo que no devuelve nada (`save()`, un `UPDATE`) cierra su barra sin
-flecha de vuelta. Una salida anticipada (un `400`, un `404`) va en un `break`.
-La respuesta lleva el código HTTP y la plantilla o la dirección; `render()` y
-`redirect()` no se dibujan aparte. Lo que una parte hace por dentro va como
-mensaje a sí misma con la línea de código, y el porqué, en nota. Las condiciones
-de `alt`, `opt`, `loop` y `break` van en español. El control de acceso por rol
-(`staff_member_required`, `user_passes_test`) corre antes de cada vista y no se
-repite en cada diagrama.
+Hay un diagrama de secuencia por escenario de cada historia. Están dibujados
+desde el código: cada flecha es una llamada que existe en `main`.
 
-Cada escenario es un archivo `docs/diagramas/us-XX/<escenario>.puml`. Parte con
-`@startuml <escenario>`, que le da el nombre al PNG, e incluye `../estilo.iuml`,
-donde están los colores y las fuentes. La capa de cada línea de vida va como
-estereotipo: `<<presentación>>`, `<<dominio>>` o `<<persistencia>>`. Para una
-historia nueva conviene copiar el diagrama más parecido y adaptarlo. Se dibuja
-con `plantuml -tpng docs/diagramas/us-XX/*.puml` y se suben el `.puml` y el
-`.png`, con el PNG enlazado acá en una sección de su historia. Las fuentes son
-Noto Sans y JetBrainsMono NF; sin ellas PlantUML usa otras y el diagrama sale
-igual, con otra letra.
+### Cómo leerlos
+
+| Elemento | Qué representa |
+|---|---|
+| Participante | Una parte del código con el nombre que tiene ahí (`personas.views`, `agenda`, la base) y, debajo, el archivo que la implementa. |
+| Color | La capa: azul es presentación, morado es dominio y verde es persistencia. |
+| Flecha | Una llamada, escrita como en su línea de código. Hacia la base, solo la operación SQL y la tabla. |
+| Flecha a sí mismo | Una línea de código que esa parte ejecuta por dentro. |
+| Comentario (`#`, en gris) | Lo que hace la línea de código de abajo, en palabras. Va en las más largas. |
+| Barra de activación | La llamada en curso. Toda llamada abre una, también las internas. |
+| Retorno (punteado) | La variable donde queda el resultado. Lo que vuelve de la base es `fila` o `filas`. Lo que no devuelve nada, como `save()`, no tiene retorno. |
+| Respuesta al actor | El código HTTP y la plantilla o la dirección, como `200 · uso/bloques.html`. |
+| `alt`, `opt`, `loop` | Ramas, pasos opcionales y repeticiones, con la condición entre corchetes. Si un retorno decide la rama, cada rama lleva el suyo. |
+| `break` | Una salida anticipada, como un `400` o un `404`. |
+| Nota | Por qué el código hace ese paso. |
+
+Los argumentos se acortan cuando no cambian lo que pasa, y dentro de un
+formulario `self.instance` es el modelo que se le pasó. El control de acceso por
+rol (`staff_member_required`, `user_passes_test`) corre antes de cada vista y no
+se dibuja.
 
 ### Inicio de sesión (US-01)
 

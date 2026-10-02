@@ -12,8 +12,8 @@ participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
 P -> N ++ : POST /solicitante/entrar/\n→ entrar(request, rol=Rol.SOLICITANTE, destino="solicitar")
-N -> N : form = AuthenticationForm(request, data=request.POST)
-N -> V ++ : Usuario.objects.filter(email__iexact=correo).first()
+N -> N : $comentario("el formulario de ingreso de Django, con lo enviado")\nform = AuthenticationForm(request, data=request.POST)
+N -> V ++ : $comentario("la cuenta con ese correo, sin distinguir mayúsculas")\nUsuario.objects.filter(email__iexact=correo).first()
 V -> D ++ : SELECT personas_usuario
 return fila
 return usuario
@@ -22,7 +22,7 @@ opt el correo existe
   return False
 end
 N -> A ++ : form.is_valid()
-A -> V ++ : Usuario._default_manager.get_by_natural_key(correo)
+A -> V ++ : $comentario("la cuenta con ese correo exacto")\nUsuario._default_manager.get_by_natural_key(correo)
 V -> D ++ : SELECT personas_usuario
 return fila
 alt el correo no existe
@@ -53,7 +53,7 @@ opt el correo existe
   end note
   N -> N : usuario.intentos_fallidos += 1
   opt llegó al máximo de intentos
-    N -> N : usuario.bloqueado_hasta = timezone.now()\n+ timedelta(minutes=parametros.minutos_bloqueo)\nusuario.intentos_fallidos = 0
+    N -> N : $comentario("bloquea la cuenta y reinicia el contador")\nusuario.bloqueado_hasta = timezone.now()\n+ timedelta(minutes=parametros.minutos_bloqueo)\nusuario.intentos_fallidos = 0
   end
   N -> V ++ : usuario.save()
   V -> D ++ : UPDATE personas_usuario

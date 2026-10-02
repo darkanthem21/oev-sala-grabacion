@@ -28,9 +28,9 @@ note right of N : Vuelve a buscar el ticket:\nno se fía de lo que mostró la pa
 break no existe, no ha terminado o se canceló
   N --> A : 404
 end
-N -> N : volver = f"{reverse('panel_apoyo')}?fecha={bloque['fecha']:%Y-%m-%d}"
+N -> N : $comentario("la dirección de la lista del día de ese bloque")\nvolver = f"{reverse('panel_apoyo')}?fecha={bloque['fecha']:%Y-%m-%d}"
 alt check-out pendiente
-  N -> N : enviados[codigo] = {"por": request.user.email, "en": timezone.now().isoformat()}
+  N -> N : $comentario("anota quién hizo el check-out y cuándo")\nenviados[codigo] = {"por": request.user.email, "en": timezone.now().isoformat()}
   N -> N : request.session[SESION] = enviados
   note right of N
     Django guarda la sesión al responder

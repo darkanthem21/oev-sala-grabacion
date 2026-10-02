@@ -31,7 +31,7 @@ break no existe, no ha terminado o se canceló
     el botón solo aparece si terminó.
   end note
 end
-N -> N : volver = f"{reverse('panel_apoyo')}?fecha={bloque['fecha']:%Y-%m-%d}"
+N -> N : $comentario("la dirección de la lista del día de ese bloque")\nvolver = f"{reverse('panel_apoyo')}?fecha={bloque['fecha']:%Y-%m-%d}"
 N -> N : registro = enviados.get(codigo)
 N --> A : 200 · uso/checkout.html
 note right of N

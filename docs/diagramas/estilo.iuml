@@ -22,3 +22,8 @@ sequenceDiagram {
   .persistencia { BackGroundColor #E8F2EB; LineColor #2F5E3C }
 }
 </style>
+
+' Lo que hace una línea de código larga, en palabras, arriba de ella.
+!function $comentario($texto)
+!return "<color:#616E7C># " + $texto + "</color>"
+!endfunction
