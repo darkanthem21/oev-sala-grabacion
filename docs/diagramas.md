@@ -118,3 +118,75 @@ y queda en la sesión.
 ![Registrar el check-out](diagramas/us-14/checkout-registrar.png)
 
 Si registra, la vuelta es por redirección, a la lista del día del bloque.
+
+## Estructura y Modelo de Datos
+
+### Solicitud de reserva y bloques horarios (US-02)
+
+El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_bloque`, administrada en US-04) de la **instancia concreta de reserva** (`solicitudes_solicitudbloque`), vinculando la fecha seleccionada con el bloque horario y la solicitud.
+
+```mermaid
+erDiagram
+    personas_usuario ||--o{ solicitudes_solicitud : "solicita"
+    personas_area ||--o{ solicitudes_solicitud : "pertenece a"
+    solicitudes_solicitud ||--|{ solicitudes_solicitudbloque : "contiene"
+    agenda_bloque ||--o{ solicitudes_solicitudbloque : "instanciado en fecha"
+    solicitudes_solicitud ||--o{ solicitudes_acompanante : "declara"
+
+    personas_usuario {
+        bigint id PK
+        string email
+        string first_name
+        string last_name
+        boolean is_active
+    }
+
+    personas_area {
+        bigint id PK
+        string nombre
+        boolean activa
+    }
+
+    solicitudes_solicitud {
+        bigint id PK
+        bigint solicitante_id FK "personas_usuario.id"
+        bigint area_id FK "personas_area.id"
+        string motivo
+        text observaciones
+        smallint personas
+        string estado_validacion
+        string estado_confirmacion
+        timestamptz creado_en
+    }
+
+    agenda_bloque {
+        bigint id PK
+        smallint dia "0=Lunes .. 4=Viernes"
+        time inicio
+        time termino
+        boolean activo
+    }
+
+    solicitudes_solicitudbloque {
+        bigint id PK
+        bigint solicitud_id FK "solicitudes_solicitud.id"
+        bigint bloque_id FK "agenda_bloque.id"
+        date fecha "Fecha de la reserva"
+    }
+
+    solicitudes_acompanante {
+        bigint id PK
+        bigint solicitud_id FK "solicitudes_solicitud.id"
+        string nombre
+        string correo
+    }
+```
+
+- **Archivo fuente PlantUML**: [`diagramas/us-02/modelo-datos.puml`](diagramas/us-02/modelo-datos.puml).
+- **Integridad referencial y claves foráneas**:
+  - `solicitudes_solicitud.solicitante_id` → `personas_usuario.id` (`on_delete=PROTECT`): protege el historial de solicitudes y auditoría.
+  - `solicitudes_solicitud.area_id` → `personas_area.id` (`on_delete=PROTECT`): garantiza la trazabilidad del área académica requirente.
+  - `solicitudes_solicitudbloque.solicitud_id` → `solicitudes_solicitud.id` (`on_delete=CASCADE`): mantiene la consistencia de bloques asignados a la solicitud.
+  - `solicitudes_solicitudbloque.bloque_id` → `agenda_bloque.id` (`on_delete=PROTECT`): permite desactivar bloques de la plantilla sin alterar las solicitudes históricas ya existentes.
+  - **Restricción de unicidad**: `UniqueConstraint(fields=["solicitud", "bloque", "fecha"])` previene asignar duplicados de un mismo bloque horario en la misma fecha para una solicitud.
+
