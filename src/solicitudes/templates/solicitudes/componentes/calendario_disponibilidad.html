@@ -1,0 +1,105 @@
+<div id="calendario-componente" class="calendario-seccion"
+     hx-include="#input-fecha-seleccionada"
+     x-data
+     @htmx:after-swap.camel="var f = document.getElementById('input-fecha-seleccionada'); if(f && f.value){ var td = $el.querySelector('td.dia-seleccionable[data-date=\'' + f.value + '\']'); if(td && !td.classList.contains('selected')){ $el.querySelectorAll('.calendario td.selected').forEach(function(el){ el.classList.remove('selected'); }); td.classList.add('selected'); } }">
+    <!-- Controles de navegación de meses y selector rápido -->
+    <div class="controles-calendario">
+        <div class="navegacion-meses">
+            {% if mostrar_anterior %}
+                <a href="?year={{ prev_year }}&month={{ prev_month }}{% if paso %}&paso={{ paso }}{% endif %}{% if fecha_str %}&fecha={{ fecha_str }}{% endif %}"
+                   class="btn-nav"
+                   hx-get="{% url 'calendario' %}?year={{ prev_year }}&month={{ prev_month }}{% if paso %}&paso={{ paso }}{% endif %}"
+                   hx-target="#calendario-componente"
+                   hx-select="#calendario-componente"
+                   hx-swap="outerHTML"
+                   hx-push-url="false"
+                   aria-label="Ir al mes anterior">
+                    <svg class="icono-nav" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    <span>Anterior</span>
+                </a>
+            {% else %}
+                <span class="btn-nav disabled" aria-disabled="true">
+                    <svg class="icono-nav" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    <span>Anterior</span>
+                </span>
+            {% endif %}
+
+            <h2 class="mes-actual">{{ nombre_mes_actual }} {{ year }}</h2>
+
+            {% if mostrar_siguiente %}
+                <a href="?year={{ next_year }}&month={{ next_month }}{% if paso %}&paso={{ paso }}{% endif %}{% if fecha_str %}&fecha={{ fecha_str }}{% endif %}"
+                   class="btn-nav"
+                   hx-get="{% url 'calendario' %}?year={{ next_year }}&month={{ next_month }}{% if paso %}&paso={{ paso }}{% endif %}"
+                   hx-target="#calendario-componente"
+                   hx-select="#calendario-componente"
+                   hx-swap="outerHTML"
+                   hx-push-url="false"
+                   aria-label="Ir al mes siguiente">
+                    <span>Siguiente</span>
+                    <svg class="icono-nav" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </a>
+            {% else %}
+                <span class="btn-nav disabled" aria-disabled="true">
+                    <span>Siguiente</span>
+                    <svg class="icono-nav" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </span>
+            {% endif %}
+        </div>
+
+        <form method="GET"
+              action="{% url 'calendario' %}"
+              class="selector-rapido"
+              hx-get="{% url 'calendario' %}"
+              hx-trigger="change"
+              hx-target="#calendario-componente"
+              hx-select="#calendario-componente"
+              hx-swap="outerHTML"
+              hx-push-url="false"
+              aria-label="Navegación rápida de fecha">
+            {% if paso %}
+                <input type="hidden" name="paso" value="{{ paso }}">
+            {% endif %}
+            <label for="select-mes" class="sr-only">Seleccionar mes</label>
+            <select id="select-mes" name="month" class="select-personalizado">
+                {% for m_num, m_nombre, habilitado in meses %}
+                    <option value="{{ m_num }}" {% if m_num == month %}selected{% endif %} {% if not habilitado %}disabled{% endif %}>{{ m_nombre }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="select-anio" class="sr-only">Seleccionar año</label>
+            <select id="select-anio" name="year" class="select-personalizado">
+                {% for y in anios_permitidos %}
+                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    {% if fecha_minima %}
+    <p class="aviso-anticipacion" style="font-size: 0.85rem; color: var(--tinta-suave); margin: 0.5rem 0 1rem 0;">
+        Anticipación requerida: Solo se pueden solicitar reservas a partir del <strong>lunes {{ fecha_minima|date:"d \d\e F" }}</strong>.
+    </p>
+    {% endif %}
+
+    <!-- Grilla del calendario mensual con leyenda -->
+    <div class="calendario-wrapper">
+        <div class="calendario" role="region" aria-label="Calendario del mes">
+            {{ calendario|safe }}
+        </div>
+
+        <div class="leyenda-calendario" aria-label="Leyenda de disponibilidad">
+            <div class="leyenda-item">
+                <span class="leyenda-muestra muestra-disponible" aria-hidden="true"></span>
+                <span>Día disponible</span>
+            </div>
+            <div class="leyenda-item">
+                <span class="leyenda-muestra muestra-seleccionado" aria-hidden="true"></span>
+                <span>Día seleccionado</span>
+            </div>
+            <div class="leyenda-item">
+                <span class="leyenda-muestra muestra-no-disponible" aria-hidden="true"></span>
+                <span>Sin disponibilidad / Bloqueado</span>
+            </div>
+        </div>
+    </div>
+</div>

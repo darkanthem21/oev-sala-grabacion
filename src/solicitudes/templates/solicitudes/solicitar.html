@@ -1,112 +1,232 @@
-{% extends "solicitudes/_base.html" %}
-{% block titulo %}Solicitar reserva{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Solicitar reserva · Paso {{ paso }} de 3{% endblock %}
+{% block estilos %}
+<link rel="stylesheet" href="{% static 'solicitudes/calendario.css' %}">
+<link rel="stylesheet" href="{% static 'solicitudes/solicitud.css' %}">
+{% endblock %}
 
-{% block hoja %}
-{% comment %}
-Alpine solo maneja lo que se ve: cuantas filas de acompanante mostrar y si el
-boton esta habilitado. Ninguna regla vive aca; todas se revalidan en la vista,
-que es la que puede negarse de verdad.
-{% endcomment %}
-<main class="hoja"
-      x-data="{ personas: {{ personas_inicial }}, acepta: {{ acepta_inicial|yesno:'true,false' }} }">
+{% block barra_superior %}
+{% include "solicitudes/componentes/barra_superior.html" %}
+{% endblock %}
 
-  <h1>Nueva solicitud de reserva</h1>
-  <p class="sub">Completa los datos de la grabación. Revisará un validador antes de confirmarse.</p>
+{% block contenido %}
+<main class="hoja {% if paso == 1 %}hoja-calendario{% endif %}"
+      {% if paso == 2 %}x-data="{ personas: {{ personas_inicial }} }"{% elif paso == 3 %}x-data="{ acepta: {{ acepta_inicial|yesno:'true,false' }} }"{% endif %}>
 
-  {% if errores or form.non_field_errors or formset.non_form_errors %}
-    <div class="error" role="alert">
-      {% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}
-      {% for e in formset.non_form_errors %}<p>{{ e }}</p>{% endfor %}
-      {% for e in errores %}<p>{{ e }}</p>{% endfor %}
+  <!-- Indicador visual del progreso del flujo multipaso (3 pasos simétricos) -->
+  <nav class="indicador-pasos" aria-label="Progreso de la solicitud">
+    <ol class="pasos-lista">
+      <li class="paso-item {% if paso == 1 %}activo{% elif paso > 1 %}completado{% endif %}">
+        <span class="paso-num">1</span>
+        <span class="paso-texto">Horario y disponibilidad</span>
+      </li>
+      <li class="paso-item {% if paso == 2 %}activo{% elif paso > 2 %}completado{% endif %}">
+        <span class="paso-num">2</span>
+        <span class="paso-texto">Datos de la actividad</span>
+      </li>
+      <li class="paso-item {% if paso == 3 %}activo{% endif %}">
+        <span class="paso-num">3</span>
+        <span class="paso-texto">Confirmación</span>
+      </li>
+    </ol>
+  </nav>
+
+  {% if paso == 1 %}
+    <h1>Paso 1: Selecciona fecha y horario</h1>
+    <p class="sub">Elige un día habilitado en el calendario y selecciona los bloques de tiempo requeridos para tu actividad.</p>
+
+    {% if error_paso %}
+      <div class="error" role="alert">
+        <p>{{ error_paso }}</p>
+      </div>
+    {% endif %}
+
+    <!-- Componente del calendario con navegación dinámica HTMX -->
+    {% include "solicitudes/componentes/calendario_disponibilidad.html" %}
+
+    <form method="POST" action="{% url 'solicitar' %}?paso=1" id="form-paso1"
+          x-data="{ haySeleccion: {% if bloques_seleccionados_ids %}true{% else %}false{% endif %} }"
+          @change="haySeleccion = $el.querySelectorAll('input[name=bloques]:checked').length > 0"
+          @htmx:after-swap.camel="haySeleccion = $el.querySelectorAll('input[name=bloques]:checked').length > 0">
+      {% csrf_token %}
+      <input type="hidden" name="paso" value="1">
+      <input type="hidden" name="fecha" id="input-fecha-seleccionada" value="{{ fecha_str|default:'' }}">
+
+      <div id="panel-bloques" class="panel-bloques">
+        {% if fecha_str %}
+          {% include "solicitudes/bloques_dia.html" with bloques=bloques_seleccionados fecha=fecha_seleccionada fecha_str=fecha_str bloques_seleccionados_ids=bloques_seleccionados_ids %}
+        {% else %}
+          <div class="mensaje-sin-seleccion">
+            <svg class="icono-estado-vacio" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <p>Selecciona un día en el calendario para consultar los bloques disponibles.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="acciones-paso">
+        {% if puede_cambiar_area %}
+          <a href="{% url 'solicitar_area' %}?cambiar=1" class="btn-secundario">
+            <svg class="icono-btn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <span>Cambiar área</span>
+          </a>
+        {% else %}
+          <div></div>
+        {% endif %}
+        <button type="submit" class="btn-accion" :disabled="!haySeleccion" {% if not bloques_seleccionados_ids %}disabled{% endif %}>
+          <span>Continuar a datos de la actividad</span>
+          <svg class="icono-btn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </div>
+    </form>
+
+  {% elif paso == 2 %}
+    <h1>Paso 2: Datos de la actividad</h1>
+    <p class="sub">Completa los detalles de la grabación y quiénes ingresarán a la sala.</p>
+
+    <!-- Ficha resumen del horario seleccionado en el Paso 1 -->
+    <div class="tarjeta-resumen-horario">
+      <div class="horario-icono" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      </div>
+      <div class="horario-datos">
+        <strong>{{ reserva.fecha|date:"l d \d\e F \d\e Y"|capfirst }}</strong>
+        <span>Bloques: {{ reserva.bloques_texto }}</span>
+      </div>
+      <a href="{% url 'solicitar' %}?paso=1" class="btn-enlace-horario" role="button" title="Modificar fecha y bloques">
+        <svg class="icono-btn" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span>Cambiar horario</span>
+      </a>
     </div>
+
+    {% if errores or form.non_field_errors or formset.non_form_errors %}
+      <div class="error" role="alert">
+        {% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}
+        {% for e in formset.non_form_errors %}<p>{{ e }}</p>{% endfor %}
+        {% for e in errores %}<p>{{ e }}</p>{% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'solicitar' %}?paso=2" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="paso" value="2">
+
+      <section>
+        <h2>Solicitante</h2>
+        <dl class="ficha">
+          <dt>Nombre</dt><dd>{{ user.get_full_name|default:"—" }}</dd>
+          <dt>Correo</dt><dd>{{ user.email }}</dd>
+          <dt>Área académica</dt><dd>{{ reserva.area_nombre }}</dd>
+        </dl>
+      </section>
+
+      <section>
+        <h2>Detalles de la solicitud</h2>
+
+        <label for="{{ form.motivo.id_for_label }}">{{ form.motivo.label }}</label>
+        {{ form.motivo }}
+        {% for e in form.motivo.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
+      </section>
+
+      <section>
+        <h2>Personas en sala</h2>
+
+        <label for="{{ form.personas.id_for_label }}">{{ form.personas.label }}</label>
+        <div class="cuenta">
+          {{ form.personas }}
+          <span class="pista">Te incluye a ti, así que puedes sumar hasta
+            {{ maximo_acompanantes }} acompañante(s).</span>
+        </div>
+        {% for e in form.personas.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
+
+        {{ formset.management_form }}
+        {% for fila in formset %}
+          <fieldset class="acompanante" x-cloak x-show="personas > {{ forloop.counter }}">
+            <legend>Acompañante {{ forloop.counter }}</legend>
+            <div class="par">
+              <div>
+                <label for="{{ fila.nombre.id_for_label }}">{{ fila.nombre.label }}</label>
+                {{ fila.nombre }}
+                {% for e in fila.nombre.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
+              </div>
+              <div>
+                <label for="{{ fila.correo.id_for_label }}">{{ fila.correo.label }}</label>
+                {{ fila.correo }}
+                {% for e in fila.correo.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
+              </div>
+            </div>
+          </fieldset>
+        {% endfor %}
+      </section>
+
+      <div class="acciones-paso">
+        <a href="{% url 'solicitar' %}?paso=1" class="btn-secundario">
+          <svg class="icono-btn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          <span>Volver al calendario</span>
+        </a>
+        <button type="submit" class="btn-accion">
+          <span>Continuar a confirmación</span>
+          <svg class="icono-btn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </div>
+    </form>
+
+  {% elif paso == 3 %}
+    <h1>Paso 3: Revisión y confirmación</h1>
+    <p class="sub">Verifica los datos de tu reserva y acepta los términos antes de enviar la solicitud.</p>
+
+    {% if error_terminos %}
+      <div class="error" role="alert">
+        <p>{{ error_terminos }}</p>
+      </div>
+    {% endif %}
+
+    <section class="resumen-confirmacion">
+      <h2>Resumen de la reserva</h2>
+      <dl class="ficha">
+        <dt>Fecha</dt><dd><strong>{{ reserva.fecha|date:"l d \d\e F \d\e Y"|capfirst }}</strong></dd>
+        <dt>Horario</dt><dd><strong>{{ reserva.bloques_texto }}</strong></dd>
+        <dt>Solicitante</dt><dd>{{ user.get_full_name|default:user.email }}</dd>
+        <dt>Área académica</dt><dd>{{ reserva.area_nombre }}</dd>
+        <dt>Motivo</dt><dd>{{ reserva.motivo }}</dd>
+        <dt>Personas en sala</dt><dd>{{ reserva.personas }} persona{{ reserva.personas|pluralize }}</dd>
+      </dl>
+
+      {% if reserva.acompanantes %}
+        <h3 class="subtitulo-resumen">Acompañantes</h3>
+        <ul class="lista">
+          {% for a in reserva.acompanantes %}
+            <li><strong>{{ a.nombre }}</strong> &middot; {{ a.correo }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+
+    <form method="post" action="{% url 'solicitar' %}?paso=3" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="paso" value="3">
+
+      <section>
+        <h2>Términos y condiciones</h2>
+        <div class="terminos" tabindex="0" role="region" aria-label="Términos y condiciones">
+          {{ terminos|linebreaks }}
+        </div>
+        <label class="acepto" for="id_acepta_terminos">
+          <input type="checkbox" name="acepta_terminos" id="id_acepta_terminos" x-model="acepta" value="1">
+          <span>He leído y acepto los términos y condiciones de uso de la sala</span>
+        </label>
+      </section>
+
+      <div class="acciones-paso">
+        <a href="{% url 'solicitar' %}?paso=2" class="btn-secundario">
+          <svg class="icono-btn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          <span>Modificar datos</span>
+        </a>
+        <button type="submit" class="btn-accion" :disabled="!acepta">Confirmar y enviar solicitud</button>
+      </div>
+      <p class="pista" x-show="!acepta">Acepta los términos para poder enviar.</p>
+    </form>
   {% endif %}
 
-  <form method="post" novalidate>
-    {% csrf_token %}
-
-    {% comment %}
-    US-14 AC5: los datos del solicitante vienen de su cuenta y no se editan en
-    el formulario. Se muestran para que sepa con que identidad solicita.
-    {% endcomment %}
-    <section>
-      <h2>Solicitante</h2>
-      <dl class="ficha">
-        <dt>Nombre</dt><dd>{{ user.get_full_name|default:"—" }}</dd>
-        <dt>Correo</dt><dd>{{ user.email }}</dd>
-      </dl>
-    </section>
-
-    <section>
-      <h2>Detalles de la solicitud</h2>
-
-      <label for="{{ form.area.id_for_label }}">{{ form.area.label }}</label>
-      {{ form.area }}
-      {% for e in form.area.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
-
-      <label for="{{ form.motivo.id_for_label }}">{{ form.motivo.label }}</label>
-      {{ form.motivo }}
-      {% for e in form.motivo.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
-
-      <label for="{{ form.observaciones.id_for_label }}">{{ form.observaciones.label }}</label>
-      {{ form.observaciones }}
-      {% for e in form.observaciones.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
-    </section>
-
-    <section>
-      <h2>Personas en sala</h2>
-
-      <label for="{{ form.personas.id_for_label }}">{{ form.personas.label }}</label>
-      <div class="cuenta">
-        {{ form.personas }}
-        <span class="pista">Te incluye a ti, así que puedes sumar hasta
-          {{ maximo_acompanantes }} acompañante(s).</span>
-      </div>
-      {% for e in form.personas.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
-
-      {{ formset.management_form }}
-      {% for fila in formset %}
-        {% comment %}
-        Se pintan todas las filas para que el índice del formset no se mueva.
-        Las que sobran van ocultas y deshabilitadas, así lo escrito en ellas no se envía.
-        {% endcomment %}
-        <fieldset class="acompanante" x-cloak x-show="personas > {{ forloop.counter }}"
-                  :disabled="personas <= {{ forloop.counter }}">
-          <legend>Acompañante {{ forloop.counter }}</legend>
-          <div class="par">
-            <div>
-              <label for="{{ fila.nombre.id_for_label }}">{{ fila.nombre.label }}</label>
-              {{ fila.nombre }}
-              {% for e in fila.nombre.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
-            </div>
-            <div>
-              <label for="{{ fila.correo.id_for_label }}">{{ fila.correo.label }}</label>
-              {{ fila.correo }}
-              {% for e in fila.correo.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
-            </div>
-          </div>
-        </fieldset>
-      {% endfor %}
-    </section>
-
-    {# AC10 #}
-    <section>
-      <h2>Términos y condiciones</h2>
-      <div class="terminos" tabindex="0" role="region" aria-label="Términos y condiciones">
-        {{ terminos|linebreaks }}
-      </div>
-      <label class="acepto" for="{{ form.acepta_terminos.id_for_label }}">
-        {{ form.acepta_terminos }}
-        <span>{{ form.acepta_terminos.label }}</span>
-      </label>
-      {% for e in form.acepta_terminos.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
-    </section>
-
-    {% comment %}
-    El :disabled es cortesia, para que se vea por que no se puede enviar. El que
-    realmente bloquea el envio sin aceptar es el required del campo.
-    {% endcomment %}
-    <button type="submit" :disabled="!acepta">Enviar solicitud</button>
-    <p class="pista" x-show="!acepta">Acepta los términos para poder enviar.</p>
-  </form>
 </main>
 {% endblock %}

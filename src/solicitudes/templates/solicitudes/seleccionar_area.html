@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Seleccionar área académica · Sala de grabación{% endblock %}
+{% block estilos %}
+<link rel="stylesheet" href="{% static 'solicitudes/solicitud.css' %}">
+{% endblock %}
+
+{% block barra_superior %}
+{% include "solicitudes/componentes/barra_superior.html" %}
+{% endblock %}
+
+{% block contenido %}
+<main class="hoja">
+  <h1>Selecciona el área académica</h1>
+  <p class="sub">Indica para qué unidad o área académica estás realizando esta solicitud antes de consultar la disponibilidad en el calendario.</p>
+
+  {% if error_paso %}
+    <div class="error" role="alert">
+      <p>{{ error_paso }}</p>
+    </div>
+  {% endif %}
+
+  <form method="POST" action="{% url 'solicitar_area' %}" id="form-area" novalidate>
+    {% csrf_token %}
+
+    <section class="seccion-area">
+      <label for="{{ form.area.id_for_label }}">{{ form.area.label }}</label>
+      {{ form.area }}
+      {% for e in form.area.errors %}<p class="campo-error">{{ e }}</p>{% endfor %}
+    </section>
+
+    <div class="acciones-paso">
+      <div></div>
+      <button type="submit" class="btn-accion">
+        <span>Continuar al calendario</span>
+        <svg class="icono-btn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </div>
+  </form>
+</main>
+{% endblock %}

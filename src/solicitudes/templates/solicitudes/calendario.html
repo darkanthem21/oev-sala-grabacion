@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block titulo %}Calendario de Disponibilidad{% endblock %}
+
+{% block estilos %}
+<link rel="stylesheet" href="{% static 'solicitudes/calendario.css' %}">
+{% endblock %}
+
+{% block contenido %}
+<main class="calendario-contenedor">
+    <header class="calendario-cabecera">
+        <h1 class="titulo-calendario">Calendario de Disponibilidad</h1>
+        <p class="subtitulo-calendario">Consulta los horarios habilitados y selecciona los bloques requeridos para tu actividad en la sala de grabación.</p>
+    </header>
+
+    <!-- Componente del calendario dinámico con controles y leyenda -->
+    {% include "solicitudes/componentes/calendario_disponibilidad.html" %}
+
+    <!-- Mensajes de estado del procesamiento -->
+    {% if mensaje_confirmacion %}
+        <div class="aviso" role="status">
+            <svg class="icono-alerta" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <p>{{ mensaje_confirmacion }}</p>
+        </div>
+    {% endif %}
+    {% if error_confirmacion %}
+        <div class="error" role="alert">
+            <svg class="icono-alerta" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <p>{{ error_confirmacion }}</p>
+        </div>
+    {% endif %}
+
+    <!-- Formulario de selección y confirmación de bloques -->
+    <form method="POST"
+          action="{% url 'calendario' %}{% if fecha_str %}?year={{ year }}&month={{ month }}&fecha={{ fecha_str }}{% else %}?year={{ year }}&month={{ month }}{% endif %}"
+          x-data="{ haySeleccion: {% if bloques_seleccionados_ids %}true{% else %}false{% endif %} }"
+          @change="haySeleccion = $el.querySelectorAll('input[name=bloques]:checked').length > 0"
+          @htmx:after-swap.camel="haySeleccion = $el.querySelectorAll('input[name=bloques]:checked').length > 0">
+        {% csrf_token %}
+        <input type="hidden" name="fecha" id="input-fecha-seleccionada" value="{{ fecha_str|default:'' }}">
+
+        <div id="panel-bloques" class="panel-bloques">
+            {% if fecha_str %}
+                {% include "solicitudes/bloques_dia.html" with bloques=bloques_seleccionados fecha=fecha_seleccionada fecha_str=fecha_str bloques_seleccionados_ids=bloques_seleccionados_ids %}
+            {% else %}
+                <div class="mensaje-sin-seleccion">
+                    <svg class="icono-estado-vacio" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <p>Selecciona un día en el calendario para consultar los bloques disponibles.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="pie-formulario">
+            <button type="submit" id="btn-confirmar" class="btn-accion" :disabled="!haySeleccion" {% if not bloques_seleccionados_ids %}disabled{% endif %}>Confirmar Selección</button>
+            {% if fecha_str and bloques_seleccionados %}
+                <span class="pista-accion">Puedes seleccionar uno o más bloques contiguos para tu grabación.</span>
+            {% endif %}
+        </div>
+    </form>
+</main>
+{% endblock %}

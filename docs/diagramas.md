@@ -57,6 +57,14 @@ La recuperación de clave (AC6) no tiene diagrama propio: son las cuatro vistas
 que trae Django (`PasswordReset`, `Done`, `Confirm` y `Complete`), con enlace
 firmado y sin tabla nuestra. El proyecto solo pone las plantillas.
 
+### Enviar una solicitud de reserva (US-02)
+
+El envío de la solicitud corresponde al paso final de confirmación en el asistente multipaso. La solicitud exige la aceptación obligatoria de los términos y condiciones del servicio (AC10) antes de procesar el registro.
+
+El guardado se ejecuta en una transacción atómica dentro de `solicitudes.services.guardar_solicitud_completa`: se persiste la `Solicitud` con estado de validación pendiente (AC5), se crean los registros de `SolicitudBloque` asociando cada bloque de la plantilla semanal con la fecha elegida, y se registran los acompañantes declarados en sala (AC6). Si la validación de algún bloque o campo falla, la transacción se cancela por completo sin dejar datos huérfanos. Al finalizar con éxito, se purga la sesión del asistente (`wizard.limpiar()`) y se presenta la confirmación con el resumen de la solicitud.
+
+![Enviar una solicitud de reserva](diagramas/us-02/enviar-solicitud.png)
+
 ### Guardar los parámetros del sistema (US-04)
 
 La bitácora de quién cambió qué es el AC4, y es lo que obliga a que el guardado
@@ -118,3 +126,20 @@ y queda en la sesión.
 ![Registrar el check-out](diagramas/us-14/checkout-registrar.png)
 
 Si registra, la vuelta es por redirección, a la lista del día del bloque.
+
+## Estructura y Modelo de Datos
+
+### Solicitud de reserva y bloques horarios (US-02)
+
+El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_bloque`, administrada en US-04) de la **instancia concreta de reserva** (`solicitudes_solicitudbloque`), vinculando la fecha seleccionada con el bloque horario y la solicitud.
+
+![Modelo de datos: Solicitud y Bloques](diagramas/us-02/modelo-datos.png)
+
+- **Archivo fuente PlantUML**: [`diagramas/us-02/modelo-datos.puml`](diagramas/us-02/modelo-datos.puml).
+- **Integridad referencial y claves foráneas**:
+  - `solicitudes_solicitud.solicitante_id` → `personas_usuario.id` (`on_delete=PROTECT`): protege el historial de solicitudes y auditoría.
+  - `solicitudes_solicitud.area_id` → `personas_area.id` (`on_delete=PROTECT`): garantiza la trazabilidad del área académica requirente.
+  - `solicitudes_solicitudbloque.solicitud_id` → `solicitudes_solicitud.id` (`on_delete=CASCADE`): mantiene la consistencia de bloques asignados a la solicitud.
+  - `solicitudes_solicitudbloque.bloque_id` → `agenda_bloque.id` (`on_delete=PROTECT`): permite desactivar bloques de la plantilla sin alterar las solicitudes históricas ya existentes.
+  - **Restricción de unicidad**: `UniqueConstraint(fields=["solicitud", "bloque", "fecha"])` previene asignar duplicados de un mismo bloque horario en la misma fecha para una solicitud.
+

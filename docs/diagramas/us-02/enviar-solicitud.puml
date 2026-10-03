@@ -1,0 +1,76 @@
+@startuml enviar-solicitud
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Enviar una solicitud de reserva (US-02)
+
+actor "Docente / Solicitante" as S
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.wizard</b>\n<size:11>solicitudes/wizard.py</size>" as W <<presentación>>
+participant "<b>solicitudes</b>\n<size:11>solicitudes/services.py</size>\n<size:11>solicitudes/models.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+S -> N ++ : POST /solicitar/ (paso=confirmacion) → solicitar(request)
+N -> W ++ : SolicitudWizard(request.session)
+return wizard
+N -> N : $comentario("valida estado de la sesión y flujo")\npaso_actual = paso_solicitado.validar_acceso(wizard.datos)
+
+N -> N ++ : _manejar_paso_confirmacion(request, wizard)
+N -> W ++ : wizard.obtener_resumen()
+return resumen
+N -> N : $comentario("revisa si se aceptaron los términos y condiciones (AC10)")\nacepta_terminos = bool(request.POST.get("acepta_terminos"))
+
+alt no aceptó los términos
+  N --> S : 200 · solicitudes/solicitar.html con mensaje de error
+  note right of N
+    La solicitud no puede enviarse ni
+    registrarse sin aceptar los términos y
+    condiciones del servicio (AC10).
+  end note
+else aceptó los términos
+  N -> V ++ : guardar_solicitud_completa(request.user, wizard.datos)
+  group @transaction.atomic
+    V -> D ++ : SELECT personas_area
+    return fila
+    V -> V : $comentario("instancia la solicitud con estado de validación pendiente (AC5)")\nsolicitud = Solicitud(solicitante, area, motivo, personas, ...)
+    V -> V ++ : solicitud.full_clean()
+    deactivate V
+    V -> V ++ : solicitud.save()
+    V -> D ++ : INSERT solicitudes_solicitud
+    deactivate D
+    deactivate V
+    V -> D ++ : SELECT agenda_bloque
+    return filas
+    alt algún bloque no es válido o está inactivo
+      V --> N : ValidationError
+      N --> S : 200 · solicitudes/solicitar.html con mensaje de error
+    else bloques vigentes
+      loop cada bloque horario seleccionado
+        V -> V : sol_bloque = SolicitudBloque(solicitud, bloque, fecha)
+        V -> V ++ : sol_bloque.full_clean()
+        deactivate V
+        V -> V ++ : sol_bloque.save()
+        V -> D ++ : INSERT solicitudes_solicitudbloque
+        deactivate D
+        deactivate V
+      end
+      loop cada acompañante con nombre y correo (AC6)
+        V -> D ++ : INSERT solicitudes_acompanante
+        deactivate D
+      end
+    end
+  end
+  note right of V
+    La transacción atómica garantiza que la solicitud,
+    sus bloques instanciados y los acompañantes se guarden
+    juntos. Si algo falla, nada persiste en la base.
+  end note
+  return solicitud
+  N -> W ++ : wizard.limpiar()
+  W -> W : $comentario("elimina los datos temporales del asistente")\ndel request.session[SESSION_KEY]
+  return
+  N --> S : 200 · solicitudes/enviada.html con resumen de la reserva
+end
+deactivate N
+deactivate N
+@enduml
