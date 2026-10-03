@@ -1,5 +1,4 @@
-@startuml modelo_datos_us02
-!theme plain
+@startuml modelo-datos
 skinparam dpi 200
 skinparam shadowing false
 skinparam roundcorner 4

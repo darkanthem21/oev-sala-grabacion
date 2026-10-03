@@ -57,6 +57,14 @@ La recuperación de clave (AC6) no tiene diagrama propio: son las cuatro vistas
 que trae Django (`PasswordReset`, `Done`, `Confirm` y `Complete`), con enlace
 firmado y sin tabla nuestra. El proyecto solo pone las plantillas.
 
+### Enviar una solicitud de reserva (US-02)
+
+El envío de la solicitud corresponde al paso final de confirmación en el asistente multipaso. La solicitud exige la aceptación obligatoria de los términos y condiciones del servicio (AC10) antes de procesar el registro.
+
+El guardado se ejecuta en una transacción atómica dentro de `solicitudes.services.guardar_solicitud_completa`: se persiste la `Solicitud` con estado de validación pendiente (AC5), se crean los registros de `SolicitudBloque` asociando cada bloque de la plantilla semanal con la fecha elegida, y se registran los acompañantes declarados en sala (AC6). Si la validación de algún bloque o campo falla, la transacción se cancela por completo sin dejar datos huérfanos. Al finalizar con éxito, se purga la sesión del asistente (`wizard.limpiar()`) y se presenta la confirmación con el resumen de reserva.
+
+![Enviar una solicitud de reserva](diagramas/us-02/enviar-solicitud.png)
+
 ### Guardar los parámetros del sistema (US-04)
 
 La bitácora de quién cambió qué es el AC4, y es lo que obliga a que el guardado
@@ -125,62 +133,7 @@ Si registra, la vuelta es por redirección, a la lista del día del bloque.
 
 El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_bloque`, administrada en US-04) de la **instancia concreta de reserva** (`solicitudes_solicitudbloque`), vinculando la fecha seleccionada con el bloque horario y la solicitud.
 
-```mermaid
-erDiagram
-    personas_usuario ||--o{ solicitudes_solicitud : "solicita"
-    personas_area ||--o{ solicitudes_solicitud : "pertenece a"
-    solicitudes_solicitud ||--|{ solicitudes_solicitudbloque : "contiene"
-    agenda_bloque ||--o{ solicitudes_solicitudbloque : "instanciado en fecha"
-    solicitudes_solicitud ||--o{ solicitudes_acompanante : "declara"
-
-    personas_usuario {
-        bigint id PK
-        string email
-        string first_name
-        string last_name
-        boolean is_active
-    }
-
-    personas_area {
-        bigint id PK
-        string nombre
-        boolean activa
-    }
-
-    solicitudes_solicitud {
-        bigint id PK
-        bigint solicitante_id FK "personas_usuario.id"
-        bigint area_id FK "personas_area.id"
-        string motivo
-        text observaciones
-        smallint personas
-        string estado_validacion
-        string estado_confirmacion
-        timestamptz creado_en
-    }
-
-    agenda_bloque {
-        bigint id PK
-        smallint dia "0=Lunes .. 4=Viernes"
-        time inicio
-        time termino
-        boolean activo
-    }
-
-    solicitudes_solicitudbloque {
-        bigint id PK
-        bigint solicitud_id FK "solicitudes_solicitud.id"
-        bigint bloque_id FK "agenda_bloque.id"
-        date fecha "Fecha de la reserva"
-    }
-
-    solicitudes_acompanante {
-        bigint id PK
-        bigint solicitud_id FK "solicitudes_solicitud.id"
-        string nombre
-        string correo
-    }
-```
+![Modelo de datos: Solicitud y Bloques](diagramas/us-02/modelo-datos.png)
 
 - **Archivo fuente PlantUML**: [`diagramas/us-02/modelo-datos.puml`](diagramas/us-02/modelo-datos.puml).
 - **Integridad referencial y claves foráneas**:
