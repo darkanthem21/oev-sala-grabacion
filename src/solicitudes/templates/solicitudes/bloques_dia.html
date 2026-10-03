@@ -1,0 +1,58 @@
+<div class="panel-bloques-contenido">
+    {% if fecha_str %}
+        <input type="hidden" name="fecha" value="{{ fecha_str }}">
+        <div class="encabezado-bloques">
+            <h3 class="titulo-bloques">Bloques para el día {% if fecha %}{{ fecha|date:"d/m/Y" }}{% else %}{{ fecha_str }}{% endif %}</h3>
+            <span class="total-bloques">{{ bloques|length }} bloque{{ bloques|length|pluralize }} encontrado{{ bloques|length|pluralize }}</span>
+        </div>
+
+        {% if bloques %}
+            <div class="grilla-bloques">
+                {% for bloque in bloques %}
+                    <label class="tarjeta-bloque {% if bloque.es_propio %}bloque-propio pendiente{% else %}disponible bloque-seleccionable{% endif %}"
+                           for="bloque-{{ bloque.id }}"
+                           data-id="{{ bloque.id }}"
+                           data-hora="{{ bloque.hora_inicio|time:'H:i' }} - {{ bloque.hora_final|time:'H:i' }}"
+                           aria-pressed="false"
+                           {% if bloque.es_propio %}
+                               title="Ya tienes una solicitud pendiente para este horario"
+                           {% else %}
+                               title="Haz clic para seleccionar este bloque"
+                           {% endif %}>
+                        <input type="checkbox"
+                               name="bloques"
+                               id="bloque-{{ bloque.id }}"
+                               value="{{ bloque.id }}"
+                               class="bloque-checkbox"
+                               {% if bloque.es_propio %}disabled{% elif bloques_seleccionados_ids and bloque.id in bloques_seleccionados_ids %}checked{% endif %}>
+                        <span class="checkbox-visual" aria-hidden="true"></span>
+                        <div class="bloque-info">
+                            <div class="bloque-hora">
+                                <svg class="icono-reloj" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                <strong>{{ bloque.hora_inicio|time:"H:i" }} - {{ bloque.hora_final|time:"H:i" }}</strong>
+                            </div>
+                            <div class="bloque-estado">
+                                {% if bloque.es_propio %}
+                                    <span class="badge badge-pendiente">Ya solicitado · Pendiente</span>
+                                {% else %}
+                                    <span class="badge badge-disponible">Disponible</span>
+                                    <span class="badge badge-seleccionado">Seleccionado</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </label>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="sin-bloques">
+                <svg class="icono-estado-vacio" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                <p>No hay bloques disponibles para esta fecha.</p>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="sin-bloques">
+            <svg class="icono-estado-vacio" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <p>Selecciona un día en el calendario para consultar sus bloques.</p>
+        </div>
+    {% endif %}
+</div>
