@@ -21,20 +21,17 @@
 
   {% if vista == "proximas" %}
     <p class="nota-confirmacion">
-      <svg class="nota-icono" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-      <span>
-        <strong>Confirma tu asistencia.</strong>
-        {% comment %}Con plazo de un día, el aviso y el límite caen el mismo día.{% endcomment %}
-        {% if plazo_confirmacion == 1 %}
-          Para cada reserva aceptada por la Oficina recibirás una notificación el
-          día anterior, para confirmarla. Si no la confirmas ese mismo día, la
-          reserva se cancelará.
-        {% else %}
-          Para cada reserva aceptada por la Oficina recibirás una notificación
-          {{ plazo_confirmacion }} días antes, para confirmarla. Si no la confirmas
-          a más tardar el día anterior, la reserva se cancelará.
-        {% endif %}
-      </span>
+      <strong>Confirma tu asistencia.</strong>
+      {% comment %}Con plazo de un día, el aviso y el límite caen el mismo día.{% endcomment %}
+      {% if plazo_confirmacion == 1 %}
+        Para cada reserva aceptada por la Oficina recibirás una notificación el
+        día anterior, para confirmarla. Si no la confirmas ese mismo día, la
+        reserva se cancelará.
+      {% else %}
+        Para cada reserva aceptada por la Oficina recibirás una notificación
+        {{ plazo_confirmacion }} días antes, para confirmarla. Si no la confirmas
+        a más tardar el día anterior, la reserva se cancelará.
+      {% endif %}
     </p>
   {% endif %}
 
