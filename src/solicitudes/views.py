@@ -2,6 +2,7 @@ from datetime import datetime
 from django.conf import settings
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
+from django.db.models import Prefetch
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
@@ -44,6 +45,24 @@ def panel_validador(request):
         "datos": validacion.cargar(),
         "origen": validacion.ORIGEN,
     })
+
+
+@user_passes_test(es_solicitante, login_url="login_solicitante")
+def mis_solicitudes(request):
+    """Historial de solicitudes del solicitante con su estado actual (US-09).
+
+    Cada solicitud muestra su área, sus bloques (hora de inicio y término) y la
+    fecha. Se listan todas las del usuario conectado, de cualquiera de sus áreas.
+    """
+    solicitudes = (
+        Solicitud.objects.filter(solicitante=request.user)
+        .select_related("area")
+        .prefetch_related(Prefetch(
+            "solicitudes_bloques",
+            queryset=SolicitudBloque.objects.select_related("bloque").order_by("fecha", "bloque__inicio"),
+        ))
+    )
+    return render(request, "solicitudes/mis_solicitudes.html", {"solicitudes": solicitudes})
 
 
 def calendario(request):

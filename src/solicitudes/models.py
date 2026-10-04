@@ -83,20 +83,35 @@ class Solicitud(models.Model):
             return 1 + self.acompanantes.count()
         return 1
 
+    # Etiqueta de cada estado general; la clave sirve de clase CSS en las vistas.
+    ESTADOS_GENERALES = {
+        "revision": "En revisión por la Oficina",
+        "rechazada": "Rechazada",
+        "confirmada": "Confirmada",
+        "cancelada": "Cancelada",
+        "por-confirmar": "Pendiente de confirmación",
+        "aceptada": "Aceptada",
+    }
+
+    @property
+    def estado_clave(self):
+        """Clave del estado general, combinando validación y confirmación."""
+        if self.estado_validacion == self.EstadoValidacion.PENDIENTE:
+            return "revision"
+        if self.estado_validacion == self.EstadoValidacion.RECHAZADA:
+            return "rechazada"
+        if self.estado_confirmacion == self.EstadoConfirmacion.CONFIRMADA:
+            return "confirmada"
+        if self.estado_confirmacion == self.EstadoConfirmacion.CANCELADA:
+            return "cancelada"
+        if self.estado_confirmacion == self.EstadoConfirmacion.PENDIENTE:
+            return "por-confirmar"
+        return "aceptada"
+
     @property
     def estado_general(self):
         """Síntesis de alto nivel del estado de la solicitud para vistas."""
-        if self.estado_validacion == self.EstadoValidacion.PENDIENTE:
-            return "En revisión por la Oficina"
-        if self.estado_validacion == self.EstadoValidacion.RECHAZADA:
-            return "Rechazada"
-        if self.estado_confirmacion == self.EstadoConfirmacion.CONFIRMADA:
-            return "Confirmada"
-        if self.estado_confirmacion == self.EstadoConfirmacion.CANCELADA:
-            return "Cancelada"
-        if self.estado_confirmacion == self.EstadoConfirmacion.PENDIENTE:
-            return "Pendiente de confirmación"
-        return "Aceptada"
+        return self.ESTADOS_GENERALES[self.estado_clave]
 
     def clean(self):
         super().clean()

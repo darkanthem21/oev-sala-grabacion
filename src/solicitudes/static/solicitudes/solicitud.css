@@ -52,6 +52,13 @@
   gap: 1.25rem;
 }
 
+/* Solo aparece en las pantallas del solicitante (/solicitar/...). */
+.barra-enlace {
+  font-family: var(--fuente-titulo); font-size: .8125rem; font-weight: 700;
+  color: var(--accion); text-decoration: none;
+}
+.barra-enlace:hover, .barra-enlace[aria-current="page"] { text-decoration: underline; }
+
 .barra-usuario-info {
   display: flex;
   align-items: center;
@@ -625,3 +632,43 @@
 
 
 
+
+/* --- Historial de solicitudes (US-09) --- */
+.hoja.hoja-historial { max-width: 52rem; }
+
+.historial { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: .9rem; }
+.historial th {
+  text-align: left; padding: .5rem .6rem; border-bottom: 2px solid var(--borde);
+  font-family: var(--fuente-titulo); font-size: .75rem; text-transform: uppercase;
+  color: var(--tinta-suave);
+}
+.historial td { padding: .65rem .6rem; border-bottom: 1px solid var(--borde); vertical-align: top; }
+.historial time { display: block; }
+
+.bloques-solicitados { margin: 0; padding: 0; list-style: none; }
+.bloques-solicitados li + li { margin-top: .2rem; }
+
+/* El color del estado va en la marca lateral, no detras del texto: los rellenos
+ * de estado no alcanzan 4.5:1 con la tinta (mismo criterio que .error). */
+.estado {
+  display: inline-block; padding: .2rem .55rem; white-space: nowrap;
+  border-left: 3px solid var(--borde); background: var(--fondo);
+  font-size: .82rem; font-weight: 500;
+}
+.estado-revision      { border-left-color: var(--info); }
+.estado-por-confirmar { border-left-color: var(--precaucion); }
+.estado-aceptada      { border-left-color: var(--exito-suave); }
+.estado-confirmada    { border-left-color: var(--exito); }
+.estado-rechazada,
+.estado-cancelada     { border-left-color: var(--alerta); }
+
+/* En pantallas angostas cada solicitud pasa a ser una ficha. */
+@media (max-width: 36rem) {
+  .historial thead { display: none; }
+  .historial tr { display: block; padding: .75rem 0; border-bottom: 1px solid var(--borde); }
+  .historial td {
+    display: grid; grid-template-columns: 5rem 1fr; gap: 1rem;
+    padding: .2rem 0; border: 0;
+  }
+  .historial td::before { content: attr(data-titulo); color: var(--tinta-suave); }
+}
