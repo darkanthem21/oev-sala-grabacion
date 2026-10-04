@@ -127,6 +127,45 @@ y queda en la sesión.
 
 Si registra, la vuelta es por redirección, a la lista del día del bloque.
 
+### Bloquear la sala en unas fechas (US-17)
+
+`BloqueoForm` decide qué campos valen según el modo (todo el día, un bloque o
+varios días) y rechaza el pasado y lo que no deja nada por bloquear, que es
+también lo que frena un doble clic. Las reglas solo del panel viven en el
+formulario y no en el modelo, para poder corregir una fila vieja desde la
+administración de Django.
+
+![Bloquear la sala en unas fechas](diagramas/us-17/bloquear.png)
+
+Para saber a quién le quita la sala, agenda pregunta por la señal
+`reservas_aprobadas` en vez de importar a quien tiene las reservas, porque
+`solicitudes` depende de agenda y no al revés. Hoy contesta `uso` con sus
+tickets de prueba. La primera vez no se guarda nada si hay reservas afectadas
+(AC4): se muestran, y al confirmar el navegador devuelve sus códigos. Si ya no
+coinciden, se vuelven a mostrar antes de avisar a nadie. Los correos salen con
+`transaction.on_commit`, así un bloqueo que no alcanzó a guardarse no avisa.
+
+### Levantar un bloqueo (US-17)
+
+Levantar no borra la fila: la marca con quién, cuándo y por qué (AC5 y AC6), y
+`vigentes()` deja de contarla. Es un `UPDATE` condicionado a que siga vigente,
+para que dos administradores levantando el mismo bloqueo a la vez no pisen el
+registro del primero.
+
+![Levantar un bloqueo](diagramas/us-17/levantar.png)
+
+### Ver una semana con sus bloqueos (US-17)
+
+La vista semanal tiene fechas porque desde ahí se bloquea un bloque en una
+fecha, pero lo que se edita sigue siendo la jornada que se repite: un aviso fijo
+lo dice. Cada columna raya los bloques que algún bloqueo deja fuera en su fecha,
+con la misma regla `cubre()` que usa el resto del sistema.
+
+![Ver una semana con sus bloqueos](diagramas/us-17/ver-semana.png)
+
+Un sábado o domingo, sin fecha en la dirección, la vista abre la semana que
+viene, porque la rejilla es de lunes a viernes.
+
 ## Estructura y Modelo de Datos
 
 ### Solicitud de reserva y bloques horarios (US-02)

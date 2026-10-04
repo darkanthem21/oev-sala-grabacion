@@ -8,6 +8,7 @@ Este manual cubre lo que hoy está disponible en el sistema:
 |---|---|---|
 | US-01 Inicio de sesión | Todos | [Iniciar sesión](#1-iniciar-sesión) |
 | US-04 Panel de administrador | Administrador | [Configurar la sala](#2-configurar-la-sala) |
+| US-17 Bloquear fechas de la sala | Administrador | [Bloquear fechas de la sala](#6-bloquear-fechas-de-la-sala) |
 | US-14 Bloques del personal de apoyo | Personal de apoyo | [Bloques del día](#3-bloques-del-día) |
 
 ## Puertas de acceso
@@ -198,3 +199,89 @@ se ve quién lo registró y cuándo.
 > esta vista muestra reservas de prueba y lo avisa con una franja arriba de la
 > tabla. El formulario de check-out con el checklist de la sala llega con US-15;
 > hasta entonces el registro es simulado y solo lo ve quien lo envió.
+
+---
+
+## 6. Bloquear fechas de la sala
+
+El administrador puede dejar la sala fuera de servicio por una **mantención**,
+un **feriado** o un **evento**. El bloqueo vale para fechas concretas: la
+jornada semanal sigue igual. Mientras está vigente, esos horarios no se pueden
+solicitar ni aprobar, y quien solicita ve el motivo.
+
+Se entra con la cuenta de administración por `/configuracion/entrar/`, pestaña
+**Bloques** (`/configuracion/bloques/`). La vista **Mensual** sirve para crear y
+revisar bloqueos; la **Semanal** muestra la jornada de una semana concreta y
+permite bloquear un bloque en una fecha.
+
+![Vista mensual con un día bloqueado](uso/us-17/mes-con-bloqueo.png)
+
+### Crear un bloqueo
+
+1. En la vista mensual, haz clic en el día que quieres bloquear.
+2. En **Qué bloquear**, elige una opción:
+   - **Todo el día**.
+   - **Un bloque**, por ejemplo de 08:10 a 09:40.
+   - **Varios días**: bloquea los días completos entre la fecha elegida y la
+     que marques como término. Puedes marcarla con otro clic en el calendario.
+3. Elige el **Motivo**: Mantención, Feriado o Evento. Si quieres, agrega un
+   **Detalle**, como *Taller de profesores*. El solicitante lo ve.
+4. Pulsa **Bloquear**.
+
+![Formulario para bloquear la sala](uso/us-17/crear-bloqueo.png)
+
+El día queda marcado en el calendario y arriba del registro aparece la
+confirmación, por ejemplo **Bloqueaste la sala el martes 6 de octubre, de 08:10
+a 09:40 (Evento: Taller de profesores).**
+
+![Bloqueo creado](uso/us-17/bloqueo-creado.png)
+
+No se puede bloquear un día que ya pasó, una fecha sin jornada ni algo que ya
+está bloqueado entero. Si el bloqueo le quita la sala a reservas aprobadas que
+todavía no empiezan, el sistema no lo guarda a la primera: muestra esas
+reservas para que revises a quién afecta. Al confirmar, guarda el bloqueo y
+avisa por correo a cada persona afectada.
+
+### Ver y levantar un bloqueo
+
+Los días bloqueados aparecen rayados. Haz clic en el bloqueo para ver su motivo
+y quién lo registró. Para devolver el horario, escribe el **Motivo para
+levantarlo** y pulsa **Levantar el bloqueo**.
+
+![Ver y levantar un bloqueo](uso/us-17/levantar-bloqueo.png)
+
+El horario vuelve a estar disponible y queda anotado quién levantó el bloqueo,
+cuándo y por qué. Un bloqueo que ya pasó no se puede levantar.
+
+El **Registro de bloqueos**, al final de la vista mensual, muestra las últimas
+acciones, bloqueos y levantamientos, con fecha, qué se bloqueó, motivo y
+responsable.
+
+![Registro de bloqueos](uso/us-17/bloqueo-levantado.png)
+
+### Bloquear desde la vista semanal
+
+La vista semanal dice qué semana es, por ejemplo **Semana del 28 de septiembre
+al 2 de octubre de 2026**, y cada columna muestra su fecha. Para cambiar de
+semana usa **←**, **Hoy** y **→**, o haz clic en un día del mini calendario de la
+izquierda. Los bloques bloqueados en esa semana aparecen rayados.
+
+![Semana con un día bloqueado](uso/us-17/semana-con-bloqueo.png)
+
+Para bloquear un bloque en una fecha, haz clic en el bloque, pulsa **Bloquear
+una fecha**, elige la fecha (viene elegida la de la semana que estás mirando),
+el motivo y pulsa **Bloquear esa fecha**.
+
+### Cómo se relaciona con la jornada
+
+La jornada semanal se configura aparte y se repite todas las semanas. Un
+bloqueo afecta solo la fecha o el rango indicado: no quita ni cambia los bloques
+de la jornada. Así, un evento puede cerrar el bloque del martes 6 de octubre de
+08:10 a 09:40 sin cerrar ese horario los martes siguientes. La vista semanal lo
+recuerda con un aviso fijo: los horarios valen para todas las semanas; los
+bloqueos, solo para su fecha.
+
+> **Estado actual.** Las reservas que un bloqueo puede afectar todavía salen de
+> los datos de prueba del personal de apoyo, porque la reserva confirmada (el
+> ticket) aún no está en la base. En desarrollo, los correos de aviso se
+> escriben en el log del contenedor en vez de enviarse.
