@@ -57,6 +57,40 @@ La recuperación de clave (AC6) no tiene diagrama propio: son las cuatro vistas
 que trae Django (`PasswordReset`, `Done`, `Confirm` y `Complete`), con enlace
 firmado y sin tabla nuestra. El proyecto solo pone las plantillas.
 
+### Elegir el área académica (US-02)
+
+La solicitud siempre queda vinculada a un área, así que es lo primero que se
+resuelve. Sin áreas activas no hay formulario; con una sola, el asistente la
+fija solo y sigue al paso 1; con varias, pasa por `/solicitar/area/`. El área
+queda en la sesión, como todo lo que se elige antes de enviar.
+
+![Elegir el área académica](diagramas/us-02/elegir-area.png)
+
+Cambiar de área desde el paso 1 (`?cambiar=1`) borra el día y los bloques ya
+elegidos, porque se habían elegido para la otra.
+
+### Elegir el día y los bloques (US-02)
+
+Cada clic en un día del calendario pide por htmx solo la lista de bloques de
+esa fecha. `obtener_bloques_dia_para_usuario` parte de la plantilla semanal
+(`agenda.disponibilidad`), esconde los bloques que ya tienen una reserva
+aceptada y marca los que el mismo usuario ya pidió.
+
+![Elegir el día y los bloques](diagramas/us-02/elegir-horario.png)
+
+Al continuar, la vista vuelve a consultar los bloques en vez de fiarse de lo que
+mostró la pantalla: entre el clic y el envío alguien pudo ocuparlos. Lo elegido
+se guarda en la sesión; la base no se toca hasta el paso 3.
+
+### Completar los datos de la actividad (US-02)
+
+`SolicitudForm` se usa sin el campo de términos (`exigir_terminos=False`),
+porque se aceptan en el paso 3. La cantidad de personas y las filas de
+acompañante están en formularios distintos, así que la regla que las cruza
+(AC6) vive en `services.revisar_acompanantes`.
+
+![Completar los datos de la actividad](diagramas/us-02/datos-actividad.png)
+
 ### Enviar una solicitud de reserva (US-02)
 
 El envío de la solicitud corresponde al paso final de confirmación en el asistente multipaso. La solicitud exige la aceptación obligatoria de los términos y condiciones del servicio (AC10) antes de procesar el registro.

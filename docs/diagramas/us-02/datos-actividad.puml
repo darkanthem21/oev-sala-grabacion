@@ -1,0 +1,59 @@
+@startuml datos-actividad
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Completar los datos de la actividad: paso 2 (US-02)
+
+actor "Solicitante" as S
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.forms</b>\n<size:11>solicitudes/forms.py</size>" as F <<presentación>>
+participant "<b>solicitudes.wizard</b>\n<size:11>solicitudes/wizard.py</size>" as W <<presentación>>
+participant "<b>solicitudes</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+
+S -> N ++ : POST /solicitar/ (paso=2) → solicitar(request)
+N -> W ++ : SolicitudWizard(request.session)
+return wizard
+N -> W ++ : PasoSolicitud.DATOS.validar_acceso(wizard.datos)
+return paso_actual
+note right of N
+  Sin fecha ni bloques en la sesión,
+  validar_acceso devuelve el paso 1.
+end note
+N -> N ++ : _manejar_paso_datos(request, wizard)
+N -> F ++ : $comentario("los términos se aceptan recién en el paso 3")\nSolicitudForm(request.POST, usuario=request.user, exigir_terminos=False)
+return form
+N -> F ++ : AcompananteFormSet(request.POST)
+return formset
+N -> F ++ : form.is_valid() and formset.is_valid()
+note right of F
+  Motivo obligatorio (hasta 300) y personas
+  entre 1 y 5. AcompananteForm.clean() exige
+  nombre y correo juntos en cada fila.
+end note
+return valido
+break algún campo no es válido
+  N --> S : 200 · solicitudes/solicitar.html (paso 2) con los errores
+end
+N -> V ++ : revisar_acompanantes(formset, esperados=personas - 1, correo_solicitante=request.user.email)
+V -> V : llenos = [f for f in formset.forms if f.esta_lleno]
+opt len(llenos) != esperados
+  V -> V : errores.append("faltan los datos de … acompañante(s)")
+end
+opt dos filas con el mismo correo
+  V -> V : errores.append("Hay un correo repetido entre los acompañantes.")
+end
+opt una fila trae el correo del solicitante
+  V -> V : errores.append("Tu propio correo ya está incluido …")
+end
+return llenos, errores
+break hay errores en los acompañantes (AC6)
+  N --> S : 200 · solicitudes/solicitar.html (paso 2) con los errores
+end
+N -> N : $comentario("nombres sin espacios sobrantes y correos en minúscula")\nacompanantes_data = [{"nombre": ..., "correo": ...} for f in llenos]
+N -> W ++ : wizard.guardar_datos_actividad(motivo, observaciones, personas, acompanantes_data)
+W -> W : self._session[CLAVE_SESION] = reserva
+deactivate W
+N --> S : 302 · /solicitar/?paso=3
+deactivate N
+deactivate N
+@enduml
