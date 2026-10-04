@@ -3,9 +3,10 @@ from django.conf import settings
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import Prefetch
+from django.db.models import F, Max, Min, Prefetch, Q
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.cache import patch_vary_headers
 
 from configuracion.models import Parametros
@@ -50,6 +51,7 @@ def panel_validador(request):
 
 
 SOLICITUDES_POR_PAGINA = 20
+VISTAS_HISTORIAL = ("proximas", "anteriores")
 
 
 @user_passes_test(es_solicitante, login_url="login_solicitante")
@@ -58,20 +60,41 @@ def mis_solicitudes(request):
 
     Cada solicitud muestra su área, sus bloques (hora de inicio y término) y la
     fecha. Se listan todas las del usuario conectado, de cualquiera de sus áreas,
-    de a SOLICITUDES_POR_PAGINA por página.
+    separadas en próximas y anteriores y de a SOLICITUDES_POR_PAGINA por página.
     """
-    solicitudes = (
-        Solicitud.objects.filter(solicitante=request.user)
-        # id para mantener el orden, evitar que se repitan filas al paginar
-        .order_by("-creado_en", "-id")
-        .select_related("area")
-        .prefetch_related(Prefetch(
-            "solicitudes_bloques",
-            queryset=SolicitudBloque.objects.select_related("bloque").order_by("fecha", "bloque__inicio"),
-        ))
+    vista = request.GET.get("vista")
+    if vista not in VISTAS_HISTORIAL:
+        vista = "proximas"
+
+    # Se separa por día calendario: una solicitud es próxima mientras le quede
+    # algún bloque de hoy en adelante, aunque la hora de hoy ya haya pasado.
+    # Una sin bloques no tiene fecha vencida, así que cuenta como próxima.
+    hoy = timezone.localdate()
+    base = Solicitud.objects.filter(solicitante=request.user).annotate(
+        primera_fecha=Min("solicitudes_bloques__fecha"),
+        ultima_fecha=Max("solicitudes_bloques__fecha"),
     )
+    anteriores = base.filter(ultima_fecha__lt=hoy)
+    proximas = base.filter(Q(ultima_fecha__gte=hoy) | Q(ultima_fecha__isnull=True))
+
+    # Las próximas parten por la más cercana; las anteriores, por la más
+    # reciente. El id desempata: sin un orden total, una fila podría repetirse
+    # o saltarse entre páginas.
+    if vista == "proximas":
+        solicitudes = proximas.order_by(F("primera_fecha").asc(nulls_last=True), "id")
+    else:
+        solicitudes = anteriores.order_by("-ultima_fecha", "-id")
+    solicitudes = solicitudes.select_related("area").prefetch_related(Prefetch(
+        "solicitudes_bloques",
+        queryset=SolicitudBloque.objects.select_related("bloque").order_by("fecha", "bloque__inicio"),
+    ))
     pagina = Paginator(solicitudes, SOLICITUDES_POR_PAGINA).get_page(request.GET.get("pagina"))
-    contexto = {"pagina": pagina}
+    contexto = {
+        "pagina": pagina,
+        "vista": vista,
+        "total_proximas": proximas.count(),
+        "total_anteriores": anteriores.count(),
+    }
 
     # htmx pide solo la tabla. Al volver con el botón Atrás sin la página en su
     # caché, htmx la pide entera (HX-History-Restore-Request), igual que el

@@ -1,9 +1,10 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from agenda.models import Bloque, Dia, primera_fecha_pedible
 from personas.models import Area, Rol
@@ -129,7 +130,7 @@ class PaginacionMisSolicitudesTestCase(TestCase):
         self.assertEqual(len(pagina.object_list), SOLICITUDES_POR_PAGINA)
         self.assertEqual(pagina.paginator.num_pages, 2)
         self.assertContains(response, "Página 1 de 2")
-        self.assertContains(response, f'hx-get="{self.url}?pagina=2"')
+        self.assertContains(response, f'hx-get="{self.url}?vista=proximas&amp;pagina=2"')
         self.assertContains(response, 'hx-target="#historial"')
         self.assertContains(response, 'hx-push-url="true"')
 
@@ -169,3 +170,96 @@ class PaginacionMisSolicitudesTestCase(TestCase):
         Solicitud.objects.filter(id__in=self._ids(self.client.get(self.url))).delete()
         response = self.client.get(self.url)
         self.assertNotContains(response, 'class="paginacion"')
+
+
+class ProximasAnterioresTestCase(TestCase):
+    """US-09: el historial separa las solicitudes por si sus fechas ya pasaron."""
+
+    def setUp(self):
+        self.area = Area.objects.create(nombre="Informática", activa=True)
+        self.usuario = Usuario.objects.create_user(email="docente@uach.cl", password="testpassword123")
+        self.usuario.groups.add(Group.objects.get(name=Rol.SOLICITANTE))
+        self.usuario.areas.add(self.area)
+        self.client.force_login(self.usuario)
+        self.bloque = Bloque.objects.filter(activo=True).first()
+        self.hoy = timezone.localdate()
+        self.url = reverse("mis_solicitudes")
+
+    def _solicitud(self, *fechas):
+        # bulk_create se salta la regla de anticipación de SolicitudBloque.clean,
+        # que impide registrar fechas pasadas.
+        solicitud = Solicitud.objects.create(solicitante=self.usuario, area=self.area, motivo="Grabar")
+        SolicitudBloque.objects.bulk_create(
+            SolicitudBloque(solicitud=solicitud, bloque=self.bloque, fecha=f) for f in fechas
+        )
+        return solicitud
+
+    def _ids(self, **params):
+        response = self.client.get(self.url, params)
+        return [s.id for s in response.context["pagina"].object_list]
+
+    def test_separa_por_fecha_y_hoy_cuenta_como_proxima(self):
+        pasada = self._solicitud(self.hoy - timedelta(days=3))
+        de_hoy = self._solicitud(self.hoy)
+        futura = self._solicitud(self.hoy + timedelta(days=7))
+
+        self.assertCountEqual(self._ids(), [de_hoy.id, futura.id])
+        self.assertEqual(self._ids(vista="anteriores"), [pasada.id])
+
+    def test_con_un_bloque_pendiente_sigue_siendo_proxima(self):
+        mixta = self._solicitud(self.hoy - timedelta(days=1), self.hoy + timedelta(days=1))
+        self.assertEqual(self._ids(), [mixta.id])
+        self.assertEqual(self._ids(vista="anteriores"), [])
+
+    def test_orden_proximas_por_cercania_y_anteriores_por_recencia(self):
+        lejana = self._solicitud(self.hoy + timedelta(days=20))
+        cercana = self._solicitud(self.hoy + timedelta(days=2))
+        antigua = self._solicitud(self.hoy - timedelta(days=30))
+        reciente = self._solicitud(self.hoy - timedelta(days=2))
+
+        self.assertEqual(self._ids(), [cercana.id, lejana.id])
+        self.assertEqual(self._ids(vista="anteriores"), [reciente.id, antigua.id])
+
+    def test_vista_por_defecto_e_invalida_son_proximas(self):
+        for params in [{}, {"vista": "otra"}]:
+            with self.subTest(params=params):
+                response = self.client.get(self.url, params)
+                self.assertEqual(response.context["vista"], "proximas")
+                self.assertRegex(
+                    response.content.decode(),
+                    r'pestana-historial activa"\s+href="[^"]*\?vista=proximas"',
+                )
+
+    def test_pestanas_muestran_cuentas_y_usan_htmx(self):
+        self._solicitud(self.hoy - timedelta(days=1))
+        self._solicitud(self.hoy + timedelta(days=1))
+        self._solicitud(self.hoy + timedelta(days=2))
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.context["total_proximas"], 2)
+        self.assertEqual(response.context["total_anteriores"], 1)
+        self.assertContains(response, f'hx-get="{self.url}?vista=anteriores"')
+
+        response = self.client.get(self.url, {"vista": "anteriores"}, HTTP_HX_REQUEST="true")
+        self.assertTemplateUsed(response, "solicitudes/_tabla_historial.html")
+        self.assertTemplateNotUsed(response, "solicitudes/mis_solicitudes.html")
+
+    def test_pestana_vacia_tiene_su_propio_aviso(self):
+        self._solicitud(self.hoy + timedelta(days=1))
+        response = self.client.get(self.url, {"vista": "anteriores"})
+        self.assertContains(response, "Aún no tienes solicitudes con fechas pasadas.")
+        self.assertNotContains(response, "Aún no has realizado solicitudes")
+
+    def test_paginacion_conserva_la_vista(self):
+        Solicitud.objects.bulk_create(
+            Solicitud(solicitante=self.usuario, area=self.area, motivo=f"Clase {n}")
+            for n in range(SOLICITUDES_POR_PAGINA + 1)
+        )
+        ids = list(Solicitud.objects.values_list("id", flat=True))
+        SolicitudBloque.objects.bulk_create(
+            SolicitudBloque(solicitud_id=i, bloque=self.bloque, fecha=self.hoy - timedelta(days=1))
+            for i in ids
+        )
+        response = self.client.get(self.url, {"vista": "anteriores"})
+        self.assertContains(response, f'hx-get="{self.url}?vista=anteriores&amp;pagina=2"')
+        self.assertEqual(len(self._ids(vista="anteriores", pagina=2)), 1)

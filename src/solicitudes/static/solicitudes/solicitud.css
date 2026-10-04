@@ -698,3 +698,23 @@
   .paginacion { grid-template-columns: 1fr 1fr; }
   .paginacion-estado { grid-column: 1 / -1; grid-row: 1; }
 }
+
+/* --- Pestañas Próximas / Anteriores del historial --- */
+.pestanas-historial {
+  display: flex; gap: 1.5rem; margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--borde);
+}
+.pestana-historial {
+  display: inline-flex; align-items: center; gap: .45rem;
+  padding: .5rem 0; margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: .875rem;
+  color: var(--tinta-suave); text-decoration: none;
+}
+.pestana-historial:hover { color: var(--tinta); }
+.pestana-historial.activa { color: var(--tinta); border-bottom-color: var(--acento); }
+.pestana-cuenta {
+  min-width: 1.4rem; padding: .05rem .4rem; border-radius: 999px;
+  background: var(--fondo); border: 1px solid var(--borde);
+  font-size: .75rem; text-align: center;
+}

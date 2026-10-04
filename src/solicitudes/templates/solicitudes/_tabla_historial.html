@@ -1,8 +1,24 @@
 {% comment %}
   Tabla paginada de Mis solicitudes (US-09). htmx reemplaza solo este bloque al
-  cambiar de página; sin htmx, los mismos enlaces cargan la página entera.
+  cambiar de pestaña o de página; sin htmx, los mismos enlaces cargan la página
+  entera. Las pestañas viven acá dentro para que su estado activo se redibuje.
 {% endcomment %}
+{% url 'mis_solicitudes' as url_historial %}
 <div id="historial" class="historial-contenedor">
+  <nav class="pestanas-historial" aria-label="Solicitudes por fecha"
+       hx-target="#historial" hx-swap="outerHTML" hx-push-url="true" hx-indicator="#historial">
+    <a class="pestana-historial {% if vista == 'proximas' %}activa{% endif %}"
+       href="{{ url_historial }}?vista=proximas" hx-get="{{ url_historial }}?vista=proximas"
+       {% if vista == "proximas" %}aria-current="page"{% endif %}>
+      Próximas <span class="pestana-cuenta">{{ total_proximas }}</span>
+    </a>
+    <a class="pestana-historial {% if vista == 'anteriores' %}activa{% endif %}"
+       href="{{ url_historial }}?vista=anteriores" hx-get="{{ url_historial }}?vista=anteriores"
+       {% if vista == "anteriores" %}aria-current="page"{% endif %}>
+      Anteriores <span class="pestana-cuenta">{{ total_anteriores }}</span>
+    </a>
+  </nav>
+
   {% if pagina.object_list %}
     <table class="historial">
       <thead>
@@ -40,14 +56,13 @@
     </table>
 
     {% if pagina.has_other_pages %}
-      {% url 'mis_solicitudes' as url_historial %}
       <nav class="paginacion" aria-label="Páginas de solicitudes"
            hx-target="#historial" hx-swap="outerHTML show:#historial:top" hx-push-url="true"
            hx-indicator="#historial">
         {% if pagina.has_previous %}
           <a class="btn-secundario paginacion-anterior" rel="prev"
-             href="{{ url_historial }}?pagina={{ pagina.previous_page_number }}"
-             hx-get="{{ url_historial }}?pagina={{ pagina.previous_page_number }}">
+             href="{{ url_historial }}?vista={{ vista }}&amp;pagina={{ pagina.previous_page_number }}"
+             hx-get="{{ url_historial }}?vista={{ vista }}&amp;pagina={{ pagina.previous_page_number }}">
             <svg class="icono-btn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
             <span>Anterior</span>
           </a>
@@ -65,8 +80,8 @@
 
         {% if pagina.has_next %}
           <a class="btn-secundario paginacion-siguiente" rel="next"
-             href="{{ url_historial }}?pagina={{ pagina.next_page_number }}"
-             hx-get="{{ url_historial }}?pagina={{ pagina.next_page_number }}">
+             href="{{ url_historial }}?vista={{ vista }}&amp;pagina={{ pagina.next_page_number }}"
+             hx-get="{{ url_historial }}?vista={{ vista }}&amp;pagina={{ pagina.next_page_number }}">
             <span>Siguiente</span>
             <svg class="icono-btn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </a>
@@ -79,6 +94,14 @@
       </nav>
     {% endif %}
   {% else %}
-    <div class="aviso" role="status">Aún no has realizado solicitudes de reserva.</div>
+    <div class="aviso" role="status">
+      {% if not total_proximas and not total_anteriores %}
+        Aún no has realizado solicitudes de reserva.
+      {% elif vista == "proximas" %}
+        No tienes solicitudes para hoy ni para los próximos días.
+      {% else %}
+        Aún no tienes solicitudes con fechas pasadas.
+      {% endif %}
+    </div>
   {% endif %}
 </div>
