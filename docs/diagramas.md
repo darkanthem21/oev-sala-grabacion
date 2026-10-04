@@ -44,7 +44,12 @@ de la puerta responde el mismo error que una clave mala, sin abrir sesión y sin
 sumar un intento, porque la clave era correcta (AC4).
 
 `django.contrib.auth` busca la cuenta y revisa la clave a través de
-`personas`, porque `Usuario` es el modelo de usuario del proyecto.
+`personas`, porque `Usuario` es el modelo de usuario del proyecto. La busca sin
+distinguir mayúsculas (`get_by_natural_key`), igual que la vista que cuenta los
+intentos: así un correo escrito con otras mayúsculas no suma fallos.
+
+Con la cuenta bloqueada la clave se revisa igual y la respuesta es el mismo
+aviso que una clave mala: ni el texto ni la demora dicen que la cuenta existe.
 
 ![Clave incorrecta y bloqueo](diagramas/us-01/intento-fallido.png)
 

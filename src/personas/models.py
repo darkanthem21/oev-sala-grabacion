@@ -52,6 +52,12 @@ class UsuarioManager(UserManager):
         extra.setdefault("is_superuser", True)
         return self.create_user(email, password, **extra)
 
+    def get_by_natural_key(self, email):
+        # US-01: el correo no distingue mayúsculas, igual que la búsqueda con que
+        # la vista cuenta los intentos. Antes «Ana@uach.cl» con su clave correcta
+        # sumaba fallos hasta quedar bloqueada.
+        return self.get(email__iexact=email)
+
 
 class Usuario(AbstractUser):
     """US-01 AC1: se entra con correo, no con nombre de usuario.
@@ -78,6 +84,12 @@ class Usuario(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def save(self, *args, **kwargs):
+        # En minúsculas, así dos cuentas no pueden diferir solo en mayúsculas y
+        # `get_by_natural_key` nunca encuentra dos.
+        self.email = self.email.lower()
+        super().save(*args, **kwargs)
 
     def tiene_rol(self, *roles):
         """Si pertenece a alguno de esos grupos, en una sola consulta."""
