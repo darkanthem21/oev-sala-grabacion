@@ -57,6 +57,40 @@ La recuperación de clave (AC6) no tiene diagrama propio: son las cuatro vistas
 que trae Django (`PasswordReset`, `Done`, `Confirm` y `Complete`), con enlace
 firmado y sin tabla nuestra. El proyecto solo pone las plantillas.
 
+### Elegir el área académica (US-02)
+
+La solicitud siempre queda vinculada a un área, así que es lo primero que se
+resuelve. Sin áreas activas no hay formulario; con una sola, el asistente la
+fija solo y sigue al paso 1; con varias, pasa por `/solicitar/area/`. El área
+queda en la sesión, como todo lo que se elige antes de enviar.
+
+![Elegir el área académica](diagramas/us-02/elegir-area.png)
+
+Cambiar de área desde el paso 1 (`?cambiar=1`) borra el día y los bloques ya
+elegidos, porque se habían elegido para la otra.
+
+### Elegir el día y los bloques (US-02)
+
+Cada clic en un día del calendario pide por htmx solo la lista de bloques de
+esa fecha. `obtener_bloques_dia_para_usuario` parte de la plantilla semanal
+(`agenda.disponibilidad`), esconde los bloques que ya tienen una reserva
+aceptada y marca los que el mismo usuario ya pidió.
+
+![Elegir el día y los bloques](diagramas/us-02/elegir-horario.png)
+
+Al continuar, la vista vuelve a consultar los bloques en vez de fiarse de lo que
+mostró la pantalla: entre el clic y el envío alguien pudo ocuparlos. Lo elegido
+se guarda en la sesión; la base no se toca hasta el paso 3.
+
+### Completar los datos de la actividad (US-02)
+
+`SolicitudForm` se usa sin el campo de términos (`exigir_terminos=False`),
+porque se aceptan en el paso 3. La cantidad de personas y las filas de
+acompañante están en formularios distintos, así que la regla que las cruza
+(AC6) vive en `services.revisar_acompanantes`.
+
+![Completar los datos de la actividad](diagramas/us-02/datos-actividad.png)
+
 ### Enviar una solicitud de reserva (US-02)
 
 El envío de la solicitud corresponde al paso final de confirmación en el asistente multipaso. La solicitud exige la aceptación obligatoria de los términos y condiciones del servicio (AC10) antes de procesar el registro.
@@ -64,6 +98,40 @@ El envío de la solicitud corresponde al paso final de confirmación en el asist
 El guardado se ejecuta en una transacción atómica dentro de `solicitudes.services.guardar_solicitud_completa`: se persiste la `Solicitud` con estado de validación pendiente (AC5), se crean los registros de `SolicitudBloque` asociando cada bloque de la plantilla semanal con la fecha elegida, y se registran los acompañantes declarados en sala (AC6). Si la validación de algún bloque o campo falla, la transacción se cancela por completo sin dejar datos huérfanos. Al finalizar con éxito, se purga la sesión del asistente (`wizard.limpiar()`) y se presenta la confirmación con el resumen de la solicitud.
 
 ![Enviar una solicitud de reserva](diagramas/us-02/enviar-solicitud.png)
+
+### Abrir el panel del validador (US-07)
+
+Las solicitudes todavía no llegan al panel desde la base: `validacion.cargar()`
+lee un JSON de prueba y es el único punto que sabe de dónde vienen. Cuando se
+conecte, cambia esa función y devuelve la misma forma de datos; la vista y la
+plantilla no se enteran.
+
+![Abrir el panel del validador](diagramas/us-07/ver-panel.png)
+
+El resto ocurre en el navegador. `panelValidador`, el componente de Alpine de
+`validador.html`, parte cada solicitud en pedidos (un bloque en una fecha) y de
+ahí arma los topes, ordenados por prioridad del área, y las tarjetas sin tope.
+
+### Resolver un bloque con tope (US-07)
+
+Aprobar una solicitud rechaza a las demás solo en ese bloque, no en toda su
+solicitud. Por eso el motivo es obligatorio: es lo que les llega a quienes
+pierden el bloque (AC4). Cada resolución queda con validador, hora y motivo
+(AC5).
+
+![Resolver un bloque con tope](diagramas/us-07/resolver-tope.png)
+
+Nada de esto se guarda: con datos de prueba, aprobar y rechazar solo cambian la
+pantalla. La regla de un aprobado por bloque y fecha (AC3) la tendrá que
+garantizar la base cuando exista el modelo.
+
+### Resolver un bloque sin tope (US-07)
+
+Sin rivales, aprobar no pide motivo. Rechazar sí, y se confirma en la misma
+fila. El estado de la solicitud no se guarda: `estadoSolicitud` lo deduce de
+sus bloques, así que puede quedar aprobada en parte.
+
+![Resolver un bloque sin tope](diagramas/us-07/resolver-sin-tope.png)
 
 ### Guardar los parámetros del sistema (US-04)
 
