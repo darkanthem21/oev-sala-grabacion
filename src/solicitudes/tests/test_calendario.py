@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import date
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.test import TestCase

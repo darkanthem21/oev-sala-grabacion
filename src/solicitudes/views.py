@@ -1,4 +1,3 @@
-from datetime import datetime
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -20,8 +19,11 @@ from .forms import (
     MAXIMO_ACOMPANANTES,
     MAXIMO_PERSONAS,
     AcompananteFormSet,
+    FechaReservaForm,
     SeleccionAreaForm,
+    SeleccionHorarioForm,
     SolicitudForm,
+    primer_error,
 )
 from .models import Solicitud
 from .services import (
@@ -30,7 +32,7 @@ from .services import (
     retirar_solicitud,
     revisar_acompanantes,
 )
-from .wizard import PasoSolicitud, SolicitudWizard, obtener_limites_reserva
+from .wizard import PasoSolicitud, SolicitudWizard
 
 
 def es_solicitante(usuario):
@@ -132,36 +134,16 @@ def calendario(request):
     error_confirmacion = None
 
     if request.method == "POST":
-        raw_bloques = request.POST.getlist("bloques")
-        bloques_ids = [int(b) for b in raw_bloques if b.isdigit()]
-
-        fecha_obj = None
-        if fecha_str:
-            try:
-                fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-            except ValueError:
-                fecha_str = None
-
-        fecha_minima, fecha_maxima = obtener_limites_reserva()
-        if not fecha_str or not fecha_obj:
-            error_confirmacion = "Por favor, selecciona un día del calendario."
-        elif fecha_obj < fecha_minima or fecha_obj > fecha_maxima:
-            error_confirmacion = "La fecha seleccionada no está dentro del período permitido."
-        elif not bloques_ids:
-            error_confirmacion = f"Día seleccionado: {fecha_obj.strftime('%d/%m/%Y')}. Por favor, selecciona al menos un bloque disponible."
+        form = SeleccionHorarioForm(request.POST, usuario=request.user, exigir_todos=False)
+        bloques_ids = form.ids_enviados
+        if form.is_valid():
+            fecha, bloques = form.cleaned_data["fecha"], form.cleaned_data["bloques"]
+            mensaje_confirmacion = (
+                f"Día seleccionado: {fecha:%d/%m/%Y}. "
+                f"Bloque(s) seleccionado(s): {', '.join(b.texto for b in bloques)}."
+            )
         else:
-            bloques_disponibles = [
-                b for b in obtener_bloques_dia_para_usuario(fecha=fecha_obj, usuario=request.user)
-                if b.id in bloques_ids and b.disponible
-            ]
-            if not bloques_disponibles:
-                error_confirmacion = "Ninguno de los bloques seleccionados está disponible."
-            else:
-                horas_texto = ", ".join(b.texto for b in bloques_disponibles)
-                mensaje_confirmacion = (
-                    f"Día seleccionado: {fecha_obj.strftime('%d/%m/%Y')}. "
-                    f"Bloque(s) seleccionado(s): {horas_texto}."
-                )
+            error_confirmacion = primer_error(form)
 
     ctx = construir_calendario_contexto(request, fecha_str=fecha_str, bloques_seleccionados_ids=bloques_ids)
     ctx.update({
@@ -174,30 +156,12 @@ def calendario(request):
 def bloques_dia(request):
     """Vista parcial HTMX para consultar y desplegar los bloques de una fecha."""
     fecha_str = request.GET.get("fecha")
-    fecha = None
-    bloques = []
-    fecha_valida = True
-    fecha_minima, fecha_maxima = obtener_limites_reserva()
-
-    if fecha_str:
-        try:
-            fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-            if fecha < fecha_minima or fecha > fecha_maxima:
-                fecha_valida = False
-            else:
-                bloques = obtener_bloques_dia_para_usuario(
-                    fecha=fecha,
-                    usuario=getattr(request, "user", None),
-                )
-        except ValueError:
-            pass
-
+    fecha = FechaReservaForm.fecha_de(fecha_str)
+    bloques = obtener_bloques_dia_para_usuario(fecha=fecha, usuario=request.user) if fecha else []
     return render(request, "solicitudes/bloques_dia.html", {
         "fecha": fecha,
         "fecha_str": fecha_str,
         "bloques": bloques,
-        "fecha_valida": fecha_valida,
-        "fecha_minima": fecha_minima,
     })
 
 
@@ -299,37 +263,18 @@ def solicitar(request):
 
 def _manejar_paso_horario(request, wizard: SolicitudWizard, puede_cambiar_area: bool = False):
     error_bloques = None
-    fecha_minima, fecha_maxima = obtener_limites_reserva()
 
     if request.method == "POST":
-        fecha_str = request.POST.get("fecha")
-        raw_bloques = request.POST.getlist("bloques")
-        bloques_ids = [int(b) for b in raw_bloques if b.isdigit()]
-
-        fecha_obj = None
-        if fecha_str:
-            try:
-                fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-            except ValueError:
-                fecha_str = None
-
-        if not fecha_str or not fecha_obj:
-            error_bloques = "Por favor, selecciona un día disponible en el calendario."
-        elif fecha_obj < fecha_minima or fecha_obj > fecha_maxima:
-            error_bloques = "La fecha seleccionada no está dentro del período permitido."
-        elif not bloques_ids:
-            error_bloques = "Por favor, selecciona al menos un bloque de horario para continuar."
-        else:
-            bloques_disponibles = [
-                b for b in obtener_bloques_dia_para_usuario(fecha=fecha_obj, usuario=request.user)
-                if b.id in bloques_ids and b.disponible
-            ]
-            if len(bloques_disponibles) != len(bloques_ids):
-                error_bloques = "Uno o más de los bloques seleccionados ya no están disponibles. Por favor, selecciona otros."
-            else:
-                horas_texto = ", ".join(b.texto for b in bloques_disponibles)
-                wizard.guardar_horario(fecha_str, bloques_ids, horas_texto)
-                return redirect(f"{reverse('solicitar')}?paso={PasoSolicitud.DATOS.value}")
+        form = SeleccionHorarioForm(request.POST, usuario=request.user)
+        if form.is_valid():
+            bloques = form.cleaned_data["bloques"]
+            wizard.guardar_horario(
+                form.cleaned_data["fecha"].isoformat(),
+                [b.id for b in bloques],
+                ", ".join(b.texto for b in bloques),
+            )
+            return redirect(f"{reverse('solicitar')}?paso={PasoSolicitud.DATOS.value}")
+        error_bloques = primer_error(form)
 
     datos_sesion = wizard.datos
     fecha_seleccionada_str = datos_sesion.get("fecha")

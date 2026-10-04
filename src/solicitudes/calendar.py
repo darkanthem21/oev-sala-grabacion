@@ -1,7 +1,8 @@
 import calendar
-from datetime import date, datetime
+from datetime import date
 from typing import Any, Dict, List, Optional, Set
 
+from .forms import FechaReservaForm
 from .services import obtener_bloques_dia_para_usuario, obtener_dias_con_disponibilidad
 from .wizard import obtener_limites_reserva
 
@@ -94,21 +95,15 @@ def construir_calendario_contexto(
     if fecha_str is None:
         fecha_str = request.POST.get("fecha") if request.method == "POST" else request.GET.get("fecha")
 
-    fecha_seleccionada = None
+    fecha_seleccionada = FechaReservaForm.fecha_de(fecha_str) if fecha_str else None
     bloques_seleccionados = []
-    if fecha_str:
-        try:
-            fecha_seleccionada = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-            if fecha_seleccionada < fecha_minima or fecha_seleccionada > fecha_maxima:
-                fecha_seleccionada = None
-                fecha_str = None
-            else:
-                bloques_seleccionados = obtener_bloques_dia_para_usuario(
-                    fecha=fecha_seleccionada,
-                    usuario=getattr(request, "user", None),
-                )
-        except ValueError:
-            fecha_str = None
+    if fecha_seleccionada:
+        bloques_seleccionados = obtener_bloques_dia_para_usuario(
+            fecha=fecha_seleccionada,
+            usuario=getattr(request, "user", None),
+        )
+    else:
+        fecha_str = None
 
     dias_disponibles = obtener_dias_con_disponibilidad(year=year, month=month)
     cal = AgendaCalendar(
