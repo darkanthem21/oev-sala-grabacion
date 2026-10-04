@@ -1,5 +1,6 @@
 import calendar
-from datetime import date, datetime
+from dataclasses import dataclass
+from datetime import date, datetime, time
 from typing import Any, Dict, List, Tuple
 
 from django.core.exceptions import ValidationError
@@ -38,6 +39,29 @@ def revisar_acompanantes(formset, esperados: int, correo_solicitante: str) -> Tu
     return llenos, errores
 
 
+@dataclass
+class BloqueVista:
+    """Un bloque de la jornada de un día, como lo ve un usuario al elegir horario.
+
+    Los aceptados no llegan hasta acá: obtener_bloques_dia_para_usuario los
+    deja fuera. Los que el usuario ya tiene pendientes se muestran, marcados y
+    sin poder elegirse otra vez.
+    """
+
+    id: int
+    inicio: time
+    termino: time
+    es_propio: bool = False
+
+    @property
+    def disponible_para_reserva(self) -> bool:
+        return not self.es_propio
+
+    @property
+    def texto(self) -> str:
+        return f"{self.inicio:%H:%M} – {self.termino:%H:%M}"
+
+
 def obtener_dias_con_disponibilidad(year: int, month: int) -> set:
     """Retorna un conjunto de números de día del mes que tienen al menos un bloque disponible."""
     _, ultimo_dia = calendar.monthrange(year, month)
@@ -72,7 +96,7 @@ def obtener_dias_con_disponibilidad(year: int, month: int) -> set:
     return dias_disponibles
 
 
-def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List[Any]:
+def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List["BloqueVista"]:
     """Retorna los bloques de la jornada configurada para una fecha visibles para el usuario:
     - Bloques disponibles (sin reservas aceptadas).
     - Bloques con solicitud activa propia del usuario (marcado con es_propio=True).
@@ -113,27 +137,12 @@ def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List[Any]:
         if any(s.estado_validacion == Solicitud.EstadoValidacion.ACEPTADA for s in sols):
             continue
 
-        item = type("BloqueVista", (), {
-            "id": b.id,
-            "inicio": b.inicio,
-            "termino": b.termino,
-            "hora_inicio": b.inicio,
-            "hora_final": b.termino,
-            "texto": f"{b.inicio.strftime('%H:%M')} – {b.termino.strftime('%H:%M')}",
-            "disponible": True,
-            "es_propio": False,
-            "disponible_para_reserva": True,
-        })()
-
         # Si el usuario actual tiene una solicitud PENDIENTE para este bloque:
-        if usuario_id and any(
+        es_propio = bool(usuario_id) and any(
             s.solicitante_id == usuario_id and s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE
             for s in sols
-        ):
-            item.es_propio = True
-            item.disponible_para_reserva = False
-
-        resultado.append(item)
+        )
+        resultado.append(BloqueVista(id=b.id, inicio=b.inicio, termino=b.termino, es_propio=es_propio))
 
     return resultado
 
