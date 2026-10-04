@@ -124,17 +124,17 @@ class SolicitarWizardTestCase(TestCase):
         self.assertEqual(solicitud.acompanantes.count(), 1)
         self.assertEqual(solicitud.acompanantes.first().nombre, "Juan Acompañante")
 
-    def test_barra_superior_en_solicitar(self):
+    def test_techo_en_solicitar(self):
         url = reverse("solicitar")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'class="barra-superior"')
+        self.assertContains(response, 'class="techo"')
         self.assertContains(response, 'Facultad-color-negro.png')
-        self.assertContains(response, self.usuario.email)
+        self.assertContains(response, self.usuario.get_full_name())
         self.assertContains(response, 'action="/logout/"')
         self.assertContains(response, 'Cerrar sesión')
 
-    def test_barra_superior_en_sin_area(self):
+    def test_techo_en_sin_area(self):
         usuario_sin_area = Usuario.objects.create_user(
             email="sinarea@uach.cl",
             first_name="Sin",
@@ -147,9 +147,9 @@ class SolicitarWizardTestCase(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "solicitudes/sin_area.html")
-        self.assertContains(response, 'class="barra-superior"')
+        self.assertContains(response, 'class="techo"')
         self.assertContains(response, 'Facultad-color-negro.png')
-        self.assertContains(response, "sinarea@uach.cl")
+        self.assertContains(response, "Sin Area")
         self.assertContains(response, 'action="/logout/"')
 
 
