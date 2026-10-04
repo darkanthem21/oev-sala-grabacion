@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %} Encabezado común de las pantallas del solicitante. {% endcomment %}
+{% block estilos %}
+  <link rel="stylesheet" href="{% static 'css/panel.css' %}">
+  <link rel="stylesheet" href="{% static 'solicitudes/solicitud.css' %}">
+{% endblock %}
+
+{% block contenido %}
+<header class="techo">
+  <div class="dentro">
+    <div class="fila">
+      <img class="sello" src="{% static 'img/Facultad-color-negro.png' %}"
+           alt="Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile">
+      <h1>Sala de grabación</h1>
+      <div class="quien">
+        <span class="correo">{{ user.get_full_name|default:user.email }}</span>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}<button class="btn" type="submit">Cerrar sesión</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</header>
+{% block hoja %}{% endblock %}
+{% endblock %}

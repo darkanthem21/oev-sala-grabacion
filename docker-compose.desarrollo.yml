@@ -3,7 +3,14 @@
 # `docker-compose up` en el servidor construia ahi en vez de bajar la imagen.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.desarrollo.yml up
+#
+# Las claves de aca son de juguete a proposito: viven en este archivo, no en el
+# base, para que no exista forma de que terminen corriendo en el servidor.
 services:
+  db:
+    environment:
+      POSTGRES_PASSWORD: oev
+
   web:
     build:
       context: .
@@ -14,6 +21,9 @@ services:
       - "8000:${PUERTO:-3006}"
     environment:
       DEBUG: "1"
+      POSTGRES_PASSWORD: oev
+      DJANGO_SUPERUSER_EMAIL: admin@uach.cl
+      DJANGO_SUPERUSER_PASSWORD: admin
     volumes:
       # El codigo montado permite editar y recargar sin reconstruir la imagen.
       - ./src:/app

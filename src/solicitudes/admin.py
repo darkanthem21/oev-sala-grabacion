@@ -36,8 +36,8 @@ class SolicitudAdmin(admin.ModelAdmin):
 
 @admin.register(SolicitudBloque)
 class SolicitudBloqueAdmin(admin.ModelAdmin):
-    list_display = ["solicitud", "bloque"]
-    list_filter = ["bloque__fecha"]
+    list_display = ["solicitud", "bloque", "fecha"]
+    list_filter = ["fecha", "bloque__dia"]
 
 
 @admin.register(Acompanante)

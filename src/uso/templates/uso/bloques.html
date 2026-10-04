@@ -1,0 +1,43 @@
+{% extends "uso/_base.html" %}
+
+{% block seccion %}
+  <div class="dia">
+    <h2>{% if fecha == hoy %}Hoy, {% endif %}{{ fecha|date:"l j \d\e F" }}</h2>
+    {% comment %} Sin JavaScript: el formulario hace GET y cambia la fecha en la dirección. {% endcomment %}
+    <form class="grupo" method="get">
+      <a class="btn ico" href="?fecha={{ anterior|date:'Y-m-d' }}" aria-label="Día anterior">‹</a>
+      <a class="btn {% if fecha == hoy %}activa{% endif %}" href="?">Hoy</a>
+      <a class="btn ico" href="?fecha={{ siguiente|date:'Y-m-d' }}" aria-label="Día siguiente">›</a>
+      <input class="btn" type="date" name="fecha" value="{{ fecha|date:'Y-m-d' }}"
+             aria-label="Ir a una fecha" onchange="this.form.submit()">
+    </form>
+  </div>
+
+  {% if bloques %}
+  <div class="marco">
+    <table class="bloques">
+      <thead>
+        <tr><th>Hora</th><th>Solicitante</th><th>Área</th><th>Personas</th><th>Estado</th><th>Check-out</th></tr>
+      </thead>
+      <tbody>
+        {% for b in bloques %}
+        <tr class="{% if b.estado == 'cancelada' %}cancelada{% endif %}">
+          <td class="num">{{ b.inicio|time:"H:i" }}–{{ b.termino|time:"H:i" }}</td>
+          <td>{{ b.solicitante }}</td>
+          <td>{{ b.area }}</td>
+          <td class="num">{{ b.personas }}</td>
+          <td><span class="marca {{ b.estado }}">{{ b.estado|capfirst }}</span></td>
+          <td>
+            {% if b.checkout == "completado" %}<a class="marca completado" href="{% url 'checkout_apoyo' b.ticket %}">Completado</a>
+            {% elif b.checkout == "pendiente" %}<a class="btn" href="{% url 'checkout_apoyo' b.ticket %}">Hacer check-out</a>
+            {% else %}<span class="nada">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="vacio">No hay bloques reservados para este día.</p>
+  {% endif %}
+{% endblock %}

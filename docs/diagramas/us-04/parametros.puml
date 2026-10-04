@@ -1,0 +1,66 @@
+@startuml parametros
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Guardar los parámetros del sistema (US-04)
+
+actor "Administrador" as A
+participant "<b>configuracion.views</b>\n<size:11>configuracion/views.py</size>\n<size:11>configuracion/forms.py</size>" as N <<presentación>>
+participant "<b>configuracion</b>\n<size:11>configuracion/services.py</size>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : POST /configuracion/reglas/ → reglas(request)
+N -> C ++ : Parametros.cargar()
+C -> D ++ : SELECT configuracion_parametros
+return fila
+return parametros
+N -> N : $comentario("el formulario con lo enviado, sobre los parámetros guardados")\nformulario = ParametrosForm(request.POST, instance=parametros)
+N -> N ++ : formulario.is_valid()
+N -> C ++ : self.instance.full_clean()
+note right of C
+  Los rangos están en los validadores
+  del modelo y se revisan acá, en el servidor.
+end note
+
+alt formulario con errores
+  C --> N -- : ValidationError
+  N --> N -- : False
+  N -> C ++ : $comentario("los últimos cambios de la bitácora, con quién los hizo")\nCambioParametro.objects.select_related("quien")[:ULTIMOS]
+  C -> D ++ : SELECT configuracion_cambioparametro ⋈ personas_usuario
+  return filas
+  return historial
+  N --> A : 200 · configuracion/reglas.html con los campos marcados, sin guardar
+else formulario válido
+  N --> N : True
+  N -> C ++ : guardar(formulario, request.user)
+  group @transaction.atomic
+    loop cada campo que cambió
+      C -> C : CambioParametro(campo, antes, despues, quien)
+    end
+    C -> N ++ : formulario.save()
+    N -> C ++ : self.instance.save()
+    C -> C : self.pk = 1
+    C -> D ++ : UPDATE configuracion_parametros
+    deactivate D
+    deactivate C
+    deactivate N
+    C -> C ++ : $comentario("guarda las filas de la bitácora de una vez")\nCambioParametro.objects.bulk_create(cambios)
+    C -> D ++ : INSERT configuracion_cambioparametro
+    deactivate D
+    return cambios
+  end
+  note right of C
+    Si falla el INSERT se deshace el UPDATE: no queda
+    un cambio sin su fila en la bitácora (AC4). guardar
+    recibe el formulario porque de él saca qué cambió
+    (changed_data) y el valor anterior (initial).
+  end note
+  return cambios
+  N --> A : 302 · /configuracion/reglas/?guardados=len(cambios)
+  note left of N
+    Así recargar no reenvía el
+    POST ni duplica la bitácora.
+  end note
+end
+deactivate N
+@enduml

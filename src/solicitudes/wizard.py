@@ -1,23 +1,37 @@
 import calendar
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
 from enum import IntEnum
 from typing import Any, Dict, List, Optional, Tuple
 
 from django.conf import settings
 
 
+def obtener_lunes_semana_subsiguiente(fecha_referencia: Optional[date] = None) -> date:
+    """
+    Retorna la primera fecha pedible (lunes mínimo permitido por desfase).
+    """
+    from agenda.models import primera_fecha_pedible
+    from django.utils import timezone
+    if fecha_referencia is not None:
+        return primera_fecha_pedible(datetime.combine(fecha_referencia, time(9, 0), tzinfo=timezone.get_current_timezone()))
+    return primera_fecha_pedible()
+
+
 def obtener_limites_reserva(fecha_referencia: Optional[date] = None) -> Tuple[date, date]:
     """
     Calcula los límites inferior y superior de fechas permitidas para reservas.
-    - Límite inferior: primer día del mes actual (no se permite reservar en meses pasados).
-    - Límite superior: último día del mes correspondiente a la anticipación máxima permitida
-      (configurable desde el panel administrador o settings.MESES_ANTICIPACION_MAXIMA,
-      por defecto 4 meses de distancia hacia el futuro a partir del mes en curso).
+    - Límite inferior: primera fecha pedible según agenda y parámetros.
+    - Límite superior: último día del mes correspondiente a la anticipación máxima permitida.
     """
-    if fecha_referencia is None:
-        fecha_referencia = date.today()
+    from agenda.models import primera_fecha_pedible
+    from django.utils import timezone
 
-    fecha_minima = date(fecha_referencia.year, fecha_referencia.month, 1)
+    if fecha_referencia is not None:
+        fecha_minima = primera_fecha_pedible(datetime.combine(fecha_referencia, time(9, 0), tzinfo=timezone.get_current_timezone()))
+        base = fecha_referencia
+    else:
+        fecha_minima = primera_fecha_pedible()
+        base = fecha_minima
 
     meses_anticipacion = getattr(settings, "MESES_ANTICIPACION_MAXIMA", 4)
     try:
@@ -25,7 +39,7 @@ def obtener_limites_reserva(fecha_referencia: Optional[date] = None) -> Tuple[da
     except (ValueError, TypeError):
         meses_anticipacion = 4
 
-    total_meses = (fecha_referencia.year * 12) + (fecha_referencia.month - 1) + max(meses_anticipacion, 0)
+    total_meses = (base.year * 12) + (base.month - 1) + max(meses_anticipacion, 0)
     max_year = total_meses // 12
     max_month = (total_meses % 12) + 1
     _, ultimo_dia = calendar.monthrange(max_year, max_month)
@@ -37,7 +51,9 @@ def obtener_limites_reserva(fecha_referencia: Optional[date] = None) -> Tuple[da
 class PasoSolicitud(IntEnum):
     """
     Pasos secuenciales del flujo multipaso (wizard) de solicitud de reserva.
-    Hereda de IntEnum para mantener compatibilidad natural con enteros en URLs (?paso=1) y plantillas.
+    1: Horario y disponibilidad (Calendario y bloques)
+    2: Datos de la actividad (Motivo y acompañantes)
+    3: Revisión y confirmación (Términos y condiciones + envío)
     """
     HORARIO = 1
     DATOS = 2
@@ -47,24 +63,29 @@ class PasoSolicitud(IntEnum):
     def resolver(cls, valor_raw: Any) -> "PasoSolicitud":
         """
         Resuelve de forma segura el paso actual desde parámetros GET o POST.
-        Si el valor es inválido, no numérico o fuera de rango, retorna HORARIO por defecto.
+        Soporta valores numéricos (1, 2, 3) y nombres de paso ('horario', 'datos', 'confirmacion').
+        Si el valor es inválido o no reconocido, retorna HORARIO por defecto.
         """
         try:
             return cls(int(valor_raw))
         except (ValueError, TypeError):
+            if isinstance(valor_raw, str):
+                nombre_clean = valor_raw.strip().upper()
+                if hasattr(cls, nombre_clean):
+                    return getattr(cls, nombre_clean)
             return cls.HORARIO
 
     def validar_acceso(self, sesion_reserva: Dict[str, Any]) -> "PasoSolicitud":
         """
         Verifica si la sesión contiene la información mínima requerida para acceder
-        al paso solicitado. Si falta información previa, redirige al paso correspondiente.
+        al paso solicitado dentro del asistente de reserva.
         """
         if self >= PasoSolicitud.DATOS:
             if not ("fecha" in sesion_reserva and "bloques_ids" in sesion_reserva):
                 return PasoSolicitud.HORARIO
 
         if self == PasoSolicitud.CONFIRMACION:
-            if not ("area_id" in sesion_reserva and "motivo" in sesion_reserva):
+            if "motivo" not in sesion_reserva:
                 return PasoSolicitud.DATOS
 
         return self
@@ -89,6 +110,33 @@ class SolicitudWizard:
         """Retorna los datos almacenados en sesión para la reserva en curso."""
         return self._session.get(self.CLAVE_SESION, {})
 
+    @property
+    def tiene_area(self) -> bool:
+        """Indica si la sesión ya cuenta con un área académica fijada."""
+        datos = self.datos
+        return bool(datos.get("area_id") and datos.get("area_nombre"))
+
+    def guardar_area(self, area_id: int, area_nombre: str, reset_horario: bool = False) -> None:
+        """Almacena el área académica seleccionada."""
+        reserva = self.datos
+        if reset_horario or reserva.get("area_id") != area_id:
+            reserva.pop("fecha", None)
+            reserva.pop("bloques_ids", None)
+            reserva.pop("bloques_texto", None)
+        reserva["area_id"] = area_id
+        reserva["area_nombre"] = area_nombre
+        self._session[self.CLAVE_SESION] = reserva
+        self._marcar_modificada()
+
+    def limpiar_horario(self) -> None:
+        """Reinicia la selección de fecha y bloques en la sesión."""
+        reserva = self.datos
+        reserva.pop("fecha", None)
+        reserva.pop("bloques_ids", None)
+        reserva.pop("bloques_texto", None)
+        self._session[self.CLAVE_SESION] = reserva
+        self._marcar_modificada()
+
     def guardar_horario(self, fecha_str: str, bloques_ids: List[int], bloques_texto: str) -> None:
         """Almacena la fecha y bloques seleccionados en el Paso 1."""
         reserva = self.datos
@@ -100,17 +148,19 @@ class SolicitudWizard:
 
     def guardar_datos_actividad(
         self,
-        area_id: int,
-        area_nombre: str,
         motivo: str,
         observaciones: str,
         personas: int,
         acompanantes: List[Dict[str, str]],
+        area_id: Optional[int] = None,
+        area_nombre: Optional[str] = None,
     ) -> None:
         """Almacena los datos de la actividad y acompañantes en el Paso 2."""
         reserva = self.datos
-        reserva["area_id"] = area_id
-        reserva["area_nombre"] = area_nombre
+        if area_id is not None:
+            reserva["area_id"] = area_id
+        if area_nombre is not None:
+            reserva["area_nombre"] = area_nombre
         reserva["motivo"] = motivo
         reserva["observaciones"] = observaciones
         reserva["personas"] = personas

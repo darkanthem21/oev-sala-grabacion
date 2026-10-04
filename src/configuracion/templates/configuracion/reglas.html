@@ -1,0 +1,77 @@
+{% extends "panel.html" %}
+{% load static %}
+{% comment %}
+  US-04. Cada fila lleva etiqueta y descripción a la izquierda y el control a la
+  derecha, para que los valores queden en una columna y se comparen de un vistazo.
+{% endcomment %}
+{% block estilos_seccion %}<link rel="stylesheet" href="{% static 'configuracion/reglas.css' %}">{% endblock %}
+
+{% block seccion %}
+{% if guardados %}
+  <p class="aviso ok" role="status">{{ guardados }} cambio{{ guardados|pluralize }} guardado{{ guardados|pluralize }}.</p>
+{% elif guardados == 0 %}
+  <p class="aviso" role="status">No había nada que cambiar.</p>
+{% endif %}
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% if form.errors %}
+    <p class="aviso mal" role="alert">Corrige lo marcado en rojo. No se guardó nada.</p>
+  {% endif %}
+
+  <div class="reglas">
+    {% for titulo, filas in form.secciones %}
+      <section class="marco">
+        <h2>{{ titulo }}</h2>
+        {% for fila in filas %}
+          <div class="regla{% if fila.errores %} con-error{% endif %}">
+            <label class="que" for="{{ fila.campos.0.id_for_label }}">{{ fila.etiqueta }}</label>
+            <span class="control">
+              {% for campo in fila.campos %}{{ campo }}{% endfor %}
+              {% if fila.unidad %}<span class="unidad">{{ fila.unidad }}</span>{% endif %}
+            </span>
+            <p class="detalle">{{ fila.detalle }}</p>
+            {% for error in fila.errores %}<p class="error">{{ error }}</p>{% endfor %}
+          </div>
+        {% endfor %}
+      </section>
+    {% endfor %}
+
+    <section class="marco ancha">
+      <h2>Términos y condiciones</h2>
+      <div class="regla">
+        <label class="que" for="{{ form.terminos.id_for_label }}">Texto que acepta el solicitante</label>
+        <p class="detalle">Se muestra en el formulario de solicitud y hay que aceptarlo para enviarlo.</p>
+      </div>
+      {{ form.terminos }}
+      {% for error in form.terminos.errors %}<p class="error">{{ error }}</p>{% endfor %}
+    </section>
+  </div>
+
+  <div class="barra">
+    <p class="pista">Los cambios rigen para las solicitudes nuevas. Las ya enviadas no cambian.</p>
+    <button class="btn activa" type="submit">Guardar cambios</button>
+  </div>
+</form>
+
+<details class="historial"{% if guardados %} open{% endif %}>
+  <summary>Últimos cambios{% if historial %} ({{ historial|length }}){% endif %}</summary>
+  {% if historial %}
+    <table>
+      <thead><tr><th>Cuándo</th><th>Parámetro</th><th>Cambio</th><th>Quién</th></tr></thead>
+      <tbody>
+        {% for cambio in historial %}
+          <tr>
+            <td class="cifra">{{ cambio.cuando|date:"d/m/Y H:i" }}</td>
+            <td>{{ cambio.etiqueta|capfirst }}</td>
+            <td class="cambio">{{ cambio.antes|truncatechars:40 }} → {{ cambio.despues|truncatechars:40 }}</td>
+            <td>{{ cambio.quien.email|default:"—" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="vacio">Nadie ha cambiado un parámetro todavía: rigen los valores por defecto.</p>
+  {% endif %}
+</details>
+{% endblock %}

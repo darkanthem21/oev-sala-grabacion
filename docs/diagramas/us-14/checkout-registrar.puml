@@ -1,0 +1,51 @@
+@startuml checkout-registrar
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Registrar el check-out (US-14)
+
+actor "Personal de apoyo" as A
+participant "<b>uso.views</b>\n<size:11>uso/views.py</size>" as N <<presentación>>
+participant "<b>uso</b>\n<size:11>uso/services.py</size>" as V <<dominio>>
+participant "<b>bloques_apoyo.json</b>\n<size:11>uso/datos_prueba/</size>" as J <<persistencia>>
+
+A -> N ++ : POST /apoyo/checkout/<codigo>/ → checkout(request, codigo)
+N -> N ++ : _enviados(request)
+return enviados
+N -> V ++ : buscar(codigo, enviados)
+V -> V : ahora = timezone.localtime()
+V -> V ++ : _tickets()
+V -> J ++ : json.load(archivo)
+return tickets
+return tickets
+opt algún ticket visible tiene ese código
+  V -> V ++ : _armar(t, enviados, ahora)
+  return bloque
+end
+return bloque
+note right of N : Vuelve a buscar el ticket:\nno se fía de lo que mostró la pantalla.
+
+break no existe, no ha terminado o se canceló
+  N --> A : 404
+end
+N -> N : $comentario("la dirección de la lista del día de ese bloque")\nvolver = f"{reverse('panel_apoyo')}?fecha={bloque['fecha']:%Y-%m-%d}"
+alt check-out pendiente
+  N -> N : $comentario("anota quién hizo el check-out y cuándo")\nenviados[codigo] = {"por": request.user.email, "en": timezone.now().isoformat()}
+  N -> N : request.session[SESION] = enviados
+  note right of N
+    Django guarda la sesión al responder
+    (SessionMiddleware: UPDATE django_session).
+    Es el check-out simulado: pasa a la base
+    cuando US-15 tenga su modelo.
+  end note
+  N --> A : 302 · volver
+else check-out completado
+  N -> N : registro = enviados.get(codigo)
+  N --> A : 200 · uso/checkout.html con quién y cuándo
+  note right of N
+    Reenviar el formulario no lo
+    registra dos veces (US-15 AC4).
+  end note
+end
+deactivate N
+@enduml

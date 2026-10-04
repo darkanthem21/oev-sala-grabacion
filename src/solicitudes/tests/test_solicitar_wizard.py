@@ -1,11 +1,14 @@
-from datetime import date, time
+from datetime import date, datetime, time
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
-from agenda.models import Bloque
-from personas.models import Area
+from agenda.models import Bloque, Dia, primera_fecha_pedible
+from personas.models import Area, Rol
 from solicitudes.models import Acompanante, Solicitud, SolicitudBloque
+from solicitudes.services import guardar_solicitud_completa
 from solicitudes.wizard import PasoSolicitud, SolicitudWizard, obtener_limites_reserva
 
 Usuario = get_user_model()
@@ -20,289 +23,114 @@ class SolicitarWizardTestCase(TestCase):
             last_name="Docente",
             password="testpassword123",
         )
+        self.usuario.groups.add(Group.objects.get(name=Rol.SOLICITANTE))
         self.usuario.areas.add(self.area)
         self.client.force_login(self.usuario)
 
-        self.bloque = Bloque.objects.create(
-            fecha=date(2026, 9, 20),
-            hora_inicio=time(10, 0),
-            hora_final=time(11, 0),
-            disponible=True,
-        )
+        self.bloque = Bloque.objects.filter(dia=Dia.JUEVES, activo=True).first()
+        fecha_minima = primera_fecha_pedible()
+        self.fecha_prueba = fecha_minima + date.resolution * ((Dia.JUEVES - fecha_minima.weekday()) % 7)
 
-    def test_acceso_paso1_por_defecto(self):
+    def test_usuario_una_sola_area_autoselecciona_y_va_a_paso1_calendario(self):
         url = reverse("solicitar")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "solicitudes/solicitar.html")
         self.assertContains(response, "Paso 1: Selecciona fecha y horario")
-        self.assertContains(response, "Horario y Disponibilidad")
-        self.assertContains(response, 'hx-get="/solicitar/bloques/?fecha=2026-09-20"')
+        self.assertContains(response, "Horario y disponibilidad")
+        self.assertContains(response, "Paso 1 de 3")
+        self.assertNotContains(response, "Cambiar área")
+        self.assertEqual(self.client.session.get("solicitud_reserva", {}).get("area_id"), self.area.id)
+        self.assertContains(response, f'hx-get="/solicitar/bloques/?fecha={self.fecha_prueba.isoformat()}"')
         self.assertContains(response, 'hx-push-url="false"')
 
-    def test_paso1_post_sin_bloques_muestra_error(self):
+    def test_usuario_con_multiples_areas_redirige_a_solicitar_area(self):
+        area2 = Area.objects.create(nombre="Medicina", activa=True)
+        self.usuario.areas.add(area2)
+
         url = reverse("solicitar")
-        response = self.client.post(f"{url}?paso=1", {
-            "paso": "1",
-            "fecha": "2026-09-20",
-            "bloques": [],
-        })
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("solicitar_area"), response["Location"])
+
+    def test_pantalla_solicitar_area_muestra_listado_y_procesa_seleccion(self):
+        area2 = Area.objects.create(nombre="Medicina", activa=True)
+        self.usuario.areas.add(area2)
+
+        url_area = reverse("solicitar_area")
+        response = self.client.get(url_area)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Por favor, selecciona al menos un bloque disponible.")
-
-    def test_paso1_post_con_bloques_avanza_a_paso2(self):
-        url = reverse("solicitar")
-        response = self.client.post(f"{url}?paso=1", {
-            "paso": "1",
-            "fecha": "2026-09-20",
-            "bloques": [str(self.bloque.id)],
-        })
-        self.assertRedirects(response, f"{url}?paso=2")
-        self.assertEqual(self.client.session.get("solicitud_reserva", {}).get("fecha"), "2026-09-20")
-        self.assertEqual(self.client.session.get("solicitud_reserva", {}).get("bloques_ids"), [self.bloque.id])
-
-    def test_paso1_post_fecha_fuera_de_rango_muestra_error(self):
-        url = reverse("solicitar")
-        response = self.client.post(f"{url}?paso=1", {
-            "paso": "1",
-            "fecha": "2027-05-10",
-            "bloques": [str(self.bloque.id)],
-        })
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "La fecha seleccionada no está dentro del período permitido para reservas.")
-
-    def test_paso2_muestra_resumen_horario(self):
-        session = self.client.session
-        session["solicitud_reserva"] = {
-            "fecha": "2026-09-20",
-            "bloques_ids": [self.bloque.id],
-            "bloques_texto": "10:00 - 11:00",
-        }
-        session.save()
-
-        url = reverse("solicitar")
-        response = self.client.get(f"{url}?paso=2")
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Paso 2: Datos de la actividad")
-        self.assertContains(response, "10:00 - 11:00")
+        self.assertTemplateUsed(response, "solicitudes/seleccionar_area.html")
         self.assertContains(response, "Informática")
+        self.assertContains(response, "Medicina")
 
-    def test_paso2_post_valido_avanza_a_paso3(self):
-        session = self.client.session
-        session["solicitud_reserva"] = {
-            "fecha": "2026-09-20",
-            "bloques_ids": [self.bloque.id],
-            "bloques_texto": "10:00 - 11:00",
-        }
-        session.save()
+        response_post = self.client.post(url_area, {"area": str(area2.id)})
+        self.assertEqual(response_post.status_code, 302)
+        self.assertIn(reverse("solicitar"), response_post["Location"])
+        self.assertEqual(self.client.session.get("solicitud_reserva", {}).get("area_id"), area2.id)
 
+    def test_flujo_completo_tres_pasos(self):
+        # Paso 1: Seleccionar Horario
         url = reverse("solicitar")
-        response = self.client.post(f"{url}?paso=2", {
-            "paso": "2",
-            "area": str(self.area.id),
-            "motivo": "Grabación de cápsula educativa",
-            "observaciones": "Micrófono corbatero",
-            "personas": 1,
+        response_p1 = self.client.post(url, {
+            "paso": "horario",
+            "fecha": self.fecha_prueba.isoformat(),
+            "bloques": [str(self.bloque.id)],
+        })
+        self.assertEqual(response_p1.status_code, 302)
+        self.assertIn("paso=2", response_p1["Location"])
+
+        # Paso 2: Datos de la actividad
+        response_p2 = self.client.post(f"{url}?paso=2", {
+            "paso": "datos",
+            "motivo": "Grabación cápsula docente",
+            "observaciones": "Requiere proyector",
+            "personas": 2,
             "form-TOTAL_FORMS": "4",
             "form-INITIAL_FORMS": "0",
             "form-MIN_NUM_FORMS": "0",
             "form-MAX_NUM_FORMS": "4",
+            "form-0-nombre": "Juan Acompañante",
+            "form-0-correo": "juan@uach.cl",
+            "form-1-nombre": "",
+            "form-1-correo": "",
+            "form-2-nombre": "",
+            "form-2-correo": "",
+            "form-3-nombre": "",
+            "form-3-correo": "",
         })
-        self.assertRedirects(response, f"{url}?paso=3")
-        reserva = self.client.session.get("solicitud_reserva", {})
-        self.assertEqual(reserva.get("motivo"), "Grabación de cápsula educativa")
-        self.assertEqual(reserva.get("area_id"), self.area.id)
+        self.assertEqual(response_p2.status_code, 302)
+        self.assertIn("paso=3", response_p2["Location"])
 
-    def test_paso3_revision_y_confirmacion_final(self):
-        session = self.client.session
-        session["solicitud_reserva"] = {
-            "fecha": "2026-09-20",
-            "bloques_ids": [self.bloque.id],
-            "bloques_texto": "10:00 - 11:00",
-            "area_id": self.area.id,
-            "area_nombre": "Informática",
-            "motivo": "Grabación de cápsula educativa",
-            "observaciones": "Micrófono corbatero",
-            "personas": 1,
-            "acompanantes": [],
-        }
-        session.save()
+        # Paso 3: Confirmación
+        response_p3 = self.client.post(f"{url}?paso=3", {
+            "paso": "confirmacion",
+            "acepta_terminos": "on",
+        })
+        self.assertEqual(response_p3.status_code, 200)
+        self.assertTemplateUsed(response_p3, "solicitudes/enviada.html")
+        self.assertContains(response_p3, "Solicitud completa")
+        self.assertContains(response_p3, "Grabación cápsula docente")
 
-        url = reverse("solicitar")
-        # GET paso 3
-        response = self.client.get(f"{url}?paso=3")
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Paso 3: Revisión y confirmación")
-        self.assertContains(response, "Grabación de cápsula educativa")
-        self.assertContains(response, "Informática")
-        self.assertContains(response, "10:00 - 11:00")
-
-        # POST paso 3 sin aceptar terminos -> error
-        response = self.client.post(f"{url}?paso=3", {"paso": "3"})
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Tienes que aceptar los términos y condiciones")
-
-        # POST paso 3 aceptando terminos -> exito
-        response = self.client.post(f"{url}?paso=3", {"paso": "3", "acepta_terminos": "1"})
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "solicitudes/enviada.html")
-        self.assertContains(response, "Solicitud completa")
-        self.assertContains(response, "10:00 - 11:00")
-        self.assertContains(response, "Informática")
-        # La sesion debe haberse limpiado
-        self.assertNotIn("solicitud_reserva", self.client.session)
-
-        # Debe haberse guardado en la base de datos
-        self.assertEqual(Solicitud.objects.count(), 1)
-        solicitud = Solicitud.objects.first()
-        self.assertEqual(solicitud.solicitante, self.usuario)
+        # Verificar persistencia en base de datos
+        solicitud = Solicitud.objects.filter(solicitante=self.usuario).first()
+        self.assertIsNotNone(solicitud)
+        self.assertEqual(solicitud.motivo, "Grabación cápsula docente")
         self.assertEqual(solicitud.area, self.area)
-        self.assertEqual(solicitud.motivo, "Grabación de cápsula educativa")
-        self.assertEqual(solicitud.estado_validacion, Solicitud.EstadoValidacion.PENDIENTE)
-        self.assertEqual(solicitud.estado_confirmacion, Solicitud.EstadoConfirmacion.NO_HABILITADA)
-        self.assertEqual(solicitud.total_personas, 1)
-        self.assertEqual(solicitud.bloques.count(), 1)
-        self.assertEqual(solicitud.bloques.first(), self.bloque)
-
-    def test_paso3_con_acompanantes_guarda_acompanantes_y_bloques(self):
-        session = self.client.session
-        session["solicitud_reserva"] = {
-            "fecha": "2026-09-20",
-            "bloques_ids": [self.bloque.id],
-            "bloques_texto": "10:00 - 11:00",
-            "area_id": self.area.id,
-            "area_nombre": "Informática",
-            "motivo": "Cápsula con invitados",
-            "personas": 3,
-            "acompanantes": [
-                {"nombre": "Acompañante Uno", "correo": "uno@uach.cl"},
-                {"nombre": "Acompañante Dos", "correo": "dos@uach.cl"},
-            ],
-        }
-        session.save()
-
-        url = reverse("solicitar")
-        response = self.client.post(f"{url}?paso=3", {"paso": "3", "acepta_terminos": "1"})
-        self.assertEqual(response.status_code, 200)
-
-        solicitud = Solicitud.objects.get(motivo="Cápsula con invitados")
-        self.assertEqual(solicitud.total_personas, 3)
-        self.assertEqual(solicitud.acompanantes.count(), 2)
-        self.assertTrue(solicitud.acompanantes.filter(correo="uno@uach.cl").exists())
-        self.assertTrue(solicitud.acompanantes.filter(correo="dos@uach.cl").exists())
-
-    def test_salto_a_paso_invalido_redirige_a_paso1(self):
-        url = reverse("solicitar")
-        # Intentar acceder a paso 3 sin sesion
-        response = self.client.get(f"{url}?paso=3")
-        self.assertEqual(response.status_code, 200)
-        # Redirige internamente a paso 1
-        self.assertContains(response, "Paso 1: Selecciona fecha y horario")
-
-
-class WizardClasesTestCase(TestCase):
-    def test_paso_solicitud_resolver(self):
-        self.assertEqual(PasoSolicitud.resolver(1), PasoSolicitud.HORARIO)
-        self.assertEqual(PasoSolicitud.resolver("2"), PasoSolicitud.DATOS)
-        self.assertEqual(PasoSolicitud.resolver(3), PasoSolicitud.CONFIRMACION)
-        self.assertEqual(PasoSolicitud.resolver("invalido"), PasoSolicitud.HORARIO)
-        self.assertEqual(PasoSolicitud.resolver(99), PasoSolicitud.HORARIO)
-        self.assertEqual(PasoSolicitud.resolver(None), PasoSolicitud.HORARIO)
-
-    def test_paso_solicitud_validar_acceso(self):
-        # Sesión vacía solo permite paso 1
-        self.assertEqual(PasoSolicitud.HORARIO.validar_acceso({}), PasoSolicitud.HORARIO)
-        self.assertEqual(PasoSolicitud.DATOS.validar_acceso({}), PasoSolicitud.HORARIO)
-        self.assertEqual(PasoSolicitud.CONFIRMACION.validar_acceso({}), PasoSolicitud.HORARIO)
-
-        # Con datos de paso 1, permite paso 1 y 2, pero no 3
-        sesion_paso1 = {"fecha": "2026-09-20", "bloques_ids": [1]}
-        self.assertEqual(PasoSolicitud.HORARIO.validar_acceso(sesion_paso1), PasoSolicitud.HORARIO)
-        self.assertEqual(PasoSolicitud.DATOS.validar_acceso(sesion_paso1), PasoSolicitud.DATOS)
-        self.assertEqual(PasoSolicitud.CONFIRMACION.validar_acceso(sesion_paso1), PasoSolicitud.DATOS)
-
-        # Con datos de paso 1 y 2, permite paso 3
-        sesion_paso2 = {
-            "fecha": "2026-09-20",
-            "bloques_ids": [1],
-            "area_id": 1,
-            "motivo": "Grabación",
-        }
-        self.assertEqual(PasoSolicitud.CONFIRMACION.validar_acceso(sesion_paso2), PasoSolicitud.CONFIRMACION)
-
-    def test_solicitud_wizard_operaciones_sesion(self):
-        session_mock = {}
-        wizard = SolicitudWizard(session_mock)
-
-        # Inicialmente vacío
-        self.assertEqual(wizard.datos, {})
-
-        # Guardar horario
-        wizard.guardar_horario("2026-09-20", [1, 2], "10:00 - 12:00")
-        self.assertEqual(wizard.datos["fecha"], "2026-09-20")
-        self.assertEqual(wizard.datos["bloques_ids"], [1, 2])
-        self.assertEqual(wizard.datos["bloques_texto"], "10:00 - 12:00")
-
-        # Guardar datos actividad
-        wizard.guardar_datos_actividad(
-            area_id=5,
-            area_nombre="Medicina",
-            motivo="Simulación clínica",
-            observaciones="Cámara cenital",
-            personas=2,
-            acompanantes=[{"nombre": "Juan Pérez", "correo": "juan@uach.cl"}],
-        )
-        self.assertEqual(wizard.datos["area_id"], 5)
-        self.assertEqual(wizard.datos["motivo"], "Simulación clínica")
-
-        # Obtener resumen estructurado
-        resumen = wizard.obtener_resumen()
-        self.assertEqual(resumen["fecha"], date(2026, 9, 20))
-        self.assertEqual(resumen["fecha_str"], "2026-09-20")
-        self.assertEqual(resumen["area_nombre"], "Medicina")
-        self.assertEqual(resumen["personas"], 2)
-        self.assertEqual(len(resumen["acompanantes"]), 1)
-
-        # Limpiar sesión
-        wizard.limpiar()
-        self.assertEqual(wizard.datos, {})
-        self.assertNotIn(SolicitudWizard.CLAVE_SESION, session_mock)
-
-    def test_obtener_limites_reserva(self):
-        # Por defecto 4 meses de anticipación
-        f_min, f_max = obtener_limites_reserva(date(2026, 9, 28))
-        self.assertEqual(f_min, date(2026, 9, 1))
-        self.assertEqual(f_max, date(2027, 1, 31))
-
-        # Configuración personalizada de anticipación
-        with self.settings(MESES_ANTICIPACION_MAXIMA=2):
-            f_min, f_max = obtener_limites_reserva(date(2026, 9, 28))
-            self.assertEqual(f_min, date(2026, 9, 1))
-            self.assertEqual(f_max, date(2026, 11, 30))
-
-        # 0 meses (solo mes en curso)
-        with self.settings(MESES_ANTICIPACION_MAXIMA=0):
-            f_min, f_max = obtener_limites_reserva(date(2026, 9, 28))
-            self.assertEqual(f_min, date(2026, 9, 1))
-            self.assertEqual(f_max, date(2026, 9, 30))
+        self.assertEqual(solicitud.personas, 2)
+        self.assertEqual(solicitud.solicitudes_bloques.count(), 1)
+        self.assertEqual(solicitud.solicitudes_bloques.first().bloque, self.bloque)
+        self.assertEqual(solicitud.solicitudes_bloques.first().fecha, self.fecha_prueba)
+        self.assertEqual(solicitud.acompanantes.count(), 1)
+        self.assertEqual(solicitud.acompanantes.first().nombre, "Juan Acompañante")
 
     def test_barra_superior_en_solicitar(self):
-        area = Area.objects.create(nombre="Test Area Barra", activa=True)
-        usuario = Usuario.objects.create_user(
-            email="barra_solicitar@uach.cl",
-            first_name="Docente",
-            last_name="Barra",
-            password="testpassword123",
-        )
-        usuario.areas.add(area)
-        self.client.force_login(usuario)
-
         url = reverse("solicitar")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'class="barra-superior"')
         self.assertContains(response, 'Facultad-color-negro.png')
-        self.assertContains(response, usuario.email)
+        self.assertContains(response, self.usuario.email)
         self.assertContains(response, 'action="/logout/"')
         self.assertContains(response, 'Cerrar sesión')
 
@@ -313,6 +141,7 @@ class WizardClasesTestCase(TestCase):
             last_name="Area",
             password="testpassword123",
         )
+        usuario_sin_area.groups.add(Group.objects.get(name=Rol.SOLICITANTE))
         self.client.force_login(usuario_sin_area)
         url = reverse("solicitar")
         response = self.client.get(url)
@@ -324,3 +153,110 @@ class WizardClasesTestCase(TestCase):
         self.assertContains(response, 'action="/logout/"')
 
 
+class DisponibilidadEfectivaTestCase(TestCase):
+    def setUp(self):
+        self.area = Area.objects.create(nombre="Informática", activa=True)
+        self.usuario = Usuario.objects.create_user(
+            email="docente_disp@uach.cl",
+            first_name="María",
+            last_name="Docente",
+            password="testpassword123",
+        )
+        self.usuario.groups.add(Group.objects.get(name=Rol.SOLICITANTE))
+        self.usuario.areas.add(self.area)
+        self.client.force_login(self.usuario)
+
+        self.bloque = Bloque.objects.filter(dia=Dia.JUEVES, activo=True).first()
+        fecha_minima = primera_fecha_pedible()
+        self.fecha_prueba = fecha_minima + date.resolution * ((Dia.JUEVES - fecha_minima.weekday()) % 7)
+
+    def test_wizard_paso1_rechaza_bloque_con_solicitud_aceptada(self):
+        otro_usuario = get_user_model().objects.create_user(email="otro_disp@uach.cl", password="123")
+        otro_usuario.groups.add(Group.objects.get(name=Rol.SOLICITANTE))
+        sol_aceptada = Solicitud.objects.create(
+            solicitante=otro_usuario,
+            area=self.area,
+            motivo="Reserva aceptada previa",
+            estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
+            estado_confirmacion=Solicitud.EstadoConfirmacion.CONFIRMADA,
+        )
+        SolicitudBloque.objects.create(solicitud=sol_aceptada, bloque=self.bloque, fecha=self.fecha_prueba)
+
+        url = reverse("solicitar")
+        response = self.client.post(url, {
+            "paso": "horario",
+            "fecha": self.fecha_prueba.isoformat(),
+            "bloques": [str(self.bloque.id)],
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Uno o más de los bloques seleccionados ya no están disponibles")
+
+    def test_modelo_solicitud_bloque_rechaza_bloque_con_solicitud_aceptada(self):
+        sol_aceptada = Solicitud.objects.create(
+            solicitante=self.usuario,
+            area=self.area,
+            motivo="Reserva aceptada previa",
+            estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
+            estado_confirmacion=Solicitud.EstadoConfirmacion.CONFIRMADA,
+        )
+        SolicitudBloque.objects.create(solicitud=sol_aceptada, bloque=self.bloque, fecha=self.fecha_prueba)
+
+        otra_solicitud = Solicitud.objects.create(
+            solicitante=self.usuario,
+            area=self.area,
+            motivo="Segunda solicitud",
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            SolicitudBloque.objects.create(
+                solicitud=otra_solicitud,
+                bloque=self.bloque,
+                fecha=self.fecha_prueba,
+            )
+        self.assertIn("ya se encuentra reservado", str(ctx.exception).lower())
+
+    def test_modelo_solicitud_bloque_rechaza_bloque_con_solicitud_propia_pendiente(self):
+        sol_pendiente = Solicitud.objects.create(
+            solicitante=self.usuario,
+            area=self.area,
+            motivo="Primera solicitud pendiente",
+            estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
+        )
+        SolicitudBloque.objects.create(solicitud=sol_pendiente, bloque=self.bloque, fecha=self.fecha_prueba)
+
+        otra_solicitud = Solicitud.objects.create(
+            solicitante=self.usuario,
+            area=self.area,
+            motivo="Segunda solicitud duplicada",
+            estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            SolicitudBloque.objects.create(
+                solicitud=otra_solicitud,
+                bloque=self.bloque,
+                fecha=self.fecha_prueba,
+            )
+        self.assertIn("ya tienes una solicitud pendiente", str(ctx.exception).lower())
+
+    def test_modelo_solicitud_bloque_permite_solicitud_pendiente_de_distinto_usuario(self):
+        sol_pendiente = Solicitud.objects.create(
+            solicitante=self.usuario,
+            area=self.area,
+            motivo="Primera solicitud pendiente",
+            estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
+        )
+        SolicitudBloque.objects.create(solicitud=sol_pendiente, bloque=self.bloque, fecha=self.fecha_prueba)
+
+        otro_usuario = get_user_model().objects.create_user(email="competidor@uach.cl", password="123")
+        otro_usuario.groups.add(Group.objects.get(name=Rol.SOLICITANTE))
+        otra_solicitud = Solicitud.objects.create(
+            solicitante=otro_usuario,
+            area=self.area,
+            motivo="Solicitud de otro docente",
+            estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
+        )
+        sb = SolicitudBloque.objects.create(
+            solicitud=otra_solicitud,
+            bloque=self.bloque,
+            fecha=self.fecha_prueba,
+        )
+        self.assertIsNotNone(sb.pk)

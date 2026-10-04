@@ -1,0 +1,29 @@
+' Un color por capa: presentación, dominio y persistencia.
+skinparam dpi 200
+hide stereotype
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+<style>
+root { FontName "Noto Sans"; FontColor #1F2933; LineColor #9AA5B1; BackGroundColor #FFFFFF }
+title { FontSize 18; FontStyle bold; FontColor #123F6D; Margin 6 0 16 0; LineColor transparent; BackGroundColor transparent }
+sequenceDiagram {
+  FontSize 12
+  participant, actor, database { FontSize 13; RoundCorner 4; LineThickness 1; Padding 8 }
+  actor { BackGroundColor #FFFFFF; LineColor #52606D }
+  lifeLine { LineColor #8FA3B8; LineThickness 1; LineStyle 4-4; BackGroundColor #D3E0EE }
+  arrow { FontName "JetBrainsMono NF"; FontSize 11; LineColor #123F6D; LineThickness 1 }
+  group { LineColor #9AA5B1; LineThickness 1; BackGroundColor transparent }
+  groupHeader { FontName "JetBrainsMono NF"; FontSize 11; FontColor #123F6D; BackGroundColor #EEF2F6; LineColor #9AA5B1 }
+  separator { LineColor #9AA5B1 }
+  note { FontSize 11; BackGroundColor #FDF8E7; LineColor #CDBB7A }
+  .presentación { BackGroundColor #E6EEF7; LineColor #123F6D }
+  .dominio { BackGroundColor #EFEBF5; LineColor #4C3F78 }
+  .persistencia { BackGroundColor #E8F2EB; LineColor #2F5E3C }
+}
+</style>
+
+' Lo que hace una línea de código larga, en palabras, arriba de ella.
+!function $comentario($texto)
+!return "<color:#616E7C># " + $texto + "</color>"
+!endfunction

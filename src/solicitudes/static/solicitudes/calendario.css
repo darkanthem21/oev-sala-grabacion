@@ -113,6 +113,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.35rem;
     padding: 0.45rem 0.85rem;
     background-color: var(--superficie);
     color: var(--tinta);
@@ -124,6 +125,10 @@
     font-weight: 700;
     line-height: 1.2;
     transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.icono-nav {
+    flex-shrink: 0;
 }
 
 .btn-nav:hover:not(.disabled) {
@@ -250,6 +255,11 @@
 .calendario td.sun:not(.available) {
     background-color: var(--fondo);
     opacity: 0.45;
+}
+
+.calendario td.bloqueado-anticipacion {
+    cursor: not-allowed;
+    opacity: 0.4;
 }
 
 .calendario .available {
@@ -569,6 +579,36 @@
     display: inline-block !important;
 }
 
+.badge-pendiente {
+    background-color: var(--superficie);
+    color: var(--tinta);
+    border: 1px solid var(--precaucion);
+    font-weight: 600;
+}
+
+.tarjeta-bloque.bloque-propio {
+    cursor: not-allowed;
+    background-color: var(--superficie);
+    border: 1px solid var(--borde);
+    opacity: 0.92;
+}
+
+.tarjeta-bloque.bloque-propio:hover {
+    border-color: var(--borde);
+    transform: none;
+    box-shadow: none;
+}
+
+.tarjeta-bloque.bloque-propio.pendiente {
+    border-left: 3px solid var(--precaucion);
+}
+
+.tarjeta-bloque.bloque-propio .checkbox-visual {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background-color: var(--fondo);
+}
+
 .tarjeta-bloque.no-disponible {
     border: 1px dashed var(--borde);
     border-left: 3px solid var(--borde);
@@ -587,6 +627,10 @@
 }
 
 .btn-accion {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     width: 100%;
     box-sizing: border-box;
     padding: 0.75rem 1.25rem;

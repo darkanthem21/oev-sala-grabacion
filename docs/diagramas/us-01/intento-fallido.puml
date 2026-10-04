@@ -1,0 +1,72 @@
+@startuml intento-fallido
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Clave incorrecta y bloqueo (US-01)
+
+actor "Solicitante" as P
+participant "<b>personas.views</b>\n<size:11>personas/views.py</size>" as N <<presentación>>
+participant "<b>django.contrib.auth</b>\n<size:11>framework</size>" as A <<presentación>>
+participant "<b>personas</b>\n<size:11>personas/models.py</size>" as V <<dominio>>
+participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+P -> N ++ : POST /solicitante/entrar/\n→ entrar(request, rol=Rol.SOLICITANTE, destino="solicitar")
+N -> N : $comentario("el formulario de ingreso de Django, con lo enviado")\nform = AuthenticationForm(request, data=request.POST)
+N -> V ++ : $comentario("la cuenta con ese correo, sin distinguir mayúsculas")\nUsuario.objects.filter(email__iexact=correo).first()
+V -> D ++ : SELECT personas_usuario
+return fila
+return usuario
+opt el correo existe
+  N -> V ++ : usuario.esta_bloqueado
+  return False
+end
+N -> A ++ : form.is_valid()
+A -> V ++ : $comentario("la cuenta con ese correo exacto")\nUsuario._default_manager.get_by_natural_key(correo)
+V -> D ++ : SELECT personas_usuario
+return fila
+alt el correo no existe
+  V --> A -- : Usuario.DoesNotExist
+  A -> V ++ : Usuario().set_password(clave)
+  deactivate V
+  note right of A
+    Sin cuenta no hay clave que revisar: Django
+    calcula un hash igual, para que la demora
+    no delate qué correos tienen cuenta.
+  end note
+else el correo existe
+  V --> A : user
+  A -> V ++ : user.check_password(clave)
+  return False
+end
+return False
+
+opt el correo existe
+  N -> N ++ : _registrar_fallo(usuario)
+  N -> C ++ : Parametros.cargar()
+  C -> D ++ : SELECT configuracion_parametros
+  return fila
+  return parametros
+  note right of N
+    Los umbrales se leen en cada fallo:
+    cambiarlos en el panel rige sin redesplegar.
+  end note
+  N -> N : usuario.intentos_fallidos += 1
+  opt llegó al máximo de intentos
+    N -> N : $comentario("bloquea la cuenta y reinicia el contador")\nusuario.bloqueado_hasta = timezone.now()\n+ timedelta(minutes=parametros.minutos_bloqueo)\nusuario.intentos_fallidos = 0
+  end
+  N -> V ++ : usuario.save()
+  V -> D ++ : UPDATE personas_usuario
+  deactivate D
+  deactivate V
+  deactivate N
+end
+
+N --> P : 200 · personas/_formulario_ingreso.html con ERROR_CREDENCIALES
+note left of N
+  Mismo mensaje para clave incorrecta
+  y correo inexistente (AC4): la respuesta
+  no dice si el correo tiene cuenta.
+end note
+deactivate N
+@enduml

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+  Cascarón del panel de administración. Cada pestaña la sirve su propio módulo:
+  Bloques es de agenda, Reglas de configuracion y Áreas será de personas (US-05).
+  Por eso el cascarón vive acá y no dentro de ninguno de los tres.
+{% endcomment %}
+{% block titulo %}Configuración{% endblock %}
+{% block estilos %}
+  <link rel="stylesheet" href="{% static 'css/panel.css' %}">
+  {% block estilos_seccion %}{% endblock %}
+{% endblock %}
+
+{% block contenido %}
+<header class="techo">
+  <div class="dentro">
+    <div class="fila">
+      <img class="sello" src="{% static 'img/Facultad-color-negro.png' %}"
+           alt="Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile">
+      <h1>Configuración</h1>
+      <div class="quien">
+        <span class="correo">{{ user.get_full_name|default:user.email }}</span>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}<button class="btn" type="submit">Cerrar sesión</button>
+        </form>
+      </div>
+    </div>
+
+    <nav class="pestanas" aria-label="Secciones de la configuración">
+      <a class="pestana {% if pestana == 'bloques' %}activa{% endif %}" href="{% url 'panel_bloques' %}"
+         {% if pestana == "bloques" %}aria-current="page"{% endif %}>Bloques</a>
+      <a class="pestana {% if pestana == 'areas' %}activa{% endif %}" href="{% url 'panel_areas' %}"
+         {% if pestana == "areas" %}aria-current="page"{% endif %}>Áreas</a>
+      <a class="pestana {% if pestana == 'reglas' %}activa{% endif %}" href="{% url 'panel_reglas' %}"
+         {% if pestana == "reglas" %}aria-current="page"{% endif %}>Reglas</a>
+    </nav>
+  </div>
+</header>
+
+<main class="panel">
+  {% block seccion %}{% endblock %}
+</main>
+{% endblock %}

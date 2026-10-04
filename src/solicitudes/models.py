@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from agenda.models import Bloque, primera_fecha_pedible
 from personas.models import Area
 
 
@@ -19,13 +20,6 @@ class Solicitud(models.Model):
         PENDIENTE = "PENDIENTE", "Pendiente"
         CONFIRMADA = "CONFIRMADA", "Confirmada"
         CANCELADA = "CANCELADA", "Cancelada"
-    # "No habilitada" es el estado inicial de la confirmación, cuando la solicitud aún no
-    # ha sido aceptada por el validador.
-
-    # Si ha sido aceptada por el validador, sigue "No habilitada" si todavía no se entra 
-    # en la ventana de 48 horas.
-
-    # Cambia a "Pendiente" cuando se envía la notificación de confirmación al solicitante.
 
     solicitante = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -43,6 +37,15 @@ class Solicitud(models.Model):
         max_length=300,
         verbose_name="motivo de la solicitud",
     )
+    observaciones = models.TextField(
+        blank=True,
+        verbose_name="observaciones y requerimientos técnicos",
+    )
+    personas = models.PositiveSmallIntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name="cantidad de personas en sala",
+    )
     estado_validacion = models.CharField(
         max_length=20,
         choices=EstadoValidacion.choices,
@@ -55,6 +58,23 @@ class Solicitud(models.Model):
         default=EstadoConfirmacion.NO_HABILITADA,
         verbose_name="estado de confirmación",
     )
+
+    bloques = models.ManyToManyField(
+        "agenda.Bloque",
+        through="SolicitudBloque",
+        related_name="solicitudes",
+        verbose_name="bloques solicitados",
+    )
+    creado_en = models.DateTimeField(auto_now_add=True, verbose_name="fecha de creación")
+    actualizado_en = models.DateTimeField(auto_now=True, verbose_name="última actualización")
+
+    class Meta:
+        verbose_name = "solicitud de reserva"
+        verbose_name_plural = "solicitudes de reserva"
+        ordering = ["-creado_en"]
+
+    def __str__(self):
+        return f"Solicitud #{self.pk} - {self.solicitante} (Val: {self.get_estado_validacion_display()} / Conf: {self.get_estado_confirmacion_display()})"
 
     @property
     def total_personas(self):
@@ -81,8 +101,6 @@ class Solicitud(models.Model):
     def clean(self):
         super().clean()
         total = self.total_personas
-
-        # Validar restricción total_personas a 1-5
         MinValueValidator(1)(total)
         MaxValueValidator(5)(total)
 
@@ -96,26 +114,9 @@ class Solicitud(models.Model):
                     "estado_confirmacion": "La confirmación solo puede estar pendiente si la solicitud fue aceptada por el validador."
                 })
 
-    bloques = models.ManyToManyField(
-        "agenda.Bloque",
-        through="SolicitudBloque",
-        related_name="solicitudes",
-        verbose_name="bloques solicitados",
-    )
-    creado_en = models.DateTimeField(auto_now_add=True, verbose_name="fecha de creación")
-    actualizado_en = models.DateTimeField(auto_now=True, verbose_name="última actualización")
-
-    class Meta:
-        verbose_name = "solicitud de reserva"
-        verbose_name_plural = "solicitudes de reserva"
-        ordering = ["-creado_en"]
-
-    def __str__(self):
-        return f"Solicitud #{self.pk} - {self.solicitante} (Val: {self.get_estado_validacion_display()} / Conf: {self.get_estado_confirmacion_display()})"
-
 
 class SolicitudBloque(models.Model):
-    """Tabla intermedia explícita entre Solicitud de reserva y Bloque."""
+    """Tabla intermedia explícita entre Solicitud de reserva y Bloque semanal (con fecha)."""
 
     solicitud = models.ForeignKey(
         Solicitud,
@@ -129,19 +130,91 @@ class SolicitudBloque(models.Model):
         related_name="solicitudes_bloques",
         verbose_name="bloque",
     )
+    fecha = models.DateField(verbose_name="fecha de la reserva")
 
     class Meta:
         verbose_name = "bloque de solicitud"
         verbose_name_plural = "bloques de solicitudes"
         constraints = [
             models.UniqueConstraint(
-                fields=["solicitud", "bloque"],
-                name="solicitud_bloque_unica",
+                fields=["solicitud", "bloque", "fecha"],
+                name="solicitud_bloque_fecha_unica",
             )
         ]
 
     def __str__(self):
-        return f"Solicitud #{self.solicitud_id} - Bloque #{self.bloque_id}"
+        return f"Solicitud #{self.solicitud_id} - Bloque #{self.bloque_id} ({self.fecha})"
+
+    @property
+    def ticket(self):
+        return f"T-{self.id:02d}"
+
+    @property
+    def inicio(self):
+        return self.bloque.inicio
+
+    @property
+    def termino(self):
+        return self.bloque.termino
+
+    def clean(self):
+        super().clean()
+        if not self.pk and self.bloque_id and self.fecha:
+            fecha_minima = primera_fecha_pedible()
+            if self.fecha < fecha_minima:
+                raise ValidationError({
+                    "fecha": (
+                        f"No se puede solicitar una reserva para el {self.fecha}. "
+                        f"Las reservas deben realizarse a partir del lunes {fecha_minima.strftime('%d/%m/%Y')}."
+                    )
+                })
+
+            if not self.bloque.activo:
+                raise ValidationError({
+                    "bloque": f"El bloque #{self.bloque_id} ya no se encuentra activo."
+                })
+
+            if self.bloque.dia != self.fecha.weekday():
+                raise ValidationError({
+                    "fecha": "El día de la semana no coincide con el turno configurado del bloque."
+                })
+
+            ocupados = SolicitudBloque.objects.filter(
+                bloque_id=self.bloque_id,
+                fecha=self.fecha,
+                solicitud__estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
+                solicitud__estado_confirmacion__in=[
+                    Solicitud.EstadoConfirmacion.NO_HABILITADA,
+                    Solicitud.EstadoConfirmacion.PENDIENTE,
+                    Solicitud.EstadoConfirmacion.CONFIRMADA,
+                ],
+            )
+            if self.solicitud_id:
+                ocupados = ocupados.exclude(solicitud_id=self.solicitud_id)
+
+            if ocupados.exists():
+                raise ValidationError({
+                    "bloque": f"El bloque #{self.bloque_id} ya se encuentra reservado para la fecha {self.fecha}."
+                })
+
+            if hasattr(self, "solicitud") and self.solicitud and getattr(self.solicitud, "solicitante_id", None):
+                propias_pendientes = SolicitudBloque.objects.filter(
+                    bloque_id=self.bloque_id,
+                    fecha=self.fecha,
+                    solicitud__solicitante_id=self.solicitud.solicitante_id,
+                    solicitud__estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
+                ).exclude(solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA)
+                if self.solicitud_id:
+                    propias_pendientes = propias_pendientes.exclude(solicitud_id=self.solicitud_id)
+
+                if propias_pendientes.exists():
+                    raise ValidationError({
+                        "bloque": f"Ya tienes una solicitud pendiente para el bloque #{self.bloque_id} en la fecha {self.fecha}."
+                    })
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 class Acompanante(models.Model):

@@ -1,33 +1,48 @@
-<div id="calendario-componente" class="calendario-seccion">
+<div id="calendario-componente" class="calendario-seccion"
+     hx-include="#input-fecha-seleccionada"
+     x-data
+     @htmx:after-swap.camel="var f = document.getElementById('input-fecha-seleccionada'); if(f && f.value){ var td = $el.querySelector('td.dia-seleccionable[data-date=\'' + f.value + '\']'); if(td && !td.classList.contains('selected')){ $el.querySelectorAll('.calendario td.selected').forEach(function(el){ el.classList.remove('selected'); }); td.classList.add('selected'); } }">
     <!-- Controles de navegación de meses y selector rápido -->
     <div class="controles-calendario">
         <div class="navegacion-meses">
             {% if mostrar_anterior %}
-                <a href="?year={{ prev_year }}&month={{ prev_month }}{% if paso %}&paso={{ paso }}{% endif %}"
+                <a href="?year={{ prev_year }}&month={{ prev_month }}{% if paso %}&paso={{ paso }}{% endif %}{% if fecha_str %}&fecha={{ fecha_str }}{% endif %}"
                    class="btn-nav"
-                   hx-get="{% url 'calendario' %}?year={{ prev_year }}&month={{ prev_month }}"
+                   hx-get="{% url 'calendario' %}?year={{ prev_year }}&month={{ prev_month }}{% if paso %}&paso={{ paso }}{% endif %}"
                    hx-target="#calendario-componente"
                    hx-select="#calendario-componente"
                    hx-swap="outerHTML"
                    hx-push-url="false"
-                   aria-label="Ir al mes anterior">&laquo; Anterior</a>
+                   aria-label="Ir al mes anterior">
+                    <svg class="icono-nav" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    <span>Anterior</span>
+                </a>
             {% else %}
-                <span class="btn-nav disabled" aria-disabled="true">&laquo; Anterior</span>
+                <span class="btn-nav disabled" aria-disabled="true">
+                    <svg class="icono-nav" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    <span>Anterior</span>
+                </span>
             {% endif %}
 
             <h2 class="mes-actual">{{ nombre_mes_actual }} {{ year }}</h2>
 
             {% if mostrar_siguiente %}
-                <a href="?year={{ next_year }}&month={{ next_month }}{% if paso %}&paso={{ paso }}{% endif %}"
+                <a href="?year={{ next_year }}&month={{ next_month }}{% if paso %}&paso={{ paso }}{% endif %}{% if fecha_str %}&fecha={{ fecha_str }}{% endif %}"
                    class="btn-nav"
-                   hx-get="{% url 'calendario' %}?year={{ next_year }}&month={{ next_month }}"
+                   hx-get="{% url 'calendario' %}?year={{ next_year }}&month={{ next_month }}{% if paso %}&paso={{ paso }}{% endif %}"
                    hx-target="#calendario-componente"
                    hx-select="#calendario-componente"
                    hx-swap="outerHTML"
                    hx-push-url="false"
-                   aria-label="Ir al mes siguiente">Siguiente &raquo;</a>
+                   aria-label="Ir al mes siguiente">
+                    <span>Siguiente</span>
+                    <svg class="icono-nav" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </a>
             {% else %}
-                <span class="btn-nav disabled" aria-disabled="true">Siguiente &raquo;</span>
+                <span class="btn-nav disabled" aria-disabled="true">
+                    <span>Siguiente</span>
+                    <svg class="icono-nav" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </span>
             {% endif %}
         </div>
 
@@ -60,6 +75,12 @@
         </form>
     </div>
 
+    {% if fecha_minima %}
+    <p class="aviso-anticipacion" style="font-size: 0.85rem; color: var(--tinta-suave); margin: 0.5rem 0 1rem 0;">
+        Anticipación requerida: Solo se pueden solicitar reservas a partir del <strong>lunes {{ fecha_minima|date:"d \d\e F" }}</strong>.
+    </p>
+    {% endif %}
+
     <!-- Grilla del calendario mensual con leyenda -->
     <div class="calendario-wrapper">
         <div class="calendario" role="region" aria-label="Calendario del mes">
@@ -77,7 +98,7 @@
             </div>
             <div class="leyenda-item">
                 <span class="leyenda-muestra muestra-no-disponible" aria-hidden="true"></span>
-                <span>Sin disponibilidad</span>
+                <span>Sin disponibilidad / Bloqueado</span>
             </div>
         </div>
     </div>

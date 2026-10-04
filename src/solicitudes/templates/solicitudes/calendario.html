@@ -38,7 +38,7 @@
           @change="haySeleccion = $el.querySelectorAll('input[name=bloques]:checked').length > 0"
           @htmx:after-swap.camel="haySeleccion = $el.querySelectorAll('input[name=bloques]:checked').length > 0">
         {% csrf_token %}
-        <input type="hidden" name="fecha" value="{{ fecha_str|default:'' }}">
+        <input type="hidden" name="fecha" id="input-fecha-seleccionada" value="{{ fecha_str|default:'' }}">
 
         <div id="panel-bloques" class="panel-bloques">
             {% if fecha_str %}

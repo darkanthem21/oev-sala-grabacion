@@ -1,0 +1,31 @@
+{% extends "uso/_base.html" %}
+
+{% block seccion %}
+<p><a href="{{ volver }}">‹ Volver a los bloques</a></p>
+
+<h2>Check-out · {{ bloque.fecha|date:"l j \d\e F" }}, <span class="num">{{ bloque.inicio|time:"H:i" }}–{{ bloque.termino|time:"H:i" }}</span></h2>
+<dl class="ficha">
+  <dt>Solicitante</dt><dd>{{ bloque.solicitante }}</dd>
+  <dt>Área</dt><dd>{{ bloque.area }}</dd>
+  <dt>Personas declaradas</dt><dd class="num">{{ bloque.personas }}</dd>
+</dl>
+
+{% if bloque.checkout == "completado" %}
+  {% comment %} US-15 AC4: enviado, ya no se edita. {% endcomment %}
+  <p class="marca completado">Check-out completado</p>
+  {% if registro %}
+    <p class="vacio">Lo registró {{ registro.por }} el {{ registro.en|date:"j \d\e F \a \l\a\s H:i" }}.</p>
+  {% endif %}
+{% else %}
+  {% comment %}
+    Marcador de posición: el checklist (asistencia, limpieza, sin daños, sin
+    faltantes, puntualidad, observaciones y foto) es US-15. El botón simula el
+    envío para que el flujo de US-14 se pueda recorrer completo.
+  {% endcomment %}
+  <p class="vacio">El formulario de check-out llega con US-15. Mientras tanto, el envío se simula.</p>
+  <form method="post">
+    {% csrf_token %}
+    <button class="btn activa" type="submit">Registrar check-out (simulado)</button>
+  </form>
+{% endif %}
+{% endblock %}

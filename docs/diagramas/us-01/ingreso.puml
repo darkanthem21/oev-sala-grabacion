@@ -1,0 +1,73 @@
+@startuml ingreso
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Clave correcta (US-01)
+
+actor "Solicitante" as P
+participant "<b>personas.views</b>\n<size:11>personas/views.py</size>" as N <<presentación>>
+participant "<b>django.contrib.auth</b>\n<size:11>framework</size>" as A <<presentación>>
+participant "<b>personas</b>\n<size:11>personas/models.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+P -> N ++ : POST /solicitante/entrar/\n→ entrar(request, rol=Rol.SOLICITANTE, destino="solicitar")
+N -> N : $comentario("el formulario de ingreso de Django, con lo enviado")\nform = AuthenticationForm(request, data=request.POST)
+N -> V ++ : $comentario("la cuenta con ese correo, sin distinguir mayúsculas")\nUsuario.objects.filter(email__iexact=correo).first()
+V -> D ++ : SELECT personas_usuario
+return fila
+return usuario
+N -> V ++ : usuario.esta_bloqueado
+return False
+N -> A ++ : form.is_valid()
+A -> V ++ : $comentario("la cuenta con ese correo exacto")\nUsuario._default_manager.get_by_natural_key(correo)
+V -> D ++ : SELECT personas_usuario
+return fila
+return user
+A -> V ++ : user.check_password(clave)
+return True
+return True
+N -> A ++ : form.get_user()
+return entrante
+
+N -> N ++ : _puede_pasar(entrante, rol)
+N -> V ++ : entrante.tiene_rol(rol)
+V -> D ++ : SELECT personas_usuario_groups ⋈ auth_group
+return fila
+note right of N
+  Las otras tres puertas hacen este recorrido con su rol
+  y su panel. La de administración deja pasar además a
+  is_staff, porque el superusuario del despliegue no
+  pertenece a ningún grupo.
+end note
+
+alt no es solicitante
+  V --> N -- : False
+  N --> N -- : False
+  N --> P : 200 · personas/_formulario_ingreso.html con ERROR_CREDENCIALES
+  note left of N
+    Mismo mensaje que una clave mala,
+    sin abrir sesión ni sumar un intento:
+    la puerta no dice qué rol tiene la cuenta.
+  end note
+else es solicitante
+  V --> N : True
+  N --> N : True
+  opt tenía intentos fallidos o un bloqueo vencido
+    N -> N : $comentario("borra los intentos fallidos y el bloqueo vencido")\nentrante.intentos_fallidos = 0\nentrante.bloqueado_hasta = None
+    N -> V ++ : entrante.save()
+    V -> D ++ : UPDATE personas_usuario
+    deactivate D
+    deactivate V
+  end
+  N -> A ++ : login(request, entrante)
+  A -> D ++ : INSERT django_session
+  deactivate D
+  A -> V ++ : user.save()
+  V -> D ++ : UPDATE personas_usuario (last_login)
+  deactivate D
+  deactivate V
+  deactivate A
+  N --> P : 204 · HX-Redirect: reverse(destino) → /solicitar/
+end
+deactivate N
+@enduml

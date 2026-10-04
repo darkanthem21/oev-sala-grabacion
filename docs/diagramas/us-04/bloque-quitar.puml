@@ -1,0 +1,61 @@
+@startuml bloque-quitar
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Quitar y reponer un bloque (US-04)
+
+actor "Administrador" as A
+participant "<b>agenda.views</b>\n<size:11>agenda/views.py</size>\n<size:11>agenda/forms.py</size>" as N <<presentación>>
+participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : POST /configuracion/bloques/editar/ → editar_bloque(request)
+N -> N : $comentario("qué se pide; si no viene, es guardar")\naccion = request.POST.get("accion", "guardar")
+N -> V ++ : $comentario("el bloque elegido, o 404 si no existe")\nget_object_or_404(Bloque, pk=request.POST.get("bloque"))
+V -> D ++ : SELECT agenda_bloque
+return fila
+return bloque
+
+alt quitar
+  N -> N : bloque.activo = False
+  N -> V ++ : bloque.save()
+  V -> D ++ : UPDATE agenda_bloque
+  deactivate D
+  deactivate V
+  note right of N
+    No se borra: las solicitudes que lo apuntan
+    siguen resolviendo, y la rejilla ofrece deshacer.
+  end note
+  ref over A, N, V, D : _responder(request, quitado=bloque): la rejilla con el aviso para deshacer
+else reponer
+  N -> N : bloque.activo = True
+  N -> V ++ : bloque.full_clean()
+  V -> V ++ : otro = self.cruce()
+  V -> D ++ : SELECT agenda_bloque
+  return fila
+  return otro
+  note right of N
+    Se valida de nuevo: mientras estuvo
+    fuera alguien pudo ocupar esa hora.
+  end note
+  alt se cruza con otro bloque
+    V --> N -- : ValidationError
+    N -> V ++ : bloque.cruce()
+    V -> D ++ : SELECT agenda_bloque
+    return fila
+    return choca
+    ref over A, N, V, D : _responder(request, error, quitado=bloque, choca): el aviso y el otro bloque marcado
+  else no se cruza
+    N -> V ++ : bloque.save()
+    V -> D ++ : UPDATE agenda_bloque
+    deactivate D
+    deactivate V
+    ref over A, N, V, D : _responder(request, elegido=bloque): la rejilla con el bloque repuesto
+  end
+end
+note over A, D
+  _responder contesta igual que en "Agregar o cambiar un bloque": con htmx,
+  200 y la rejilla (agenda/_calendario.html); sin htmx, 302 a la vista semanal.
+end note
+deactivate N
+@enduml
