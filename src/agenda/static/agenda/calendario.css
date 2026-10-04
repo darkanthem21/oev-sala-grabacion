@@ -270,3 +270,41 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
 /* Un botón rojo grita más de lo que una baja lógica merece. */
 .btn.peligro { color: var(--tinta); }
 .btn.peligro:hover { border-color: var(--alerta); background: var(--fondo); }
+
+/* --- semana con fechas (US-17): aviso, mini calendario y bloqueos --- */
+/* El aviso va siempre, no solo al editar: es lo que impide leer "5 al 9 de
+ * octubre" como si la jornada fuera de esos cinco días. */
+.nota-semana {
+  margin: 0 0 .75rem; padding: .5rem .75rem;
+  border-left: 3px solid var(--acento); background: var(--superficie);
+  font-size: .82rem; color: var(--tinta);
+}
+.con-mini { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr); gap: 1rem; align-items: start; }
+.con-mini > .marco { min-width: 0; }
+@media (max-width: 60rem) { .con-mini { grid-template-columns: 1fr; } }
+
+.mini { padding: .6rem; border: 1px solid var(--borde); background: var(--superficie); }
+.mini-barra { display: flex; align-items: center; justify-content: space-between; margin-bottom: .4rem; }
+.mini-mes { font-family: var(--fuente-titulo); font-size: .85rem; font-weight: 700; }
+.mini table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.mini th { padding: .2rem 0; font-size: .65rem; font-weight: 600; color: var(--tinta-suave); }
+.mini td { padding: 1px; text-align: center; }
+/* La semana que muestra la rejilla, de lunes a domingo. */
+.mini td.elegida { background: var(--fondo); }
+.mini a {
+  display: block; padding: .25rem 0; border-radius: 50%;
+  font-size: .75rem; color: var(--tinta); text-decoration: none; font-variant-numeric: tabular-nums;
+}
+.mini a:hover { background: var(--borde); }
+.mini a.fuera { color: var(--tinta-suave); }
+.mini a.hoy { background: var(--accion); color: var(--superficie); font-weight: 700; }
+
+.dnum { font-variant-numeric: tabular-nums; }
+.columna.hoy .dnum { padding: 0 .4rem; border-radius: 999px; background: var(--acento); color: var(--superficie); font-weight: 700; }
+
+/* Un bloque bloqueado en la fecha de su columna, con el mismo rayado de la
+ * vista mensual. Sigue siendo clicable: la jornada se edita igual. */
+.semana { --rayado-bloqueo: repeating-linear-gradient(135deg, var(--alerta-suave) 0 4px, var(--superficie) 4px 11px); }
+.bloque.bloqueado { background: var(--rayado-bloqueo); border-color: var(--alerta); }
+.columna.bloqueada .rejilla { background: var(--rayado-bloqueo); }
+.mini .btn.ico { min-width: 1.6rem; width: 1.6rem; height: 1.6rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; }

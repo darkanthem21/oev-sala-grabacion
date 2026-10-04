@@ -71,22 +71,20 @@
     <h2 class="periodo">{{ titulo }}</h2>
 
     <div class="mandos">
-      {% comment %}Moverse de período solo significa algo sobre fechas, y la vista
-      semanal es la plantilla que se repite.{% endcomment %}
-      {% if vista == "mes" %}
-        <div class="grupo">
-          <a class="btn ico" x-ref="antes"
-             href="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ anterior|date:'Y-m-d' }}"
-             hx-get="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ anterior|date:'Y-m-d' }}"
-             aria-label="Mes anterior">&larr;</a>
-          <a class="btn" href="{% url 'panel_bloques' %}?vista=mes"
-             hx-get="{% url 'panel_bloques' %}?vista=mes">Hoy</a>
-          <a class="btn ico" x-ref="luego"
-             href="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ siguiente|date:'Y-m-d' }}"
-             hx-get="{% url 'panel_bloques' %}?vista=mes&amp;desde={{ siguiente|date:'Y-m-d' }}"
-             aria-label="Mes siguiente">&rarr;</a>
-        </div>
-      {% endif %}
+      {% comment %}En la semanal moverse sirve para ver los bloqueos de cada semana
+      y elegir la fecha que se bloquea; la jornada es la misma en todas.{% endcomment %}
+      <div class="grupo">
+        <a class="btn ico" x-ref="antes"
+           href="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ anterior|date:'Y-m-d' }}"
+           hx-get="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ anterior|date:'Y-m-d' }}"
+           aria-label="{% if vista == 'mes' %}Mes anterior{% else %}Semana anterior{% endif %}">&larr;</a>
+        <a class="btn" href="{% url 'panel_bloques' %}?vista={{ vista }}"
+           hx-get="{% url 'panel_bloques' %}?vista={{ vista }}">Hoy</a>
+        <a class="btn ico" x-ref="luego"
+           href="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ siguiente|date:'Y-m-d' }}"
+           hx-get="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ siguiente|date:'Y-m-d' }}"
+           aria-label="{% if vista == 'mes' %}Mes siguiente{% else %}Semana siguiente{% endif %}">&rarr;</a>
+      </div>
 
       <div class="grupo" role="group" aria-label="Forma de ver el calendario">
         <a class="btn {% if vista == 'mes' %}activa{% endif %}"
@@ -304,6 +302,43 @@
     </details>
 
   {% else %}
+    {% comment %}La semana tiene fechas para bloquear y ver los bloqueos (US-17),
+    pero la jornada es una sola. Este aviso es lo que evita creer que editar un
+    horario lo cambia solo en estos cinco días.{% endcomment %}
+    <p class="nota-semana">Los horarios valen para <strong>todas las semanas</strong>;
+      los bloqueos, solo para su fecha.</p>
+
+    <div class="con-mini">
+      <nav class="mini" aria-label="Elegir la semana" hx-target="#calendario" hx-swap="outerHTML" hx-push-url="true">
+        <div class="mini-barra">
+          <a class="btn ico" href="{% url 'panel_bloques' %}?vista=semana&amp;desde={{ mini.anterior|date:'Y-m-d' }}"
+             hx-get="{% url 'panel_bloques' %}?vista=semana&amp;desde={{ mini.anterior|date:'Y-m-d' }}"
+             aria-label="Mes anterior">&lsaquo;</a>
+          <span class="mini-mes">{{ mini.titulo }}</span>
+          <a class="btn ico" href="{% url 'panel_bloques' %}?vista=semana&amp;desde={{ mini.siguiente|date:'Y-m-d' }}"
+             hx-get="{% url 'panel_bloques' %}?vista=semana&amp;desde={{ mini.siguiente|date:'Y-m-d' }}"
+             aria-label="Mes siguiente">&rsaquo;</a>
+        </div>
+        <table>
+          <thead><tr><th>L</th><th>M</th><th>X</th><th>J</th><th>V</th><th>S</th><th>D</th></tr></thead>
+          <tbody>
+            {% for semana in mini.semanas %}
+              <tr>
+                {% for d in semana %}
+                  <td class="{% if d.elegida %}elegida{% endif %}">
+                    <a class="{% if d.fuera %}fuera{% endif %} {% if d.hoy %}hoy{% endif %}"
+                       href="{% url 'panel_bloques' %}?vista=semana&amp;desde={{ d.fecha|date:'Y-m-d' }}"
+                       hx-get="{% url 'panel_bloques' %}?vista=semana&amp;desde={{ d.fecha|date:'Y-m-d' }}"
+                       {% if d.hoy %}aria-current="date"{% endif %}
+                       aria-label="Semana del {{ d.fecha|date:'j \d\e F' }}">{{ d.fecha.day }}</a>
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </nav>
+
     <div class="marco">
       {# La rejilla mide lo que mide la jornada, no una franja fija (US-06 AC6). #}
       <div class="semana" style="--horas: {{ altura }}">
@@ -313,11 +348,12 @@
           {% endfor %}
         </div>
         {% for dia in dias %}
-          <div class="columna {% if dia.fecha == hoy %}hoy{% endif %}">
+          <div class="columna {% if dia.fecha == hoy %}hoy{% endif %} {% if dia.entero %}bloqueada{% endif %}">
             <div class="cabecera">
-              {% comment %}El nombre del día, porque lo que se edita acá vale para
-              todos los martes.{% endcomment %}
+              {% comment %}El nombre y el número del día: lo que se edita vale para
+              todos los martes, y el número dice qué fecha se bloquearía.{% endcomment %}
               <span class="dsem">{{ dia.fecha|date:"l"|capfirst }}</span>
+              <span class="dnum">{{ dia.fecha.day }}</span>
               <button type="button" class="mas"
                       @click="agregar({{ dia.numero }}, '{{ dia.fecha|date:"l" }}', '{{ dia.proximo.inicio }}', '{{ dia.proximo.termino }}')"
                       aria-label="Agregar un bloque los {{ dia.fecha|date:'l' }}">+</button>
@@ -346,8 +382,9 @@
                 <span x-text="ini && fin ? `${ini}–${fin}` : ''"></span>
               </div>
               {% for bloque in dia.bloques %}
-                <button type="button" class="bloque {% if bloque.pk == choca %}choca{% endif %}"
+                <button type="button" class="bloque {% if bloque.pk == choca %}choca{% endif %} {% if bloque.pk in dia.bloqueados %}bloqueado{% endif %}"
                         style="top: {{ bloque.posicion }}%; height: {{ bloque.largo }}%"
+                        {% if bloque.pk in dia.bloqueados %}title="Bloqueado el {{ dia.fecha|date:'j \d\e F' }}: no se puede pedir"{% endif %}
                         :class="elegido === {{ bloque.pk }} ? 'elegido' : ''"
                         :aria-pressed="elegido === {{ bloque.pk }}"
                         @click="elegir({{ bloque.pk }}, '{{ dia.fecha|date:"l" }}', '{{ bloque.inicio|time:"H:i" }}', '{{ bloque.termino|time:"H:i" }}', {{ dia.numero }})"
@@ -366,6 +403,7 @@
           </div>
         {% endfor %}
       </div>
+    </div>
     </div>
 
     {% if error %}<p class="aviso">{{ error }}</p>{% endif %}
@@ -393,8 +431,8 @@
       <input type="hidden" name="vista" value="{{ vista }}">
       <input type="hidden" name="desde" value="{{ foco|date:'Y-m-d' }}">
 
-      {% comment %}Sin la advertencia de que vale para todas las semanas, porque la
-      pantalla ya no muestra fechas.{% endcomment %}
+      {% comment %}La advertencia de que vale para todas las semanas está arriba de
+      la rejilla, que es donde se ven las fechas.{% endcomment %}
       <p class="que">
         <span x-show="elegido !== null">Bloque de los <strong x-text="dia"></strong>.</span>
         <span x-show="elegido === null">Bloque nuevo los <strong x-text="dia"></strong>.</span>
@@ -440,7 +478,7 @@
           <label x-show="dian === {{ dia.numero }}">Fecha
             <select name="bq-desde" :disabled="dian !== {{ dia.numero }}">
               {% for f in dia.fechas %}
-                <option value="{{ f.fecha|date:'Y-m-d' }}" {% if f.entero %}disabled{% endif %}>{{ f.fecha|date:"l j \d\e F" }}{% if f.entero %} (bloqueado todo el día){% endif %}</option>
+                <option value="{{ f.fecha|date:'Y-m-d' }}" {% if f.entero %}disabled{% elif f.elegida %}selected{% endif %}>{{ f.fecha|date:"l j \d\e F" }}{% if f.entero %} (bloqueado todo el día){% endif %}</option>
               {% endfor %}
             </select>
           </label>

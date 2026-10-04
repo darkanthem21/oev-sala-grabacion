@@ -59,13 +59,39 @@ def _correr(dia, vista, signo):
 def _titulo(vista, foco):
     """Qué se está mirando, escrito como lo diría una persona.
 
-    La semanal no lleva fechas porque es la plantilla que se repite, no una
-    semana concreta. Titularla "21-25 de septiembre" hacía creer que lo editado
-    valía solo para esos cinco días.
+    La semanal dice qué semana es porque desde ahí se bloquea una fecha (US-17).
+    Que los horarios valen para todas las semanas lo dice el aviso de la
+    rejilla: sin él, "5 al 9 de octubre" haría creer que lo editado vale solo
+    para esos cinco días.
     """
     if vista == "mes":
         return date_format(foco, "F Y").capitalize()
-    return "Jornada semanal"
+    lunes, viernes = _semana(foco)[0], _semana(foco)[-1]
+    hasta = date_format(viernes, r"j \d\e F \d\e Y")
+    if lunes.month == viernes.month:
+        return f"Semana del {lunes.day} al {hasta}"
+    desde = date_format(lunes, r"j \d\e F")
+    return f"Semana del {desde} al {hasta}"
+
+
+def _mini(foco, hoy):
+    """El mes de `foco` para el mini calendario de la vista semanal.
+
+    Lleva sábado y domingo para que se lea como un calendario cualquiera; un
+    clic en ellos lleva a su semana, igual que en un día hábil.
+    """
+    lunes = foco - timedelta(days=foco.weekday())
+    semanas = calendar.Calendar(firstweekday=0).monthdatescalendar(foco.year, foco.month)
+    return {
+        "titulo": date_format(foco, "F Y").capitalize(),
+        "semanas": [
+            [{"fecha": d, "fuera": d.month != foco.month, "hoy": d == hoy,
+              "elegida": lunes <= d < lunes + timedelta(days=7)} for d in semana]
+            for semana in semanas
+        ],
+        "anterior": _correr(foco, "mes", -1),
+        "siguiente": _correr(foco, "mes", +1),
+    }
 
 
 def _ventana(plantilla):
@@ -155,8 +181,10 @@ def _dia(fecha, plantilla, foco=None, bloqueos=None, hoy=None):
         "fuera": foco is not None and fecha.month != foco.month,
         "bloques": bloques,
         "proximo": _proximo(bloques),
-        # US-17: solo la vista mensual los usa, porque es la que tiene fechas.
+        # US-17. La mensual los dibuja en la celda; la semanal raya los bloques
+        # que dejan fuera, y para eso le basta con los `pk`.
         "bloqueos": del_dia,
+        "bloqueados": {b.pk for b in bloques if any(x.cubre(fecha, b.inicio) for x in del_dia)},
         "entero": any(b.bloque_id is None for b in del_dia),
         "pasado": hoy is not None and fecha < hoy,
     }
@@ -193,10 +221,10 @@ def _estado_bloqueo(formulario):
     }
 
 
-def _proximas(hoy):
+def _proximas(hoy, semana=()):
     """Las próximas fechas de cada día de la semana, para bloquear un bloque desde
     la vista semanal. Un día ya bloqueado entero va marcado, porque ahí no queda
-    nada que bloquear."""
+    nada que bloquear. La fecha de la semana que se está mirando viene elegida."""
     hasta = hoy + timedelta(weeks=SEMANAS_PARA_BLOQUEAR)
     bloqueos = bloqueos_por_fecha(hoy, hasta)
     por_dia = {d: [] for d in Dia.values}
@@ -206,6 +234,7 @@ def _proximas(hoy):
             por_dia[fecha.weekday()].append({
                 "fecha": fecha,
                 "entero": any(b.bloque_id is None for b in bloqueos.get(fecha, [])),
+                "elegida": fecha in semana,
             })
         fecha += timedelta(days=1)
     return [{"numero": d, "fechas": fechas} for d, fechas in por_dia.items()]
@@ -259,7 +288,12 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
     if vista not in ("mes", "semana"):
         vista = "mes"
     hoy = timezone.localdate()
-    foco = _fecha(datos.get("desde"), hoy)
+    # La rejilla es de lunes a viernes: un sábado o domingo, "Hoy" lleva a la
+    # semana que viene y no a la que ya terminó.
+    por_defecto = hoy
+    if vista == "semana" and hoy.weekday() >= 5:
+        por_defecto = hoy + timedelta(days=7 - hoy.weekday())
+    foco = _fecha(datos.get("desde"), por_defecto)
 
     plantilla = plantilla_semanal()
     desde, hasta = _ventana(plantilla)
@@ -267,7 +301,10 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
     _ubicar(plantilla, desde, largo)
     fechas = _semana(foco)
     mes = _mes(foco)
-    bloqueos = bloqueos_por_fecha(mes[0][0], mes[-1][-1]) if vista == "mes" else {}
+    if vista == "mes":
+        bloqueos = bloqueos_por_fecha(mes[0][0], mes[-1][-1])
+    else:
+        bloqueos = bloqueos_por_fecha(fechas[0], fechas[-1])
 
     return {
         "pestana": "bloques",
@@ -283,7 +320,8 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
         "desde_min": desde,
         "largo_min": largo,
         "cabeceras": _cabeceras(plantilla),
-        "dias": [_dia(fecha, plantilla) for fecha in fechas],
+        "dias": [_dia(fecha, plantilla, None, bloqueos, hoy) for fecha in fechas],
+        "mini": _mini(foco, hoy) if vista == "semana" else None,
         "semanas": [[_dia(f, plantilla, foco, bloqueos, hoy) for f in s] for s in mes],
         "anterior": _correr(foco, vista, -1),
         "siguiente": _correr(foco, vista, +1),
@@ -295,7 +333,7 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
         "choca": choca.pk if choca is not None else None,
         # US-17, vista mensual. Los bloqueos del mes sin repetir, para el panel
         # de cada uno; uno de varios días aparece en varias celdas.
-        "bloqueos_mes": list({b.pk: b for bs in bloqueos.values() for b in bs}.values()),
+        "bloqueos_mes": list({b.pk: b for bs in bloqueos.values() for b in bs}.values()) if vista == "mes" else [],
         "jornada": [{"numero": d, "bloques": plantilla[d]} for d in Dia.values],
         "motivos": Motivo.choices,
         "modos": MODOS,
@@ -307,7 +345,7 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
         "aviso_mes": aviso_mes,
         "hecho": hecho,
         "registro": _registro() if vista == "mes" else [],
-        "proximas": _proximas(hoy) if vista == "semana" else [],
+        "proximas": _proximas(hoy, fechas) if vista == "semana" else [],
     }
 
 
