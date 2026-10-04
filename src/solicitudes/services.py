@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from agenda.models import Bloque, disponibilidad, primera_fecha_pedible
 from personas.models import Area
@@ -183,3 +184,24 @@ def guardar_solicitud_completa(
                 )
 
         return solicitud
+
+
+def retirar_solicitud(usuario, solicitud_id: int) -> bool:
+    """Retira una solicitud propia que el validador todavía no revisa.
+
+    Pasa a RETIRADA y no se borra: sigue en el historial. La disponibilidad y
+    la regla de bloque ya pedido solo cuentan las pendientes y aceptadas, así
+    que el bloque queda libre para pedirlo de nuevo.
+
+    Es un solo UPDATE condicionado al estado: si el validador la acepta o
+    rechaza en el mismo instante, no se pisa su decisión. Devuelve si se retiró.
+    """
+    return Solicitud.objects.filter(
+        pk=solicitud_id,
+        solicitante=usuario,
+        estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
+    ).update(
+        estado_validacion=Solicitud.EstadoValidacion.RETIRADA,
+        # update() se salta auto_now.
+        actualizado_en=timezone.now(),
+    ) == 1

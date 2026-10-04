@@ -16,4 +16,60 @@
     </a>
   </div>
 </main>
+
+{% comment %}
+  Confirmación de Retirar. Vive fuera de #historial para que htmx no la
+  reemplace al redibujar la tabla, y fuera de .hoja para no heredar el estilo
+  de sus botones. <dialog> trae el fondo, el bloqueo de la página, Esc y el
+  foco; el script solo decide si la petición sale.
+{% endcomment %}
+<dialog id="dialogo-retirar" class="dialogo" aria-labelledby="dialogo-retirar-titulo"
+        aria-describedby="dialogo-retirar-texto">
+  <h2 id="dialogo-retirar-titulo" class="dialogo-titulo">¿Retirar la solicitud <span data-numero></span>?</h2>
+  <p id="dialogo-retirar-texto" class="dialogo-texto">
+    La Oficina ya no la revisará y su horario quedará libre para otras
+    solicitudes. Esta acción no se puede deshacer.
+  </p>
+  <div class="dialogo-acciones">
+    <button type="button" class="btn-secundario" data-cancelar autofocus>Cancelar</button>
+    <button type="button" class="dialogo-confirmar" data-confirmar>Retirar solicitud</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // htmx pregunta antes de enviar un hx-confirm. Se responde con el diálogo
+  // propio en vez del confirm() del navegador.
+  (function () {
+    var dialogo = document.getElementById("dialogo-retirar");
+    var pendiente = null;
+
+    document.body.addEventListener("htmx:confirm", function (evento) {
+      var form = evento.detail.elt.closest("form.form-retirar");
+      if (!form || !evento.detail.question) return;
+      evento.preventDefault();
+      pendiente = evento.detail;
+      dialogo.querySelector("[data-numero]").textContent = "#" + form.dataset.solicitud;
+      dialogo.showModal();
+    });
+
+    dialogo.querySelector("[data-confirmar]").addEventListener("click", function () {
+      var detalle = pendiente;
+      pendiente = null;
+      dialogo.close();
+      if (detalle) detalle.issueRequest(true);
+    });
+
+    dialogo.querySelector("[data-cancelar]").addEventListener("click", function () {
+      dialogo.close();
+    });
+
+    // Esc, Cancelar o un clic fuera del recuadro: la petición no sale.
+    dialogo.addEventListener("close", function () { pendiente = null; });
+    dialogo.addEventListener("click", function (evento) {
+      if (evento.target === dialogo) dialogo.close();
+    });
+  })();
+</script>
 {% endblock %}

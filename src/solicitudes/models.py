@@ -14,6 +14,8 @@ class Solicitud(models.Model):
         PENDIENTE = "PENDIENTE", "Pendiente"
         ACEPTADA = "ACEPTADA", "Aceptada"
         RECHAZADA = "RECHAZADA", "Rechazada"
+        # La retiró quien la pidió antes de que el validador decidiera (US-09).
+        RETIRADA = "RETIRADA", "Retirada"
 
     class EstadoConfirmacion(models.TextChoices):
         NO_HABILITADA = "NO_HABILITADA", "No habilitada"
@@ -86,6 +88,7 @@ class Solicitud(models.Model):
     # Etiqueta de cada estado general; la clave sirve de clase CSS en las vistas.
     ESTADOS_GENERALES = {
         "revision": "En revisión por la Oficina",
+        "retirada": "Retirada",
         "rechazada": "Rechazada",
         "confirmada": "Confirmada",
         "cancelada": "Cancelada",
@@ -98,6 +101,8 @@ class Solicitud(models.Model):
         """Clave del estado general, combinando validación y confirmación."""
         if self.estado_validacion == self.EstadoValidacion.PENDIENTE:
             return "revision"
+        if self.estado_validacion == self.EstadoValidacion.RETIRADA:
+            return "retirada"
         if self.estado_validacion == self.EstadoValidacion.RECHAZADA:
             return "rechazada"
         if self.estado_confirmacion == self.EstadoConfirmacion.CONFIRMADA:
@@ -107,6 +112,11 @@ class Solicitud(models.Model):
         if self.estado_confirmacion == self.EstadoConfirmacion.PENDIENTE:
             return "por-confirmar"
         return "aceptada"
+
+    @property
+    def puede_retirarse(self):
+        """Solo mientras la Oficina no la haya revisado (ver services.retirar_solicitud)."""
+        return self.estado_validacion == self.EstadoValidacion.PENDIENTE
 
     @property
     def estado_general(self):
@@ -127,6 +137,12 @@ class Solicitud(models.Model):
             if self.estado_confirmacion == self.EstadoConfirmacion.PENDIENTE:
                 raise ValidationError({
                     "estado_confirmacion": "La confirmación solo puede estar pendiente si la solicitud fue aceptada por el validador."
+                })
+            # Cancelar es parte del flujo de confirmación. Solo se
+            # cancela si la solicitud fue previamente aceptada.
+            if self.estado_confirmacion == self.EstadoConfirmacion.CANCELADA:
+                raise ValidationError({
+                    "estado_confirmacion": "Solo se puede cancelar una solicitud aceptada por el validador."
                 })
 
 

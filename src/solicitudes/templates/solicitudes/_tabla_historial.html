@@ -19,6 +19,12 @@
     </a>
   </nav>
 
+  {% comment %}El resultado de retirar llega acá, con la tabla ya redibujada.{% endcomment %}
+  {% for mensaje in messages %}
+    <div class="{% if mensaje.level_tag == 'error' %}error{% else %}aviso{% endif %}"
+         role="{% if mensaje.level_tag == 'error' %}alert{% else %}status{% endif %}">{{ mensaje }}</div>
+  {% endfor %}
+
   {% if vista == "proximas" %}
     <p class="nota-confirmacion">
       <strong>Confirma tu asistencia.</strong>
@@ -65,6 +71,20 @@
             </td>
             <td data-titulo="Estado">
               <span class="estado estado-{{ solicitud.estado_clave }}">{{ solicitud.estado_general }}</span>
+              {% if solicitud.puede_retirarse %}
+                {% url 'retirar_solicitud' solicitud.id as url_retirar %}
+                <form class="form-retirar" method="post" action="{{ url_retirar }}"
+                      hx-post="{{ url_retirar }}" hx-target="#historial" hx-swap="outerHTML"
+                      hx-indicator="#historial"
+                      hx-confirm="¿Retirar la solicitud #{{ solicitud.id }}?"
+                      data-solicitud="{{ solicitud.id }}">
+                  {% csrf_token %}
+                  <input type="hidden" name="vista" value="{{ vista }}">
+                  <input type="hidden" name="pagina" value="{{ pagina.number }}">
+                  <button type="submit" class="btn-retirar"
+                          aria-label="Retirar la solicitud #{{ solicitud.id }}">Retirar</button>
+                </form>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}

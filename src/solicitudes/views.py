@@ -1,5 +1,8 @@
 from datetime import datetime
+from urllib.parse import urlencode
+
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -8,6 +11,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.cache import patch_vary_headers
+from django.views.decorators.http import require_POST
 
 from configuracion.models import Parametros
 from personas.models import Rol
@@ -25,6 +29,7 @@ from .models import Solicitud, SolicitudBloque
 from .services import (
     guardar_solicitud_completa,
     obtener_bloques_dia_para_usuario,
+    retirar_solicitud,
     revisar_acompanantes,
 )
 from .wizard import PasoSolicitud, SolicitudWizard, obtener_limites_reserva
@@ -54,15 +59,8 @@ SOLICITUDES_POR_PAGINA = 20
 VISTAS_HISTORIAL = ("proximas", "anteriores")
 
 
-@user_passes_test(es_solicitante, login_url="login_solicitante")
-def mis_solicitudes(request):
-    """Historial de solicitudes del solicitante con su estado actual (US-09).
-
-    Cada solicitud muestra su área, sus bloques (hora de inicio y término) y la
-    fecha. Se listan todas las del usuario conectado, de cualquiera de sus áreas,
-    separadas en próximas y anteriores y de a SOLICITUDES_POR_PAGINA por página.
-    """
-    vista = request.GET.get("vista")
+def _contexto_historial(usuario, vista, numero_pagina):
+    """Lo que dibuja la tabla del historial: pestaña, página y cuentas."""
     if vista not in VISTAS_HISTORIAL:
         vista = "proximas"
 
@@ -70,7 +68,7 @@ def mis_solicitudes(request):
     # algún bloque de hoy en adelante, aunque la hora de hoy ya haya pasado.
     # Una sin bloques no tiene fecha vencida, así que cuenta como próxima.
     hoy = timezone.localdate()
-    base = Solicitud.objects.filter(solicitante=request.user).annotate(
+    base = Solicitud.objects.filter(solicitante=usuario).annotate(
         primera_fecha=Min("solicitudes_bloques__fecha"),
         ultima_fecha=Max("solicitudes_bloques__fecha"),
     )
@@ -88,9 +86,8 @@ def mis_solicitudes(request):
         "solicitudes_bloques",
         queryset=SolicitudBloque.objects.select_related("bloque").order_by("fecha", "bloque__inicio"),
     ))
-    pagina = Paginator(solicitudes, SOLICITUDES_POR_PAGINA).get_page(request.GET.get("pagina"))
     contexto = {
-        "pagina": pagina,
+        "pagina": Paginator(solicitudes, SOLICITUDES_POR_PAGINA).get_page(numero_pagina),
         "vista": vista,
         "total_proximas": proximas.count(),
         "total_anteriores": anteriores.count(),
@@ -99,6 +96,18 @@ def mis_solicitudes(request):
         # La nota de confirmación cita el plazo vigente, que lo fija
         # administración en la configuración.
         contexto["plazo_confirmacion"] = Parametros.cargar().plazo_confirmacion_dias
+    return contexto
+
+
+@user_passes_test(es_solicitante, login_url="login_solicitante")
+def mis_solicitudes(request):
+    """Historial de solicitudes del solicitante con su estado actual (US-09).
+
+    Cada solicitud muestra su área, sus bloques (hora de inicio y término) y la
+    fecha. Se listan todas las del usuario conectado, de cualquiera de sus áreas,
+    separadas en próximas y anteriores y de a SOLICITUDES_POR_PAGINA por página.
+    """
+    contexto = _contexto_historial(request.user, request.GET.get("vista"), request.GET.get("pagina"))
 
     # htmx pide solo la tabla. Al volver con el botón Atrás sin la página en su
     # caché, htmx la pide entera (HX-History-Restore-Request), igual que el
@@ -111,6 +120,27 @@ def mis_solicitudes(request):
     # navegador no las confunda.
     patch_vary_headers(respuesta, ["HX-Request"])
     return respuesta
+
+
+@user_passes_test(es_solicitante, login_url="login_solicitante")
+@require_POST
+def retirar(request, solicitud_id):
+    """Retira una solicitud propia que la Oficina todavía no revisa.
+
+    htmx recibe la tabla redibujada en la misma pestaña y página. Sin htmx se
+    redirige al historial, para que recargar no reenvíe el formulario.
+    """
+    if retirar_solicitud(request.user, solicitud_id):
+        messages.success(request, f"Retiraste la solicitud #{solicitud_id}. Su horario queda libre.")
+    else:
+        # Ajena, inexistente o ya revisada: el mismo mensaje para no revelar
+        # cuáles existen.
+        messages.error(request, f"No se pudo retirar la solicitud #{solicitud_id}: ya no está en revisión.")
+
+    vista, pagina = request.POST.get("vista"), request.POST.get("pagina")
+    if request.headers.get("HX-Request"):
+        return render(request, "solicitudes/_tabla_historial.html", _contexto_historial(request.user, vista, pagina))
+    return redirect(f"{reverse('mis_solicitudes')}?{urlencode({'vista': vista or 'proximas', 'pagina': pagina or 1})}")
 
 
 def calendario(request):

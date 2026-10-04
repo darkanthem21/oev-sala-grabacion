@@ -285,3 +285,146 @@ class ProximasAnterioresTestCase(TestCase):
                 texto = " ".join(self.client.get(self.url).content.decode().split())
                 self.assertIn(aviso, texto)
                 self.assertIn(limite, texto)
+
+
+class RetirarSolicitudTestCase(TestCase):
+    """El solicitante retira una solicitud mientras la Oficina no la revisa."""
+
+    def setUp(self):
+        self.area = Area.objects.create(nombre="Informática", activa=True)
+        self.usuario = Usuario.objects.create_user(email="docente@uach.cl", password="testpassword123")
+        self.usuario.groups.add(Group.objects.get(name=Rol.SOLICITANTE))
+        self.usuario.areas.add(self.area)
+        self.client.force_login(self.usuario)
+
+        fecha_minima = primera_fecha_pedible()
+        self.fecha = fecha_minima + date.resolution * ((Dia.JUEVES - fecha_minima.weekday()) % 7)
+        self.bloque = Bloque.objects.filter(dia=Dia.JUEVES, activo=True).first()
+
+    def _solicitud(self, usuario=None, **estados):
+        solicitud = Solicitud.objects.create(
+            solicitante=usuario or self.usuario, area=self.area, motivo="Grabar", **estados
+        )
+        SolicitudBloque.objects.bulk_create([SolicitudBloque(solicitud=solicitud, bloque=self.bloque, fecha=self.fecha)])
+        return solicitud
+
+    def _retirar(self, solicitud, **extra):
+        return self.client.post(
+            reverse("retirar_solicitud", args=[solicitud.id]),
+            {"vista": "proximas", "pagina": "1"},
+            **extra,
+        )
+
+    def test_retira_una_en_revision_y_queda_en_el_historial(self):
+        solicitud = self._solicitud()
+        response = self._retirar(solicitud)
+
+        # Sin seguir la redirección: esa petición consumiría el mensaje.
+        self.assertRedirects(
+            response, f'{reverse("mis_solicitudes")}?vista=proximas&pagina=1', fetch_redirect_response=False
+        )
+        solicitud.refresh_from_db()
+        self.assertEqual(solicitud.estado_validacion, Solicitud.EstadoValidacion.RETIRADA)
+        # Retirar no toca la confirmación: cancelar es otro flujo.
+        self.assertEqual(solicitud.estado_confirmacion, Solicitud.EstadoConfirmacion.NO_HABILITADA)
+        self.assertEqual(solicitud.estado_general, "Retirada")
+
+        pagina = self.client.get(reverse("mis_solicitudes"))
+        self.assertContains(pagina, f"Retiraste la solicitud #{solicitud.id}")
+        self.assertContains(pagina, "estado-retirada")
+        self.assertNotContains(pagina, 'class="btn-retirar"')
+
+    def test_con_htmx_devuelve_la_tabla_redibujada(self):
+        solicitud = self._solicitud()
+        response = self._retirar(solicitud, HTTP_HX_REQUEST="true")
+        self.assertTemplateUsed(response, "solicitudes/_tabla_historial.html")
+        self.assertTemplateNotUsed(response, "solicitudes/mis_solicitudes.html")
+        self.assertContains(response, f"Retiraste la solicitud #{solicitud.id}")
+        self.assertContains(response, "Retirada")
+
+    def test_boton_solo_en_las_que_estan_en_revision(self):
+        en_revision = self._solicitud()
+        Solicitud.objects.create(
+            solicitante=self.usuario, area=self.area, motivo="Otra",
+            estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
+        )
+        response = self.client.get(reverse("mis_solicitudes"))
+        self.assertContains(response, 'class="btn-retirar"', count=1)
+        self.assertContains(response, reverse("retirar_solicitud", args=[en_revision.id]))
+
+    def test_no_retira_las_ya_revisadas(self):
+        for estados in [
+            {"estado_validacion": Solicitud.EstadoValidacion.ACEPTADA},
+            {"estado_validacion": Solicitud.EstadoValidacion.RECHAZADA},
+            {"estado_validacion": Solicitud.EstadoValidacion.RETIRADA},
+        ]:
+            with self.subTest(estados=estados):
+                solicitud = self._solicitud(**estados)
+                antes = (solicitud.estado_validacion, solicitud.estado_confirmacion)
+                self._retirar(solicitud)
+                solicitud.refresh_from_db()
+                self.assertEqual((solicitud.estado_validacion, solicitud.estado_confirmacion), antes)
+
+    def test_no_retira_solicitudes_ajenas(self):
+        otro = Usuario.objects.create_user(email="otro@uach.cl", password="x")
+        ajena = self._solicitud(usuario=otro)
+        response = self._retirar(ajena, HTTP_HX_REQUEST="true")
+        self.assertContains(response, "No se pudo retirar")
+        ajena.refresh_from_db()
+        self.assertEqual(ajena.estado_validacion, Solicitud.EstadoValidacion.PENDIENTE)
+
+    def test_solo_por_post(self):
+        solicitud = self._solicitud()
+        response = self.client.get(reverse("retirar_solicitud", args=[solicitud.id]))
+        self.assertEqual(response.status_code, 405)
+        solicitud.refresh_from_db()
+        self.assertEqual(solicitud.estado_validacion, Solicitud.EstadoValidacion.PENDIENTE)
+
+    def test_requiere_ingreso_de_solicitante(self):
+        solicitud = self._solicitud()
+        self.client.logout()
+        response = self._retirar(solicitud)
+        self.assertIn(reverse("login_solicitante"), response["Location"])
+        solicitud.refresh_from_db()
+        self.assertEqual(solicitud.estado_validacion, Solicitud.EstadoValidacion.PENDIENTE)
+
+    def test_el_bloque_retirado_se_puede_volver_a_pedir(self):
+        from solicitudes.services import obtener_bloques_dia_para_usuario
+
+        def propio():
+            return next(
+                b for b in obtener_bloques_dia_para_usuario(fecha=self.fecha, usuario=self.usuario)
+                if b.id == self.bloque.id
+            ).es_propio
+
+        solicitud = self._solicitud()
+        self.assertTrue(propio())
+        self._retirar(solicitud)
+        self.assertFalse(propio())
+        # La regla de bloque ya pedido tampoco la cuenta.
+        nueva = Solicitud.objects.create(solicitante=self.usuario, area=self.area, motivo="De nuevo")
+        SolicitudBloque.objects.create(solicitud=nueva, bloque=self.bloque, fecha=self.fecha)
+
+    def test_cancelar_solo_cabe_en_una_aceptada(self):
+        from django.core.exceptions import ValidationError
+
+        for validacion in [
+            Solicitud.EstadoValidacion.PENDIENTE,
+            Solicitud.EstadoValidacion.RECHAZADA,
+            Solicitud.EstadoValidacion.RETIRADA,
+        ]:
+            with self.subTest(validacion=validacion):
+                solicitud = Solicitud(
+                    solicitante=self.usuario, area=self.area, motivo="Grabar",
+                    estado_validacion=validacion,
+                    estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA,
+                )
+                with self.assertRaises(ValidationError):
+                    solicitud.clean()
+
+        aceptada = Solicitud(
+            solicitante=self.usuario, area=self.area, motivo="Grabar",
+            estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
+            estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA,
+        )
+        aceptada.clean()
