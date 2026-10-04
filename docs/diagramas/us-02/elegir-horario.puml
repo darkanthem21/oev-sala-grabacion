@@ -1,0 +1,82 @@
+@startuml elegir-horario
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Elegir el día y los bloques: paso 1 (US-02)
+
+actor "Solicitante" as S
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.wizard</b>\n<size:11>solicitudes/wizard.py</size>" as W <<presentación>>
+participant "<b>solicitudes</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as A <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+== Ver los bloques de un día (htmx) ==
+S -> N ++ : GET /solicitar/bloques/?fecha=AAAA-MM-DD → bloques_dia(request)
+N -> W ++ : obtener_limites_reserva()
+W -> A ++ : primera_fecha_pedible()
+A -> D ++ : SELECT configuracion_parametros
+return fila
+return fecha_minima
+W -> W : $comentario("último día del mes que permite la anticipación máxima")\nfecha_maxima = date(max_year, max_month, ultimo_dia)
+return fecha_minima, fecha_maxima
+alt la fecha está dentro del período permitido
+  N -> V ++ : obtener_bloques_dia_para_usuario(fecha, request.user)
+  V -> A ++ : disponibilidad(fecha, fecha)
+  A -> D ++ : SELECT agenda_bloque
+  return filas
+  return bloques_plantilla
+  V -> D ++ : SELECT solicitudes_solicitudbloque, solicitudes_solicitud
+  return filas
+  loop cada bloque de la jornada de ese día, por hora de inicio
+    opt el bloque ya tiene una solicitud aceptada
+      V -> V : continue
+    end
+    opt el usuario ya lo pidió y está pendiente
+      V -> V : item.es_propio = True
+    end
+  end
+  return bloques
+else fuera del período
+  N -> N : fecha_valida = False
+end
+N --> S : 200 · solicitudes/bloques_dia.html
+note right of N
+  htmx pega la lista dentro de #panel-bloques.
+  Un bloque reservado no aparece y uno pedido
+  por el mismo usuario sale marcado.
+end note
+deactivate N
+
+== Continuar con los bloques marcados ==
+S -> N ++ : POST /solicitar/ (paso=1, fecha, bloques) → solicitar(request)
+N -> W ++ : SolicitudWizard(request.session)
+return wizard
+N -> W ++ : PasoSolicitud.resolver(request.POST["paso"]).validar_acceso(wizard.datos)
+return paso_actual
+N -> N ++ : _manejar_paso_horario(request, wizard)
+N -> W ++ : obtener_limites_reserva()
+return fecha_minima, fecha_maxima
+N -> N : bloques_ids = [int(b) for b in request.POST.getlist("bloques") if b.isdigit()]
+break falta la fecha, está fuera del período o no marcó bloques
+  N --> S : 200 · solicitudes/solicitar.html (paso 1) con el error
+end
+N -> V ++ : obtener_bloques_dia_para_usuario(fecha_obj, request.user)
+note right of V : Vuelve a consultar: no se fía\nde lo que mostró la pantalla.
+return bloques
+N -> N : bloques_disponibles = [b for b in bloques if b.id in bloques_ids and b.disponible]
+break alguno de los bloques marcados ya no está disponible
+  N --> S : 200 · solicitudes/solicitar.html (paso 1) con el error
+end
+N -> N : horas_texto = ", ".join(b.texto for b in bloques_disponibles)
+N -> W ++ : wizard.guardar_horario(fecha_str, bloques_ids, horas_texto)
+W -> W : self._session[CLAVE_SESION] = reserva
+deactivate W
+note right of N
+  Todavía no se escribe ninguna solicitud:
+  la elección vive en la sesión hasta el paso 3.
+end note
+N --> S : 302 · /solicitar/?paso=2
+deactivate N
+deactivate N
+@enduml
