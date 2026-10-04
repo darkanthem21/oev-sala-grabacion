@@ -31,10 +31,6 @@ M -> M : $comentario("días que ya pasaron, la más reciente primero")\nself.fil
 return anteriores
 N -> M ++ : $comentario("con el área y los bloques de la tabla")\n(proximas if vista == "proximas" else anteriores).con_detalle()
 return solicitudes
-note right of N
-  Hasta acá los QuerySet son perezosos:
-  todavía no hay ninguna consulta.
-end note
 
 N -> N ++ : $comentario("una página inválida o fuera de rango cae en la primera o la última")\nPaginator(solicitudes, SOLICITUDES_POR_PAGINA).get_page(numero_pagina)
 N -> M ++ : solicitudes.count()
