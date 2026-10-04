@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.cache import patch_vary_headers
@@ -241,6 +241,16 @@ def solicitar(request):
     return manejar(request, wizard, puede_cambiar_area=tiene_multiples_areas)
 
 
+@user_passes_test(es_solicitante, login_url="login_solicitante")
+def enviada(request, solicitud_id):
+    """Confirmación de una solicitud recién enviada, leída de la base."""
+    solicitud = get_object_or_404(
+        Solicitud.objects.de(request.user).con_detalle().prefetch_related("acompanantes"),
+        pk=solicitud_id,
+    )
+    return render(request, "solicitudes/enviada.html", {"solicitud": solicitud})
+
+
 def _manejar_paso_horario(request, wizard: SolicitudWizard, puede_cambiar_area: bool = False):
     error_bloques = None
 
@@ -341,14 +351,13 @@ def _manejar_paso_confirmacion(request, wizard: SolicitudWizard, puede_cambiar_a
                     usuario=request.user,
                     datos_reserva=wizard.datos,
                 )
-                wizard.limpiar()
-                return render(request, "solicitudes/enviada.html", {
-                    "solicitud": solicitud_obj,
-                    "reserva": resumen,
-                    "acompanantes": resumen["acompanantes"],
-                })
             except ValidationError as e:
-                error_terminos = "; ".join(e.messages) if hasattr(e, "messages") else str(e)
+                error_terminos = "; ".join(e.messages)
+            else:
+                wizard.limpiar()
+                # Redirección y no la página directa: recargar no reenvía el
+                # formulario, y la confirmación queda con dirección propia.
+                return redirect("solicitud_enviada", solicitud_id=solicitud_obj.id)
 
     contexto = {
         "paso": PasoSolicitud.CONFIRMACION.value,

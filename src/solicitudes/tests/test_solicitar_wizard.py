@@ -105,10 +105,15 @@ class SolicitarWizardTestCase(TestCase):
             "paso": "confirmacion",
             "acepta_terminos": "on",
         })
-        self.assertEqual(response_p3.status_code, 200)
-        self.assertTemplateUsed(response_p3, "solicitudes/enviada.html")
-        self.assertContains(response_p3, "Solicitud completa")
-        self.assertContains(response_p3, "Grabación cápsula docente")
+        # POST/Redirect/GET: el envío redirige a la confirmación.
+        solicitud_creada = Solicitud.objects.get(solicitante=self.usuario)
+        self.assertRedirects(response_p3, reverse("solicitud_enviada", args=[solicitud_creada.id]))
+        confirmacion = self.client.get(response_p3["Location"])
+        self.assertTemplateUsed(confirmacion, "solicitudes/enviada.html")
+        self.assertContains(confirmacion, "Solicitud completa")
+        self.assertContains(confirmacion, "Grabación cápsula docente")
+        self.assertContains(confirmacion, f"{self.bloque.inicio:%H:%M} – {self.bloque.termino:%H:%M}")
+        self.assertContains(confirmacion, "Juan Acompañante")
 
         # Verificar persistencia en base de datos
         solicitud = Solicitud.objects.filter(solicitante=self.usuario).first()
@@ -262,3 +267,38 @@ class DisponibilidadEfectivaTestCase(TestCase):
             bloque=self.bloque,
         )
         self.assertIsNotNone(sb.pk)
+
+
+class SolicitudEnviadaTestCase(TestCase):
+    """La confirmación tiene dirección propia y solo muestra solicitudes propias."""
+
+    def setUp(self):
+        self.area = Area.objects.create(nombre="Informática", activa=True)
+        self.usuario = Usuario.objects.create_user(email="docente@uach.cl", password="x")
+        self.usuario.groups.add(Group.objects.get(name=Rol.SOLICITANTE))
+        self.client.force_login(self.usuario)
+        fecha_minima = primera_fecha_pedible()
+        self.fecha = fecha_minima + date.resolution * ((Dia.JUEVES - fecha_minima.weekday()) % 7)
+
+    def _solicitud(self, usuario, **estados):
+        return Solicitud.objects.create(solicitante=usuario, area=self.area, fecha=self.fecha, motivo="Grabar", **estados)
+
+    def test_no_muestra_solicitudes_ajenas(self):
+        otro = Usuario.objects.create_user(email="otro@uach.cl", password="x")
+        ajena = self._solicitud(otro)
+        response = self.client.get(reverse("solicitud_enviada", args=[ajena.id]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_requiere_ingreso_de_solicitante(self):
+        propia = self._solicitud(self.usuario)
+        self.client.logout()
+        response = self.client.get(reverse("solicitud_enviada", args=[propia.id]))
+        self.assertIn(reverse("login_solicitante"), response["Location"])
+
+    def test_muestra_el_estado_actual(self):
+        en_revision = self._solicitud(self.usuario)
+        self.assertContains(self.client.get(reverse("solicitud_enviada", args=[en_revision.id])), "se encuentra en revisión")
+        aceptada = self._solicitud(self.usuario, estado_validacion=Solicitud.EstadoValidacion.ACEPTADA)
+        response = self.client.get(reverse("solicitud_enviada", args=[aceptada.id]))
+        self.assertContains(response, "está aceptada")
+        self.assertNotContains(response, "se encuentra en revisión")

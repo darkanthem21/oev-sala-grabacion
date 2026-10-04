@@ -7,36 +7,37 @@
   <h1>Solicitud completa</h1>
 
   {% comment %}
-  Honestidad con quien prueba la pantalla: el formulario valida entero, pero
-  todavia no hay donde guardarlo. El numero de solicitud y el estado PENDIENTE
-  (US-14 AC6) llegan cuando se cierre la decision Solicitud/Ticket y exista el
-  modelo.
+  Se lee de la base: la dirección queda guardada y se puede volver a ella,
+  así que el estado es el actual y no el del momento del envío.
   {% endcomment %}
   <div class="aviso" role="status">
-    Tu solicitud {% if solicitud.id %}<strong>#{{ solicitud.id }}</strong> {% endif %}ha sido registrada con éxito y se encuentra en revisión.
+    {% if solicitud.estado_clave == "revision" %}
+      Tu solicitud <strong>#{{ solicitud.id }}</strong> ha sido registrada con éxito y se encuentra en revisión.
+    {% else %}
+      Tu solicitud <strong>#{{ solicitud.id }}</strong> está {{ solicitud.estado_general|lower }}.
+    {% endif %}
   </div>
 
   <dl class="ficha">
     <dt>Solicitante</dt><dd>{{ user.get_full_name|default:user.email }}</dd>
-    {% if solicitud.fecha %}
-      <dt>Fecha</dt><dd><strong>{{ solicitud.fecha|date:"l d \d\e F \d\e Y"|capfirst }}</strong></dd>
-    {% endif %}
-    {% if solicitud.bloques_texto %}
-      <dt>Horario</dt><dd><strong>{{ solicitud.bloques_texto }}</strong></dd>
-    {% endif %}
+    <dt>Fecha</dt><dd><strong>{{ solicitud.fecha|date:"l d \d\e F \d\e Y"|capfirst }}</strong></dd>
+    <dt>Horario</dt>
+    <dd><strong>{% for sb in solicitud.solicitudes_bloques.all %}{{ sb.inicio|time:"H:i" }} – {{ sb.termino|time:"H:i" }}{% if not forloop.last %}, {% endif %}{% endfor %}</strong></dd>
     <dt>Área académica</dt><dd>{{ solicitud.area }}</dd>
     <dt>Motivo</dt><dd>{{ solicitud.motivo }}</dd>
     <dt>Personas en sala</dt><dd>{{ solicitud.personas }}</dd>
   </dl>
 
-  {% if acompanantes %}
-    <h2>Acompañantes</h2>
-    <ul class="lista">
-      {% for persona in acompanantes %}
-        <li>{{ persona.nombre }} · {{ persona.correo }}</li>
-      {% endfor %}
-    </ul>
-  {% endif %}
+  {% with acompanantes=solicitud.acompanantes.all %}
+    {% if acompanantes %}
+      <h2>Acompañantes</h2>
+      <ul class="lista">
+        {% for persona in acompanantes %}
+          <li>{{ persona.nombre }} · {{ persona.correo }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
 
   <div class="acciones-paso">
     <a href="{% url 'solicitar' %}" class="btn-secundario">

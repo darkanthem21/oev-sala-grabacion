@@ -67,9 +67,14 @@ else aceptó los términos
   end note
   return solicitud
   N -> W ++ : wizard.limpiar()
-  W -> W : $comentario("elimina los datos temporales del asistente")\ndel request.session[SESSION_KEY]
+  W -> W : $comentario("elimina los datos temporales del asistente")\nself._session.pop(self.CLAVE_SESION, None)
   return
-  N --> S : 200 · solicitudes/enviada.html con resumen de la reserva
+  N --> S : 302 · /solicitar/enviada/<id>/
+  note right of N
+    Redirección y no la página directa: recargar no
+    reenvía el formulario. La confirmación (enviada)
+    lee la solicitud de la base y muestra su estado actual.
+  end note
 end
 deactivate N
 deactivate N
