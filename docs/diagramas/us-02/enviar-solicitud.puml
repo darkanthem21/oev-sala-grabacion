@@ -14,12 +14,26 @@ participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
 S -> N ++ : POST /solicitar/ (paso=confirmacion, acepta_terminos) → solicitar(request)
-ref over N, W, D : áreas activas, wizard.ajustar_area(areas) y paso_actual: igual que en "Elegir el día y los bloques"
+N -> D ++ : $comentario("las áreas activas del usuario")\nSELECT personas_area, personas_usuario_areas
+return filas
+break no tiene áreas activas
+  N --> S : 200 · solicitudes/sin_area.html
+end
+N -> W ++ : SolicitudWizard(request.session)
+return wizard
+N -> W ++ : wizard.ajustar_area(areas)
+return falta_area
+break falta_area es "elegir" o "cambiar"
+  N --> S : 302 · /solicitar/area/
+end
+N -> W ++ : $comentario("el paso pedido, o el primero que la sesión aún no completó")\nPasoSolicitud.resolver(paso_param).validar_acceso(wizard.datos)
+return paso_actual
 note right of N
   Si la sesión no completó los pasos anteriores,
   validar_acceso devuelve el primero que falta
   y se atiende ese en lugar del paso 3.
 end note
+N -> N : manejar = {…, CONFIRMACION: _manejar_paso_confirmacion}[paso_actual]
 
 N -> N ++ : _manejar_paso_confirmacion(request, wizard, puede_cambiar_area)
 N -> W ++ : wizard.obtener_resumen()
@@ -34,7 +48,7 @@ alt no aceptó los términos
   N -> N : $comentario("AC10: sin aceptar no se registra nada")\nerror_terminos = "Tienes que aceptar los términos…"
 else aceptó los términos
   N -> V ++ : guardar_solicitud_completa(usuario=request.user, datos_reserva=wizard.datos)
-  group @transaction.atomic
+  V -> V ++ : $comentario("lo de adentro se guarda junto o no se guarda")\nwith transaction.atomic():
     V -> D ++ : SELECT personas_area
     return fila
     V -> V : $comentario("con la fecha elegida y validación pendiente (AC5)")\nsolicitud = Solicitud(solicitante, area, fecha, motivo, observaciones, personas, …)
@@ -74,7 +88,7 @@ else aceptó los términos
       V -> D ++ : $comentario("Acompanante.objects.create(…)")\nINSERT solicitudes_acompanante
       deactivate D
     end
-  end
+  deactivate V
 
   alt se guardó todo
     V --> N : solicitud
@@ -103,9 +117,7 @@ end
 deactivate N
 deactivate N
 
-== El navegador sigue la redirección ==
-
-S -> N ++ : GET /solicitar/enviada/<id>/ → enviada(request, solicitud_id)
+S -> N ++ : $comentario("el navegador sigue la redirección")\nGET /solicitar/enviada/<id>/ → enviada(request, solicitud_id)
 N -> M ++ : $comentario("SolicitudQuerySet: solo las del usuario, con área y bloques")\nget_object_or_404(Solicitud.objects.de(request.user).con_detalle().prefetch_related("acompanantes"), pk=solicitud_id)
 M -> D ++ : SELECT solicitudes_solicitud, personas_area
 return fila

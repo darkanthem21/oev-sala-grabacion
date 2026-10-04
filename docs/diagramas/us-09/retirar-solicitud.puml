@@ -7,7 +7,9 @@ title Retirar una solicitud propia (US-09)
 actor "Solicitante" as S
 participant "<b>diálogo de confirmación</b>\n<size:11>solicitudes/mis_solicitudes.html</size>" as P <<presentación>>
 participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
-participant "<b>solicitudes</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>solicitudes.models</b>\n<size:11>solicitudes/models.py</size>\n<size:11>SolicitudQuerySet</size>" as M <<dominio>>
+participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
 S -> P ++ : clic en Retirar de una solicitud en revisión
@@ -34,7 +36,43 @@ else Retirar solicitud
   end
 
   N -> N : $comentario("la pestaña y la página donde estaba")\nvista, pagina = request.POST.get("vista"), request.POST.get("pagina")
-  ref over N, V, D : _contexto_historial(request.user, vista, pagina): las mismas consultas que en "Ver mis solicitudes"
+  N -> N ++ : $comentario("la tabla otra vez, ya con la solicitud como Retirada")\n_contexto_historial(request.user, vista, pagina)
+  N -> N : hoy = timezone.localdate()
+  N -> M ++ : Solicitud.objects.de(request.user)
+  return propias
+  N -> M ++ : propias.proximas(hoy)
+  return proximas
+  N -> M ++ : propias.anteriores(hoy)
+  return anteriores
+  N -> M ++ : (proximas if vista == "proximas" else anteriores).con_detalle()
+  return solicitudes
+  N -> M ++ : $comentario("Paginator(…).get_page(pagina)")\nsolicitudes.count()
+  M -> D ++ : SELECT COUNT solicitudes_solicitud
+  return filas
+  return total
+  N -> M ++ : proximas.count()
+  M -> D ++ : SELECT COUNT solicitudes_solicitud
+  return filas
+  return total_proximas
+  N -> M ++ : anteriores.count()
+  M -> D ++ : SELECT COUNT solicitudes_solicitud
+  return filas
+  return total_anteriores
+  opt vista == "proximas"
+    N -> C ++ : Parametros.cargar().plazo_confirmacion_dias
+    C -> D ++ : SELECT configuracion_parametros
+    return fila
+    return plazo_confirmacion
+  end
+  return contexto
+  N -> N ++ : render(request, "solicitudes/_tabla_historial.html", contexto)
+  N -> M ++ : $comentario("la plantilla recorre la página; trae los mensajes de messages")\npagina.object_list
+  M -> D ++ : SELECT solicitudes_solicitud, personas_area
+  return filas
+  M -> D ++ : SELECT solicitudes_solicitudbloque, agenda_bloque
+  return filas
+  return solicitudes
+  return respuesta
   N --> P -- : 200 · solicitudes/_tabla_historial.html
   P -> P : $comentario("htmx reemplaza la tabla; el mensaje viene dentro")\nhx-swap="outerHTML" sobre #historial
   P --> S : la fila como Retirada y el mensaje

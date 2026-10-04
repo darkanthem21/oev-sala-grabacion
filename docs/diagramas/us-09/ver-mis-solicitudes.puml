@@ -6,7 +6,7 @@ title Ver mis solicitudes (US-09)
 
 actor "Solicitante" as S
 participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
-participant "<b>solicitudes</b>\n<size:11>solicitudes/models.py</size>\n<size:11>SolicitudQuerySet</size>" as M <<dominio>>
+participant "<b>solicitudes.models</b>\n<size:11>solicitudes/models.py</size>\n<size:11>SolicitudQuerySet</size>" as M <<dominio>>
 participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
@@ -69,7 +69,12 @@ alt HX-Request y no HX-History-Restore-Request
   end note
 else sin htmx, o htmx restaurando el historial
   N -> N ++ : $comentario("la página entera, que incluye la misma tabla")\nrender(request, "solicitudes/mis_solicitudes.html", contexto)
-  ref over N, M, D : pagina.object_list: las mismas dos consultas de la página y sus bloques
+  N -> M ++ : pagina.object_list
+  M -> D ++ : SELECT solicitudes_solicitud, personas_area
+  return filas
+  M -> D ++ : SELECT solicitudes_solicitudbloque, agenda_bloque
+  return filas
+  return solicitudes
   return respuesta
 end
 N -> N : $comentario("la misma dirección entrega tabla o página entera")\npatch_vary_headers(respuesta, ["HX-Request"])

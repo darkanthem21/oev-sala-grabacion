@@ -8,6 +8,7 @@ actor "Solicitante" as S
 participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
 participant "<b>solicitudes.forms</b>\n<size:11>solicitudes/forms.py</size>" as F <<presentación>>
 participant "<b>solicitudes.wizard</b>\n<size:11>solicitudes/wizard.py</size>" as W <<presentación>>
+participant "<b>solicitudes.calendar</b>\n<size:11>solicitudes/calendar.py</size>" as K <<presentación>>
 participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
 participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as A <<dominio>>
 participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
@@ -77,7 +78,51 @@ alt la fecha y todos los bloques son válidos
 else fecha fuera de período, sin bloques o alguno ya no está libre
   N -> F ++ : primer_error(form)
   return error_bloques
-  ref over N, F, W, V, A, C, D : construir_calendario_contexto(request, wizard.fecha_str, wizard.bloques_ids): el mes con lo que ya tenía elegido
+  N -> K ++ : $comentario("el mes con lo que ya tenía elegido")\nconstruir_calendario_contexto(request, fecha_str=wizard.fecha_str, bloques_seleccionados_ids=wizard.bloques_ids, paso=1)
+  K -> W ++ : obtener_limites_reserva()
+  W -> A ++ : primera_fecha_pedible()
+  A -> C ++ : Parametros.cargar()
+  C -> D ++ : SELECT configuracion_parametros
+  return fila
+  return parametros
+  return fecha_minima
+  return fecha_minima, fecha_maxima
+  opt la sesión ya tiene una fecha elegida
+    K -> F ++ : $comentario("la misma validación de fecha del formulario")\nFechaReservaForm.fecha_de(fecha_str)
+    F -> W ++ : obtener_limites_reserva()
+    W -> A ++ : primera_fecha_pedible()
+    A -> C ++ : Parametros.cargar()
+    C -> D ++ : SELECT configuracion_parametros
+    return fila
+    return parametros
+    return fecha_minima
+    return fecha_minima, fecha_maxima
+    return fecha_seleccionada
+    K -> V ++ : $comentario("los bloques de ese día, para volver a mostrarlos")\nobtener_bloques_dia_para_usuario(fecha_seleccionada, usuario)
+    V -> A ++ : disponibilidad(fecha, fecha)
+    A -> A ++ : plantilla_semanal()
+    A -> D ++ : SELECT agenda_bloque
+    return filas
+    return por_dia
+    return {fecha: bloques}
+    V -> D ++ : SELECT solicitudes_solicitudbloque, solicitudes_solicitud, personas_usuario
+    return filas
+    return bloques_seleccionados
+  end
+  K -> V ++ : $comentario("qué días del mes tienen algún bloque libre")\nobtener_dias_con_disponibilidad(year, month)
+  V -> A ++ : disponibilidad(desde, hasta)
+  A -> A ++ : plantilla_semanal()
+  A -> D ++ : SELECT agenda_bloque
+  return filas
+  return por_dia
+  return jornada_mes
+  V -> D ++ : $comentario("los bloques aceptados del mes")\nSELECT solicitudes_solicitudbloque, solicitudes_solicitud
+  return filas
+  return dias_disponibles
+  K -> K : $comentario("la grilla HTML del mes")\nAgendaCalendar(dias_disponibles, year, month, …).formatmonth(year, month)
+  K -> W ++ : SolicitudWizard(request.session).datos
+  return reserva
+  return contexto
   N --> S : 200 · solicitudes/solicitar.html con el error
 end
 deactivate N

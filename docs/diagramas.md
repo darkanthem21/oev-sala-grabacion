@@ -74,6 +74,11 @@ usuario ya tiene pendiente se rechaza aquí, igual que la pantalla lo
 deshabilita. Si todo es válido queda en la sesión y se pasa al paso 2; si no,
 vuelve el calendario con el error y lo que ya tenía elegido.
 
+El paso 2 (motivo, personas y acompañantes) no lleva diagrama: después del
+mismo comienzo de `solicitar`, valida con `SolicitudForm` y
+`AcompananteFormSet`, guarda en la sesión y redirige al paso 3. No lee ni
+escribe tablas de solicitudes.
+
 ### Enviar una solicitud de reserva (US-02)
 
 El envío es el paso 3 del asistente y exige aceptar los términos y condiciones
@@ -130,8 +135,8 @@ rápido y no se pierde nada.
 
 El historial lista todas las solicitudes del usuario, de cualquiera de sus
 áreas, con el área, la fecha, los bloques y el estado. Se separa en Próximas y
-Anteriores por día calendario: una solicitud es próxima mientras le quede algún
-bloque de hoy en adelante, aunque la hora de hoy ya haya pasado. Esas reglas
+Anteriores por día calendario: una solicitud es próxima si su fecha es hoy o
+posterior, aunque la hora de sus bloques ya haya pasado. Esas reglas
 viven en `SolicitudQuerySet` (`de`, `proximas`, `anteriores`, `con_detalle`) y
 no en la vista, porque son del dominio: la vista solo elige la pestaña, pagina y
 responde. La fecha es un campo de la solicitud, así que filtrar y ordenar no
@@ -145,7 +150,8 @@ de esa página. Cambiar de pestaña o de página es el mismo `GET` con htmx, que
 recibe solo `_tabla_historial.html` y actualiza la dirección. Si htmx restaura
 el historial sin tenerlo en caché, pide la página entera, y `Vary: HX-Request`
 evita que el navegador confunda una respuesta con la otra. El plazo de la nota
-de confirmación se lee de `Parametros`, porque lo cambia administración.
+de confirmación se lee de `Parametros`, porque lo cambia administración, y solo
+en Próximas, que es la única pestaña que muestra la nota.
 
 ### Retirar una solicitud propia (US-09)
 
@@ -206,5 +212,10 @@ El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_
   - `solicitudes_solicitud.area_id` → `personas_area.id` (`on_delete=PROTECT`): garantiza la trazabilidad del área académica requirente.
   - `solicitudes_solicitudbloque.solicitud_id` → `solicitudes_solicitud.id` (`on_delete=CASCADE`): mantiene la consistencia de bloques asignados a la solicitud.
   - `solicitudes_solicitudbloque.bloque_id` → `agenda_bloque.id` (`on_delete=PROTECT`): permite desactivar bloques de la plantilla sin alterar las solicitudes históricas ya existentes.
+  - `personas_usuario_areas` (`Usuario.areas`): las áreas para las que una persona puede solicitar. El asistente lee de aquí las activas para fijar el área o pedir que la elija.
   - **Restricción de unicidad**: `UniqueConstraint(fields=["solicitud", "bloque"])` impide pedir dos veces el mismo bloque en una solicitud. La fecha ya no entra: es la de la solicitud.
+- **Estados**: cada solicitud tiene dos, uno por quien decide.
+  - `estado_validacion` lo decide la Oficina: `PENDIENTE`, `ACEPTADA` o `RECHAZADA`. `RETIRADA` es la excepción: la pone el propio solicitante cuando la retira antes de que se revise (US-09).
+  - `estado_confirmacion` es del solicitante una vez aceptada: `NO_HABILITADA` hasta que se acepta, y después `PENDIENTE`, `CONFIRMADA` o `CANCELADA`. `Solicitud.clean()` exige que solo una solicitud aceptada pueda estar pendiente de confirmar, confirmada o cancelada.
+  - Lo que ve el solicitante combina los dos (`Solicitud.estado_general`): "En revisión por la Oficina", "Aceptada", "Pendiente de confirmación", "Confirmada", "Rechazada", "Cancelada" o "Retirada".
 
