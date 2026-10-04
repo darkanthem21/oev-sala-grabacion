@@ -198,10 +198,12 @@ se ve quién lo registró y cuándo.
 
 ![Check-out completado](uso/us-14/checkout-completado.png)
 
-> **Estado actual.** Mientras no existan las solicitudes en la base de datos,
-> esta vista muestra reservas de prueba y lo avisa con una franja arriba de la
-> tabla. El formulario de check-out con el checklist de la sala llega con US-15;
-> hasta entonces el registro es simulado y solo lo ve quien lo envió.
+> **Estado actual.** La lista muestra los bloques de las solicitudes aceptadas.
+> Mientras el panel del validador use datos de prueba (US-07), una solicitud se
+> acepta desde `/admin/`, en **Solicitudes de reserva**, con el estado de
+> validación **Aceptada**. El formulario de check-out con el checklist de la sala
+> llega con US-15; hasta entonces el registro es simulado y solo lo ve quien lo
+> envió.
 
 ---
 
@@ -492,7 +494,6 @@ de la jornada. Así, un evento puede cerrar el bloque del martes 6 de octubre de
 recuerda con un aviso fijo: los horarios valen para todas las semanas; los
 bloqueos, solo para su fecha.
 
-> **Estado actual.** Las reservas que un bloqueo puede afectar todavía salen de
-> los datos de prueba del personal de apoyo, porque la reserva confirmada (el
-> ticket) aún no está en la base. En desarrollo, los correos de aviso se
-> escriben en el log del contenedor en vez de enviarse.
+> **Estado actual.** Las reservas que un bloqueo afecta son las solicitudes
+> aceptadas y no canceladas de esas fechas. En desarrollo, los correos de aviso
+> se escriben en el log del contenedor en vez de enviarse.

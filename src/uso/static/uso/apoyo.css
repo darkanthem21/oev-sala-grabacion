@@ -1,10 +1,5 @@
 /* Vista del personal de apoyo (US-14). Solo variables de marca.css. */
 
-.aviso-prueba {
-  margin: 0 0 1.25rem; padding: .5rem .75rem; font-size: .8rem;
-  border-left: 3px solid var(--precaucion); background: var(--superficie);
-}
-
 .dia { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1rem; }
 .dia h2 { margin: 0; font-size: 1.05rem; }
 .dia form { margin-left: auto; }

@@ -8,7 +8,7 @@ actor "Administrador" as A
 participant "<b>agenda.views</b>\n<size:11>agenda/views.py</size>" as N <<presentación>>
 participant "<b>agenda.forms</b>\n<size:11>agenda/forms.py</size>" as F <<presentación>>
 participant "<b>agenda</b>\n<size:11>agenda/services.py</size>\n<size:11>agenda/models.py</size>" as V <<dominio>>
-participant "<b>uso</b>\n<size:11>uso/services.py</size>" as U <<dominio>>
+participant "<b>solicitudes</b>\n<size:11>solicitudes/services.py</size>" as U <<dominio>>
 participant "<b>notificaciones</b>\n<size:11>notificaciones/services.py</size>" as M <<dominio>>
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
@@ -36,11 +36,12 @@ N -> F ++ : formulario.save(commit=False)
 return bloqueo
 N -> V ++ : services.afectadas(bloqueo)
 V -> U ++ : $comentario("agenda pregunta sin depender de quien tiene las reservas")\nreservas_aprobadas.send(sender=Bloqueo, desde, hasta)
+U -> D ++ : $comentario("las aceptadas y no canceladas de esas fechas")\nSELECT solicitudes_solicitudbloque, solicitudes_solicitud, agenda_bloque, personas_usuario
+return filas
 return reservas
 note right of U
-  Hoy contesta uso con sus tickets de prueba.
-  Cuando exista Ticket, el receptor se muda
-  a solicitudes y agenda no se entera.
+  Contesta solicitudes, que depende de agenda:
+  por eso agenda pregunta por señal y no la importa.
 end note
 V -> V : $comentario("las que el bloqueo cubre y aún no empiezan")\nsorted(r for r in reservas if bloqueo.cubre(r.fecha, r.inicio))
 return afectadas

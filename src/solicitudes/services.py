@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from agenda.models import Bloque, disponibilidad, primera_fecha_pedible
+from agenda.signals import Reserva
 from personas.models import Area
 from .models import Acompanante, Solicitud, SolicitudBloque
 
@@ -183,3 +184,25 @@ def guardar_solicitud_completa(
                 )
 
         return solicitud
+
+
+def reservas_aprobadas(sender, desde, hasta, **kwargs):
+    """US-17 AC4: las reservas aceptadas y no canceladas de esas fechas, para que
+    agenda sepa a quién le quita la sala un bloqueo. Se conecta en `apps.py`."""
+    filas = SolicitudBloque.objects.filter(
+        fecha__range=(desde, hasta),
+        solicitud__estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
+    ).exclude(
+        solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA,
+    ).select_related("bloque", "solicitud__solicitante")
+    return [
+        Reserva(
+            codigo=f.ticket,
+            fecha=f.fecha,
+            inicio=f.inicio,
+            termino=f.termino,
+            solicitante=f.solicitud.solicitante.get_full_name() or f.solicitud.solicitante.email,
+            correo=f.solicitud.solicitante.email,
+        )
+        for f in filas
+    ]

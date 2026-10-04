@@ -40,7 +40,6 @@ def bloques(request):
         "bloques": services.bloques_del_dia(fecha, _enviados(request)),
         # US-17 AC2: también cuando ese día no hay nada reservado.
         "bloqueos": bloqueos_por_fecha(fecha, fecha).get(fecha, []),
-        "origen": services.ORIGEN,
     })
 
 
@@ -70,5 +69,4 @@ def checkout(request, codigo):
         "bloque": bloque,
         "registro": registro,
         "volver": volver,
-        "origen": services.ORIGEN,
     })

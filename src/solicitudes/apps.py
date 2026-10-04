@@ -1,8 +1,8 @@
 from django.apps import AppConfig
 
 
-class UsoConfig(AppConfig):
-    name = "uso"
+class SolicitudesConfig(AppConfig):
+    name = "solicitudes"
 
     def ready(self):
         # US-17 AC4. Agenda pregunta por señal quién pierde la sala con un
@@ -11,4 +11,4 @@ class UsoConfig(AppConfig):
 
         from .services import reservas_aprobadas as receptor
 
-        reservas_aprobadas.connect(receptor, dispatch_uid="uso.reservas_aprobadas")
+        reservas_aprobadas.connect(receptor, dispatch_uid="solicitudes.reservas_aprobadas")
