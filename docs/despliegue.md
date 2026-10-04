@@ -137,6 +137,40 @@ Para restaurar, sobre una base vacía:
 docker exec -i grupo6_db psql -U oev oev < respaldo-AAAA-MM-DD.sql
 ```
 
+## Solicitudes y panel del validador (US-02 y US-07)
+
+### Antes de desplegar
+
+Esta versión trae la migración de `solicitudes`, que crea las tablas de la
+solicitud, sus bloques y sus acompañantes. Hacer el respaldo de la base (ver
+[Respaldo de la base](#respaldo-de-la-base)) antes de bajar la imagen.
+
+No hay variables nuevas en el `.env`. El texto de los términos y condiciones se
+edita en el panel de administración, en **Reglas**, y no por entorno.
+
+### Rutas nuevas
+
+| Ruta | Quién entra |
+|---|---|
+| `/solicitar/` | Formulario de solicitud. Cuentas del grupo **Solicitante** con al menos un área activa |
+| `/validacion/entrar/` | Puerta de los validadores |
+| `/validador/` | Panel del validador. Cuentas del grupo **Validador** |
+
+El grupo y las áreas de cada cuenta se asignan en `/admin/` > **Usuarios**.
+
+### Verificar después de desplegar
+
+- Entrar por `/solicitante/entrar/` con una cuenta que tenga área y ver el paso
+  1 del formulario en `/solicitar/`.
+- Entrar por `/validacion/entrar/` con una cuenta validadora y ver el recuadro
+  **Datos de prueba** en `/validador/`.
+
+### Pendiente
+
+El panel del validador lee `src/solicitudes/datos_prueba/panel_validador.json`,
+no la base de datos. Cuando se conecte a las solicitudes reales puede traer
+otra migración: repetir el respaldo antes de ese despliegue.
+
 ## Problemas conocidos
 
 | Síntoma | Causa | Solución |

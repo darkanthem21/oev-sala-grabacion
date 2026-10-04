@@ -9,6 +9,7 @@ Este manual cubre lo que hoy está disponible en el sistema:
 | US-01 Inicio de sesión | Todos | [Iniciar sesión](#1-iniciar-sesión) |
 | US-04 Panel de administrador | Administrador | [Configurar la sala](#2-configurar-la-sala) |
 | US-14 Bloques del personal de apoyo | Personal de apoyo | [Bloques del día](#3-bloques-del-día) |
+| US-07 Panel del validador | Validador | [Panel del validador](#5-panel-del-validador) |
 
 ## Puertas de acceso
 
@@ -19,6 +20,7 @@ desde el sitio; las otras dos las conoce quien las usa.
 |---|---|
 | Solicitante | `/solicitante/entrar/` |
 | Administrador | `/configuracion/entrar/` |
+| Validador | `/validacion/entrar/` |
 | Personal de apoyo | `/apoyo/entrar/` |
 
 ---
@@ -198,3 +200,103 @@ se ve quién lo registró y cuándo.
 > esta vista muestra reservas de prueba y lo avisa con una franja arriba de la
 > tabla. El formulario de check-out con el checklist de la sala llega con US-15;
 > hasta entonces el registro es simulado y solo lo ve quien lo envió.
+
+---
+
+## 5. Panel del validador
+
+Aquí el validador revisa las solicitudes pendientes y aprueba o rechaza cada
+bloque pedido. Se entra por `/validacion/entrar/` y el panel está en
+`/validador/`.
+
+> **Estado actual.** El panel funciona con datos de prueba: los lee de
+> `src/solicitudes/datos_prueba/panel_validador.json`, no de la base de datos.
+> Aprobar y rechazar solo cambian lo que se ve en pantalla: no se guarda nada, y
+> al recargar todo vuelve a pendiente. Un recuadro naranja arriba del panel lo
+> recuerda.
+
+### Dar el rol a alguien
+
+El rol se asigna desde `/admin` con la cuenta de administrador: en **Usuarios**,
+abre la cuenta de la persona, agrégale el grupo **Validador** y guarda.
+
+### Leer el panel
+
+![Panel del validador](uso/us-07/panel-con-tope.png)
+
+**Bloques de la semana**, en la columna izquierda, es un calendario de lunes a
+viernes con los bloques de la jornada:
+
+| Casilla | Qué indica |
+|---|---|
+| Vacía | Libre |
+| Borde gris con un número | Una solicitud pendiente |
+| Borde rojo con un número | Tope: varias solicitudes piden ese bloque. El número dice cuántas |
+| Verde | Aprobado, con el número de la solicitud |
+
+Al hacer clic en una casilla, el panel baja a la solicitud o al tope
+correspondiente.
+
+Arriba a la derecha, el resumen dice cuántos bloques quedan **pendientes**,
+cuántos tienen **tope** y cuántos están **resueltos**.
+
+Cada tarjeta tiene además un mini calendario con sus bloques: borde azul es un
+pedido pendiente, borde rojo con número es un tope, verde es aprobado y rayado
+es rechazado.
+
+### Con tope
+
+Agrupa los bloques que piden dos o más solicitudes en la misma fecha y hora.
+Esos bloques se resuelven solo aquí.
+
+Cada tarjeta muestra el bloque, las solicitudes que lo piden, ordenadas por
+prioridad del área (P1 primero), y una sugerencia según esa prioridad. De cada
+solicitud se ve el encargado, el área, el motivo y las personas, y si pide otros
+bloques también se indica.
+
+Para resolver un tope:
+
+1. Escribe el **Motivo de la resolución** (mínimo 10 caracteres). Es el motivo
+   que recibe quien no obtiene el bloque.
+2. Pulsa **Aprobar esta** en la solicitud elegida. Las demás quedan rechazadas
+   solo en ese bloque; sus otros bloques siguen pendientes.
+3. También puedes **Rechazar** una solicitud en particular, con el mismo
+   motivo. Si en el bloque queda una sola, pasa a **Sin tope**.
+
+Si pulsas **Aprobar esta** o **Rechazar** sin motivo, la tarjeta lo avisa y
+deja el cursor en el campo.
+
+![Aviso de motivo faltante](uso/us-07/tope-falta-motivo.png)
+
+![Motivo escrito antes de aprobar](uso/us-07/tope-motivo-escrito.png)
+
+Al aprobar, la casilla del calendario queda verde con el número de la solicitud
+y el tope sale de la lista.
+
+![Tope resuelto](uso/us-07/tope-aprobado.png)
+
+### Sin tope
+
+Muestra una tarjeta por solicitud con bloques que nadie más pide: encargado,
+área, motivo, observaciones, personas y acompañantes, fecha de envío y su mini
+calendario.
+
+![Solicitudes sin tope](uso/us-07/panel-sin-tope.png)
+
+Cada bloque se resuelve por separado:
+
+- **Aprobar**: se aprueba de inmediato.
+- **Rechazar**: pide escribir el motivo (mínimo 10 caracteres) y luego
+  **Confirmar**.
+
+Si la solicitud también tiene un bloque con tope, ese bloque aparece como
+**Tope con #…** junto a **Ir al tope**, y no se resuelve aquí. Según cómo se
+resuelvan sus bloques, la solicitud queda **Aprobada**, **Rechazada** o
+**Aprobada en parte**.
+
+### Resueltas
+
+Un registro de cada resolución: bloque, solicitud, resultado, motivo, validador
+y hora.
+
+![Registro de resoluciones](uso/us-07/resueltas.png)

@@ -65,6 +65,40 @@ El guardado se ejecuta en una transacción atómica dentro de `solicitudes.servi
 
 ![Enviar una solicitud de reserva](diagramas/us-02/enviar-solicitud.png)
 
+### Abrir el panel del validador (US-07)
+
+Las solicitudes todavía no llegan al panel desde la base: `validacion.cargar()`
+lee un JSON de prueba y es el único punto que sabe de dónde vienen. Cuando se
+conecte, cambia esa función y devuelve la misma forma de datos; la vista y la
+plantilla no se enteran.
+
+![Abrir el panel del validador](diagramas/us-07/ver-panel.png)
+
+El resto ocurre en el navegador. `panelValidador`, el componente de Alpine de
+`validador.html`, parte cada solicitud en pedidos (un bloque en una fecha) y de
+ahí arma los topes, ordenados por prioridad del área, y las tarjetas sin tope.
+
+### Resolver un bloque con tope (US-07)
+
+Aprobar una solicitud rechaza a las demás solo en ese bloque, no en toda su
+solicitud. Por eso el motivo es obligatorio: es lo que les llega a quienes
+pierden el bloque (AC4). Cada resolución queda con validador, hora y motivo
+(AC5).
+
+![Resolver un bloque con tope](diagramas/us-07/resolver-tope.png)
+
+Nada de esto se guarda: con datos de prueba, aprobar y rechazar solo cambian la
+pantalla. La regla de un aprobado por bloque y fecha (AC3) la tendrá que
+garantizar la base cuando exista el modelo.
+
+### Resolver un bloque sin tope (US-07)
+
+Sin rivales, aprobar no pide motivo. Rechazar sí, y se confirma en la misma
+fila. El estado de la solicitud no se guarda: `estadoSolicitud` lo deduce de
+sus bloques, así que puede quedar aprobada en parte.
+
+![Resolver un bloque sin tope](diagramas/us-07/resolver-sin-tope.png)
+
 ### Guardar los parámetros del sistema (US-04)
 
 La bitácora de quién cambió qué es el AC4, y es lo que obliga a que el guardado

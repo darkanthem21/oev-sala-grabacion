@@ -1,0 +1,60 @@
+@startuml resolver-sin-tope
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Resolver un bloque sin tope (US-07)
+
+actor "Validador" as A
+participant "<b>panelValidador</b>\n<size:11>solicitudes/validador.html</size>" as P <<presentación>>
+
+== Aprobar ==
+A -> P ++ : clic «Aprobar» en la fila del bloque → aprobar(p)
+P -> P : limpiarAviso()
+P -> P ++ : rivales(p)
+return []
+P -> P : motivo = (motivos[p.clave] || "").trim()
+note right of P
+  Sin rivales no se pide motivo:
+  se aprueba de inmediato (AC3).
+end note
+P -> P ++ : registrar(p, "aprobado", motivo, "")
+deactivate P
+P --> A : la fila queda «Aprobado» y el bloque pasa a «Resueltas»
+deactivate P
+
+== Rechazar ==
+A -> P ++ : clic «Rechazar» → abrirRechazo(p)
+P -> P : rechazando = p.ticket
+P --> A : la fila muestra el campo del motivo y «Confirmar»
+deactivate P
+A -> P ++ : clic «Confirmar» o Enter → rechazar(p)
+P -> P : $comentario("sin tope, el motivo es el de la fila")\nmotivo = (motivos[p.ticket] || "").trim()
+break el motivo tiene menos de 10 caracteres
+  P -> P ++ : avisar("Para rechazar escribe el motivo (mínimo 10 caracteres): le llega al encargado.")
+  deactivate P
+  P --> A : aviso arriba del panel
+  note right of P : AC4: no se rechaza sin motivo.
+end
+P -> P ++ : registrar(p, "rechazado", motivo, "")
+deactivate P
+P -> P : rechazando = null
+P -> P : limpiarAviso()
+
+P -> P ++ : estadoSolicitud(s)
+alt le quedan bloques sin resolver
+  P -> P : $comentario("«En revisión» si ya resolvió alguno")\n"pendiente" o "en_revision"
+else todos aprobados
+  P -> P : "aprobada"
+else todos rechazados
+  P -> P : "rechazada"
+else unos y otros
+  P -> P : "parcial"
+end
+return estado
+note right of P
+  El estado de la solicitud no se guarda:
+  se deduce de sus bloques cada vez.
+end note
+P --> A : la fila queda «Rechazado» con su motivo en «Resueltas»
+deactivate P
+@enduml

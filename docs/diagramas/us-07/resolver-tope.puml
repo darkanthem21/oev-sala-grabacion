@@ -1,0 +1,55 @@
+@startuml resolver-tope
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Resolver un bloque con tope (US-07)
+
+actor "Validador" as A
+participant "<b>panelValidador</b>\n<size:11>solicitudes/validador.html</size>" as P <<presentación>>
+
+== Aprobar una de las solicitudes ==
+A -> P ++ : clic «Aprobar esta» → aprobar(p)
+P -> P : limpiarAviso()
+P -> P ++ : rivales(p)
+return rivales
+P -> P : $comentario("el motivo es el de la tarjeta del tope")\nmotivo = (motivos[p.clave] || "").trim()
+break hay rivales y el motivo tiene menos de 10 caracteres
+  P -> P ++ : avisar("Ese bloque lo piden … solicitudes: escribe el motivo …", p.clave)
+  P -> P : $comentario("deja el cursor en el campo que falta")\ndocument.querySelector("#c-… .motivo input").focus()
+  deactivate P
+  P --> A : aviso en la tarjeta del tope
+end
+P -> P ++ : registrar(p, "aprobado", motivo, "")
+P -> P : $comentario("AC5: con validador, hora y motivo")\nresoluciones[p.ticket] = {estado, motivo, validador, hora}
+deactivate P
+loop cada rival
+  P -> P ++ : registrar(r, "rechazado", motivo, "El bloque se asignó a la solicitud #" + p.sol.id)
+  deactivate P
+end
+note right of P
+  Pierden solo este bloque, no el resto de
+  su solicitud: sus otros bloques siguen
+  pendientes. El motivo es el que les llega.
+end note
+P --> A : la casilla queda verde con el número de la solicitud y las dos van a «Resueltas»
+deactivate P
+
+== Rechazar una de las solicitudes ==
+A -> P ++ : clic «Rechazar» → rechazar(p, c.clave)
+P -> P : motivo = (motivos[c.clave] || "").trim()
+break el motivo tiene menos de 10 caracteres
+  P -> P ++ : avisar("Para rechazar escribe el motivo …", c.clave)
+  deactivate P
+  P --> A : aviso en la tarjeta del tope
+end
+P -> P ++ : registrar(p, "rechazado", motivo, "")
+deactivate P
+P -> P : limpiarAviso()
+P --> A : la solicitud sale del tope
+note right of P
+  Si en el bloque queda una sola solicitud ya no hay
+  tope: get competencias() la saca de la sección y
+  el bloque pasa a «Sin tope».
+end note
+deactivate P
+@enduml
