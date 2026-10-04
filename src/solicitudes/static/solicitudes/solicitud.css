@@ -207,8 +207,21 @@
     align-items: stretch;
   }
 
+  /* Mes arriba a todo el ancho y los dos botones debajo, mitad y mitad: en
+   * una sola fila el mes y los botones no caben en un celular. */
   .hoja .controles-calendario .navegacion-meses {
-    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  .hoja .controles-calendario h2.mes-actual {
+    order: -1;
+    flex: 1 0 100%;
+    min-width: 0;
+  }
+
+  .hoja .controles-calendario .btn-nav {
+    flex: 1 1 0;
   }
 
   .hoja .controles-calendario .selector-rapido {
@@ -218,6 +231,7 @@
   .hoja .controles-calendario .selector-rapido select,
   .hoja .controles-calendario select.select-personalizado {
     flex: 1;
+    min-width: 0;
     max-width: none;
   }
 }

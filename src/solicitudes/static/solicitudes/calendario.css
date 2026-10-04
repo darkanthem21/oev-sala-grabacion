@@ -681,8 +681,20 @@
         align-items: stretch;
     }
 
+    /* Mes arriba a todo el ancho y los dos botones debajo, mitad y mitad. */
     .navegacion-meses {
-        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+
+    .mes-actual {
+        order: -1;
+        flex: 1 0 100%;
+        min-width: 0;
+    }
+
+    .btn-nav {
+        flex: 1 1 0;
     }
 
     .selector-rapido {
@@ -691,6 +703,7 @@
 
     .select-personalizado {
         flex: 1;
+        min-width: 0;
     }
 
     .calendario td {
