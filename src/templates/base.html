@@ -11,10 +11,9 @@
 </head>
 <body>
 {% comment %}
-  Vacío a propósito: cada panel trae su propio encabezado. Uno por defecto se
-  sumaba al `techo` de configuración, apoyo y validación.
+  Sin encabezado propio: cada panel trae el suyo (`techo`), y uno por defecto
+  se sumaría encima.
 {% endcomment %}
-{% block barra_superior %}{% endblock %}
 {% block contenido %}{% endblock %}
 {% block scripts %}{% endblock %}
 </body>
