@@ -539,6 +539,18 @@
   border-radius: 4px;
 }
 
+/* .btn-accion en un enlace: el mismo botón principal que `.hoja button`. */
+a.btn-accion {
+  border: 0; background: var(--accion); color: var(--superficie);
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: .9rem;
+  text-decoration: none; transition: background-color 0.15s ease;
+}
+a.btn-accion:hover { background: var(--tinta); }
+a.btn-accion:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+/* Una sola acción al pie: va a la derecha, como el avance del formulario. */
+.acciones-paso.acciones-fin { justify-content: flex-end; }
+
 .btn-secundario {
   display: inline-flex;
   align-items: center;
