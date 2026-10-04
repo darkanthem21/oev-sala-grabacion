@@ -8,6 +8,11 @@
   width: 100%; max-width: 42rem; margin: 2.5rem auto; padding: 2rem 1.75rem;
   background: var(--superficie); border: 1px solid var(--borde); border-radius: 4px;
 }
+/* En pantalla angosta, width 100% más el padding desbordaba la página hacia
+ * el costado. Solo aquí: en escritorio cambiaría el ancho útil de las hojas. */
+@media (max-width: 40rem) {
+  .hoja { box-sizing: border-box; margin: 1rem auto; padding: 1.5rem 1rem; }
+}
 .hoja h1 { font-size: 1.35rem; margin: 0 0 .25rem; }
 .hoja h2 {
   font-size: .95rem; margin: 0 0 1rem;
@@ -536,6 +541,8 @@ a.btn-accion:focus-visible { outline: 2px solid var(--acento); outline-offset: 2
     padding: .2rem 0; border: 0;
   }
   .historial td::before { content: attr(data-titulo); color: var(--tinta-suave); }
+  /* Sin esto la etiqueta se estira a todo el ancho de la celda. */
+  .historial .estado { justify-self: start; }
 }
 
 /* --- Paginacion del historial --- */
