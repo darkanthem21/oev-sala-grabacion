@@ -8,6 +8,7 @@ from django.urls import reverse
 from agenda.models import Bloque, Dia, primera_fecha_pedible
 from personas.models import Area, Rol
 from solicitudes.models import Solicitud, SolicitudBloque
+from solicitudes.views import SOLICITUDES_POR_PAGINA
 
 Usuario = get_user_model()
 
@@ -89,7 +90,7 @@ class MisSolicitudesTestCase(TestCase):
         de_medicina.save()
 
         response = self.client.get(reverse("mis_solicitudes"))
-        self.assertCountEqual(response.context["solicitudes"], [de_informatica, de_medicina])
+        self.assertCountEqual(response.context["pagina"].object_list, [de_informatica, de_medicina])
         self.assertContains(response, '<th scope="col">Área</th>', html=True)
         self.assertContains(response, '<td data-titulo="Área">Informática</td>', html=True)
         self.assertContains(response, '<td data-titulo="Área">Medicina</td>', html=True)
@@ -98,5 +99,73 @@ class MisSolicitudesTestCase(TestCase):
         ajena = self._solicitud(self._solicitante("otro@uach.cl"), self.bloques[:1])
         propia = self._solicitud(self.usuario, self.bloques[1:])
         response = self.client.get(reverse("mis_solicitudes"))
-        self.assertEqual(list(response.context["solicitudes"]), [propia])
+        self.assertEqual(list(response.context["pagina"].object_list), [propia])
         self.assertNotContains(response, f"#{ajena.id}<")
+
+
+class PaginacionMisSolicitudesTestCase(TestCase):
+    """US-09: el historial se pagina de a 20 y htmx cambia solo la tabla."""
+
+    def setUp(self):
+        self.area = Area.objects.create(nombre="Informática", activa=True)
+        self.usuario = Usuario.objects.create_user(email="docente@uach.cl", password="testpassword123")
+        self.usuario.groups.add(Group.objects.get(name=Rol.SOLICITANTE))
+        self.usuario.areas.add(self.area)
+        self.client.force_login(self.usuario)
+        # Sin bloques: la paginación no depende de ellos y así no chocan las
+        # validaciones de bloque ya pedido.
+        Solicitud.objects.bulk_create(
+            Solicitud(solicitante=self.usuario, area=self.area, motivo=f"Clase {n}")
+            for n in range(SOLICITUDES_POR_PAGINA + 5)
+        )
+        self.url = reverse("mis_solicitudes")
+
+    def _ids(self, response):
+        return [s.id for s in response.context["pagina"].object_list]
+
+    def test_primera_pagina_trae_veinte_y_enlace_a_la_siguiente(self):
+        response = self.client.get(self.url)
+        pagina = response.context["pagina"]
+        self.assertEqual(len(pagina.object_list), SOLICITUDES_POR_PAGINA)
+        self.assertEqual(pagina.paginator.num_pages, 2)
+        self.assertContains(response, "Página 1 de 2")
+        self.assertContains(response, f'hx-get="{self.url}?pagina=2"')
+        self.assertContains(response, 'hx-target="#historial"')
+        self.assertContains(response, 'hx-push-url="true"')
+
+    def test_ultima_pagina_trae_el_resto_sin_repetir(self):
+        primera = self._ids(self.client.get(self.url))
+        segunda = self._ids(self.client.get(self.url, {"pagina": 2}))
+        self.assertEqual(len(segunda), 5)
+        self.assertFalse(set(primera) & set(segunda))
+        self.assertEqual(
+            sorted(primera + segunda),
+            sorted(Solicitud.objects.values_list("id", flat=True)),
+        )
+
+    def test_pagina_invalida_no_rompe(self):
+        for valor, esperada in [("abc", 1), ("999", 2), ("-1", 2)]:
+            with self.subTest(pagina=valor):
+                response = self.client.get(self.url, {"pagina": valor})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.context["pagina"].number, esperada)
+
+    def test_htmx_recibe_solo_la_tabla(self):
+        response = self.client.get(self.url, {"pagina": 2}, HTTP_HX_REQUEST="true")
+        self.assertTemplateUsed(response, "solicitudes/_tabla_historial.html")
+        self.assertTemplateNotUsed(response, "solicitudes/mis_solicitudes.html")
+        self.assertNotContains(response, "<html")
+        self.assertContains(response, 'id="historial"')
+        self.assertIn("HX-Request", response["Vary"])
+
+    def test_sin_htmx_o_al_restaurar_historial_recibe_la_pagina_entera(self):
+        for cabeceras in [{}, {"HTTP_HX_REQUEST": "true", "HTTP_HX_HISTORY_RESTORE_REQUEST": "true"}]:
+            with self.subTest(cabeceras=cabeceras):
+                response = self.client.get(self.url, {"pagina": 2}, **cabeceras)
+                self.assertTemplateUsed(response, "solicitudes/mis_solicitudes.html")
+                self.assertContains(response, "<html")
+
+    def test_con_una_sola_pagina_no_muestra_controles(self):
+        Solicitud.objects.filter(id__in=self._ids(self.client.get(self.url))).delete()
+        response = self.client.get(self.url)
+        self.assertNotContains(response, 'class="paginacion"')

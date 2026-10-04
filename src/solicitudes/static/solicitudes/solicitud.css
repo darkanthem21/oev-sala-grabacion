@@ -672,3 +672,29 @@
   }
   .historial td::before { content: attr(data-titulo); color: var(--tinta-suave); }
 }
+
+/* --- Paginacion del historial --- */
+/* Tres columnas: las laterales iguales dejan el estado centrado aunque los
+ * botones midan distinto. */
+.paginacion {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 1rem; margin: 0 0 1.5rem;
+}
+.paginacion-anterior { justify-self: start; }
+.paginacion-siguiente { justify-self: end; }
+.paginacion-estado { color: var(--tinta-suave); font-size: .85rem; text-align: center; }
+
+/* Sin pagina a la que ir: el boton queda gris y no reacciona. */
+.btn-secundario.deshabilitado,
+.btn-secundario.deshabilitado:hover {
+  background: var(--fondo); border-color: var(--borde); color: var(--tinta-suave);
+  opacity: .55; cursor: not-allowed;
+}
+
+/* htmx pone esta clase mientras espera la página siguiente. */
+.historial-contenedor.htmx-request { opacity: .6; transition: opacity .15s ease; }
+
+@media (max-width: 36rem) {
+  .paginacion { grid-template-columns: 1fr 1fr; }
+  .paginacion-estado { grid-column: 1 / -1; grid-row: 1; }
+}

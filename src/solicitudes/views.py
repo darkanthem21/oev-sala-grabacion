@@ -2,9 +2,11 @@ from datetime import datetime
 from django.conf import settings
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db.models import Prefetch
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.cache import patch_vary_headers
 
 from configuracion.models import Parametros
 from personas.models import Rol
@@ -47,22 +49,41 @@ def panel_validador(request):
     })
 
 
+SOLICITUDES_POR_PAGINA = 20
+
+
 @user_passes_test(es_solicitante, login_url="login_solicitante")
 def mis_solicitudes(request):
     """Historial de solicitudes del solicitante con su estado actual (US-09).
 
     Cada solicitud muestra su área, sus bloques (hora de inicio y término) y la
-    fecha. Se listan todas las del usuario conectado, de cualquiera de sus áreas.
+    fecha. Se listan todas las del usuario conectado, de cualquiera de sus áreas,
+    de a SOLICITUDES_POR_PAGINA por página.
     """
     solicitudes = (
         Solicitud.objects.filter(solicitante=request.user)
+        # id para mantener el orden, evitar que se repitan filas al paginar
+        .order_by("-creado_en", "-id")
         .select_related("area")
         .prefetch_related(Prefetch(
             "solicitudes_bloques",
             queryset=SolicitudBloque.objects.select_related("bloque").order_by("fecha", "bloque__inicio"),
         ))
     )
-    return render(request, "solicitudes/mis_solicitudes.html", {"solicitudes": solicitudes})
+    pagina = Paginator(solicitudes, SOLICITUDES_POR_PAGINA).get_page(request.GET.get("pagina"))
+    contexto = {"pagina": pagina}
+
+    # htmx pide solo la tabla. Al volver con el botón Atrás sin la página en su
+    # caché, htmx la pide entera (HX-History-Restore-Request), igual que el
+    # navegador sin htmx.
+    if request.headers.get("HX-Request") and not request.headers.get("HX-History-Restore-Request"):
+        respuesta = render(request, "solicitudes/_tabla_historial.html", contexto)
+    else:
+        respuesta = render(request, "solicitudes/mis_solicitudes.html", contexto)
+    # La misma URL entrega tabla o página según la cabecera: que la caché del
+    # navegador no las confunda.
+    patch_vary_headers(respuesta, ["HX-Request"])
+    return respuesta
 
 
 def calendario(request):

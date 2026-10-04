@@ -12,44 +12,7 @@
   <h1>Mis solicitudes</h1>
   <p class="sub">Revisa el estado de cada una de tus solicitudes para saber con qué horario cuentas.</p>
 
-  {% if solicitudes %}
-    <table class="historial">
-      <thead>
-        <tr>
-          <th scope="col">N.º</th>
-          <th scope="col">Área</th>
-          <th scope="col">Fecha</th>
-          <th scope="col">Bloque</th>
-          <th scope="col">Estado</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for solicitud in solicitudes %}
-          <tr>
-            <td data-titulo="N.º">#{{ solicitud.id }}</td>
-            <td data-titulo="Área">{{ solicitud.area.nombre }}</td>
-            <td data-titulo="Fecha">
-              {% for sb in solicitud.solicitudes_bloques.all %}
-                {% ifchanged sb.fecha %}<time datetime="{{ sb.fecha|date:'Y-m-d' }}">{{ sb.fecha|date:"l d/m/Y"|capfirst }}</time>{% endifchanged %}
-              {% empty %}—{% endfor %}
-            </td>
-            <td data-titulo="Bloque">
-              <ul class="bloques-solicitados">
-                {% for sb in solicitud.solicitudes_bloques.all %}
-                  <li>{{ sb.inicio|time:"H:i" }} – {{ sb.termino|time:"H:i" }}</li>
-                {% empty %}<li>—</li>{% endfor %}
-              </ul>
-            </td>
-            <td data-titulo="Estado">
-              <span class="estado estado-{{ solicitud.estado_clave }}">{{ solicitud.estado_general }}</span>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <div class="aviso" role="status">Aún no has realizado solicitudes de reserva.</div>
-  {% endif %}
+  {% include "solicitudes/_tabla_historial.html" %}
 
   <p><a href="{% url 'solicitar' %}">Hacer una nueva solicitud</a></p>
 </main>
