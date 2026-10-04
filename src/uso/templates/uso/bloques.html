@@ -13,6 +13,16 @@
     </form>
   </div>
 
+  {# US-17 AC2 #}
+  {% if bloqueos %}
+    <div class="bloqueos" role="note">
+      <strong>La sala está bloqueada</strong>
+      <ul>
+        {% for b in bloqueos %}<li>{{ b.razon }} ({{ b.alcance }}).</li>{% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
   {% if bloques %}
   <div class="marco">
     <table class="bloques">
@@ -26,7 +36,8 @@
           <td>{{ b.solicitante }}</td>
           <td>{{ b.area }}</td>
           <td class="num">{{ b.personas }}</td>
-          <td><span class="marca {{ b.estado }}">{{ b.estado|capfirst }}</span></td>
+          <td><span class="marca {{ b.estado }}">{{ b.estado|capfirst }}</span>
+            {% if b.bloqueo %}<span class="marca bloqueada" title="{{ b.bloqueo.razon }}">Sala bloqueada</span>{% endif %}</td>
           <td>
             {% if b.checkout == "completado" %}<a class="marca completado" href="{% url 'checkout_apoyo' b.ticket %}">Completado</a>
             {% elif b.checkout == "pendiente" %}<a class="btn" href="{% url 'checkout_apoyo' b.ticket %}">Hacer check-out</a>

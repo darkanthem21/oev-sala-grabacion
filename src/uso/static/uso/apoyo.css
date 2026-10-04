@@ -23,6 +23,14 @@
 .cancelada td:not(:nth-child(5)) { text-decoration: line-through; color: var(--tinta-suave); }
 .nada { color: var(--tinta-suave); }
 
+/* US-17 AC2: la reserva sigue en la lista, pero ya no hay sala que preparar. */
+.marca.bloqueada { border-color: var(--destacado); margin-left: .25rem; }
+.bloqueos {
+  margin: 0 0 1rem; padding: .55rem .75rem; font-size: .85rem;
+  background: var(--superficie); border-left: 3px solid var(--destacado);
+}
+.bloqueos ul { margin: .25rem 0 0; padding-left: 1.1rem; }
+
 a.marca { text-decoration: none; color: var(--tinta); }
 .ficha { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1.25rem; margin: 1rem 0 1.5rem; font-size: .9rem; }
 .ficha dt { color: var(--tinta-suave); }

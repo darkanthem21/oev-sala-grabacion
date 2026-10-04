@@ -36,6 +36,21 @@
     <h1>Paso 1: Selecciona fecha y horario</h1>
     <p class="sub">Elige un día habilitado en el calendario y selecciona los bloques de tiempo requeridos para tu actividad.</p>
 
+    {% comment %}
+    US-17 AC7: el calendario ya no ofrece los horarios bloqueados; esta lista
+    dice por qué faltan, para que nadie crea que es un error.
+    {% endcomment %}
+    {% if bloqueos %}
+      <aside class="bloqueos" aria-labelledby="h-bloqueos">
+        <h2 id="h-bloqueos">La sala no estará disponible</h2>
+        <ul>
+          {% for b in bloqueos %}
+            <li><strong>{{ b.periodo|capfirst }}</strong>, {{ b.alcance }}. {{ b.razon }}.</li>
+          {% endfor %}
+        </ul>
+      </aside>
+    {% endif %}
+
     {% if error_paso %}
       <div class="error" role="alert">
         <p>{{ error_paso }}</p>

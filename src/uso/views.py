@@ -6,6 +6,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from agenda.models import bloqueos_por_fecha
 from personas.models import Rol
 
 from . import services
@@ -37,6 +38,8 @@ def bloques(request):
         "anterior": fecha - timedelta(days=1),
         "siguiente": fecha + timedelta(days=1),
         "bloques": services.bloques_del_dia(fecha, _enviados(request)),
+        # US-17 AC2: también cuando ese día no hay nada reservado.
+        "bloqueos": bloqueos_por_fecha(fecha, fecha).get(fecha, []),
         "origen": services.ORIGEN,
     })
 

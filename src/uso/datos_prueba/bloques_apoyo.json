@@ -1,20 +1,20 @@
 {
   "_aviso": "DATOS DE PRUEBA. No vienen de PostgreSQL ni de ninguna base de datos. Sirven para ver y probar la vista del personal de apoyo (US-14) mientras no existan Solicitud ni Ticket. Las personas son inventadas.",
-  "_forma": "Cada entrada es un ticket (solicitud x bloque). `en_dias` es la fecha relativa a hoy (0 = hoy, -1 = ayer), para que la demo siempre tenga datos. `checkout` dice si el bloque ya tiene su check-out enviado.",
+  "_forma": "Cada entrada es un ticket (solicitud x bloque). `en_dias` es la fecha relativa a hoy (0 = hoy, -1 = ayer), para que la demo siempre tenga datos. `checkout` dice si el bloque ya tiene su check-out enviado. `correo` es a quién se le avisa si un bloqueo (US-17) le quita la sala.",
   "tickets": [
-    {"ticket": "T-01", "en_dias": -1, "inicio": "09:40", "termino": "11:10", "solicitante": "Ana Rojas", "area": "Instituto de Informática", "personas": 3, "estado": "confirmada", "checkout": true},
-    {"ticket": "T-02", "en_dias": -1, "inicio": "14:10", "termino": "15:40", "solicitante": "Luis Pardo", "area": "Educación Continua Online", "personas": 2, "estado": "confirmada", "checkout": false},
+    {"ticket": "T-01", "en_dias": -1, "inicio": "09:40", "termino": "11:10", "solicitante": "Ana Rojas", "correo": "ana.rojas@prueba.local", "area": "Instituto de Informática", "personas": 3, "estado": "confirmada", "checkout": true},
+    {"ticket": "T-02", "en_dias": -1, "inicio": "14:10", "termino": "15:40", "solicitante": "Luis Pardo", "correo": "luis.pardo@prueba.local", "area": "Educación Continua Online", "personas": 2, "estado": "confirmada", "checkout": false},
 
-    {"ticket": "T-03", "en_dias": 0, "inicio": "15:40", "termino": "17:10", "solicitante": "Ana Rojas", "area": "Instituto de Informática", "personas": 3, "estado": "confirmada", "checkout": false},
-    {"ticket": "T-04", "en_dias": 0, "inicio": "08:10", "termino": "09:40", "solicitante": "Marta Soto", "area": "Instituto de Electricidad y Electrónica", "personas": 1, "estado": "confirmada", "checkout": true},
-    {"ticket": "T-05", "en_dias": 0, "inicio": "11:10", "termino": "12:40", "solicitante": "Jorge Vidal", "area": "Instituto de Obras Civiles", "personas": 4, "estado": "aprobada", "checkout": false},
-    {"ticket": "T-06", "en_dias": 0, "inicio": "14:10", "termino": "15:40", "solicitante": "Paula Morales", "area": "Educación Continua Online", "personas": 2, "estado": "cancelada", "checkout": false},
-    {"ticket": "T-07", "en_dias": 0, "inicio": "17:10", "termino": "18:40", "solicitante": "Diego Fuentes", "area": "Instituto de Informática", "personas": 2, "estado": "pendiente", "checkout": false},
+    {"ticket": "T-03", "en_dias": 0, "inicio": "15:40", "termino": "17:10", "solicitante": "Ana Rojas", "correo": "ana.rojas@prueba.local", "area": "Instituto de Informática", "personas": 3, "estado": "confirmada", "checkout": false},
+    {"ticket": "T-04", "en_dias": 0, "inicio": "08:10", "termino": "09:40", "solicitante": "Marta Soto", "correo": "marta.soto@prueba.local", "area": "Instituto de Electricidad y Electrónica", "personas": 1, "estado": "confirmada", "checkout": true},
+    {"ticket": "T-05", "en_dias": 0, "inicio": "11:10", "termino": "12:40", "solicitante": "Jorge Vidal", "correo": "jorge.vidal@prueba.local", "area": "Instituto de Obras Civiles", "personas": 4, "estado": "aprobada", "checkout": false},
+    {"ticket": "T-06", "en_dias": 0, "inicio": "14:10", "termino": "15:40", "solicitante": "Paula Morales", "correo": "paula.morales@prueba.local", "area": "Educación Continua Online", "personas": 2, "estado": "cancelada", "checkout": false},
+    {"ticket": "T-07", "en_dias": 0, "inicio": "17:10", "termino": "18:40", "solicitante": "Diego Fuentes", "correo": "diego.fuentes@prueba.local", "area": "Instituto de Informática", "personas": 2, "estado": "pendiente", "checkout": false},
 
-    {"ticket": "T-08", "en_dias": 1, "inicio": "09:40", "termino": "11:10", "solicitante": "Camila Reyes", "area": "Instituto de Electricidad y Electrónica", "personas": 5, "estado": "aprobada", "checkout": false},
-    {"ticket": "T-09", "en_dias": 1, "inicio": "08:10", "termino": "09:40", "solicitante": "Luis Pardo", "area": "Educación Continua Online", "personas": 2, "estado": "pendiente", "checkout": false},
-    {"ticket": "T-10", "en_dias": 2, "inicio": "18:40", "termino": "20:10", "solicitante": "Luis Pardo", "area": "Educación Continua Online", "personas": 2, "estado": "confirmada", "checkout": false},
-    {"ticket": "T-11", "en_dias": 3, "inicio": "11:10", "termino": "12:40", "solicitante": "Marta Soto", "area": "Instituto de Electricidad y Electrónica", "personas": 1, "estado": "aprobada", "checkout": false},
-    {"ticket": "T-12", "en_dias": 4, "inicio": "14:10", "termino": "15:40", "solicitante": "Jorge Vidal", "area": "Instituto de Obras Civiles", "personas": 3, "estado": "cancelada", "checkout": false}
+    {"ticket": "T-08", "en_dias": 1, "inicio": "09:40", "termino": "11:10", "solicitante": "Camila Reyes", "correo": "camila.reyes@prueba.local", "area": "Instituto de Electricidad y Electrónica", "personas": 5, "estado": "aprobada", "checkout": false},
+    {"ticket": "T-09", "en_dias": 1, "inicio": "08:10", "termino": "09:40", "solicitante": "Luis Pardo", "correo": "luis.pardo@prueba.local", "area": "Educación Continua Online", "personas": 2, "estado": "pendiente", "checkout": false},
+    {"ticket": "T-10", "en_dias": 2, "inicio": "18:40", "termino": "20:10", "solicitante": "Luis Pardo", "correo": "luis.pardo@prueba.local", "area": "Educación Continua Online", "personas": 2, "estado": "confirmada", "checkout": false},
+    {"ticket": "T-11", "en_dias": 3, "inicio": "11:10", "termino": "12:40", "solicitante": "Marta Soto", "correo": "marta.soto@prueba.local", "area": "Instituto de Electricidad y Electrónica", "personas": 1, "estado": "aprobada", "checkout": false},
+    {"ticket": "T-12", "en_dias": 4, "inicio": "14:10", "termino": "15:40", "solicitante": "Jorge Vidal", "correo": "jorge.vidal@prueba.local", "area": "Instituto de Obras Civiles", "personas": 3, "estado": "cancelada", "checkout": false}
   ]
 }

@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
+from agenda.models import Bloqueo, primera_fecha_pedible
 from configuracion.models import Parametros
 from personas.models import Rol
 
@@ -25,6 +26,10 @@ from .services import (
 )
 from .wizard import PasoSolicitud, SolicitudWizard, obtener_limites_reserva
 
+# Los bloqueos que ve el solicitante en el paso 1. El calendario ya no ofrece
+# esos bloques; la lista dice por qué faltan. Más que esto ya no es un aviso.
+BLOQUEOS_VISIBLES = 8
+
 
 def es_solicitante(usuario):
     return usuario.is_authenticated and usuario.tiene_rol(Rol.SOLICITANTE)
@@ -41,7 +46,7 @@ def panel_validador(request):
     `validacion.cargar` es el único punto que sabe de dónde vienen los datos.
     """
     return render(request, "solicitudes/validador.html", {
-        "datos": validacion.cargar(),
+        "datos": validacion.marcar_bloqueos(validacion.cargar()),
         "origen": validacion.ORIGEN,
     })
 
@@ -269,6 +274,11 @@ def _manejar_paso_horario(request, wizard: SolicitudWizard, puede_cambiar_area: 
         "error_bloques": error_bloques,
         "reserva": wizard.obtener_resumen(),
         "puede_cambiar_area": puede_cambiar_area,
+        # US-17 AC7: qué no se puede pedir y por qué. Desde la primera fecha
+        # pedible, porque lo anterior tampoco se podría pedir sin bloqueo.
+        "bloqueos": Bloqueo.objects.vigentes()
+                    .filter(hasta__gte=primera_fecha_pedible())
+                    .select_related("bloque")[:BLOQUEOS_VISIBLES],
     })
     return render(request, "solicitudes/solicitar.html", contexto)
 

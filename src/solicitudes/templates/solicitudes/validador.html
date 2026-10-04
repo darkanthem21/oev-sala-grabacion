@@ -72,7 +72,15 @@ function panelValidador(datos, validador) {
       return semanaDe(fechas[0] || pedidos.map(p => p.fecha).sort()[0]);
     },
     enCelda(fecha, inicio) { return pedidos.filter(p => p.fecha === fecha && p.inicio === inicio); },
+    // US-17. El motivo si la sala esta bloqueada en ese horario, o "". Los
+    // bloqueos son reales: los agrega el servidor, con la misma clave que cada
+    // pedido. En un :disabled va con !!, porque Alpine deshabilita con "".
+    bloqueado(fecha, inicio) { return datos.bloqueados[fecha + " " + inicio] || ""; },
+    // AC2: un horario bloqueado se ve bloqueado, lo pida alguien o no.
     estadoCelda(fecha, inicio) {
+      return this.bloqueado(fecha, inicio) ? "bloqueado" : this.estadoPedidos(fecha, inicio);
+    },
+    estadoPedidos(fecha, inicio) {
       const aqui = this.enCelda(fecha, inicio);
       if (aqui.some(p => this.resoluciones[p.ticket]?.estado === "aprobado")) return "aprobado";
       const vivos = aqui.filter(p => this.vivo(p)).length;
@@ -80,19 +88,22 @@ function panelValidador(datos, validador) {
     },
     textoCelda(fecha, inicio) {
       const estado = this.estadoCelda(fecha, inicio), aqui = this.enCelda(fecha, inicio);
+      if (estado === "bloqueado") return "";
       if (estado === "aprobado") return "#" + aqui.find(p => this.resoluciones[p.ticket]?.estado === "aprobado").sol.id;
       return estado === "libre" ? "" : String(aqui.filter(p => this.vivo(p)).length);
     },
     describirCelda(d, h) {
       const estado = this.estadoCelda(d.iso, h.inicio);
       const cual = { libre: "libre", una: "una solicitud pendiente", competencia: "solicitudes con tope",
-                     aprobado: "aprobado para la solicitud " + this.textoCelda(d.iso, h.inicio) }[estado];
+                     aprobado: "aprobado para la solicitud " + this.textoCelda(d.iso, h.inicio),
+                     bloqueado: "sala bloqueada (" + this.bloqueado(d.iso, h.inicio) + ")" }[estado];
       return d.corto + " " + d.dm + ", " + h.inicio + " a " + h.termino + ": " +
              (estado === "competencia" ? this.textoCelda(d.iso, h.inicio) + " " : "") + cual;
     },
-    // Clic en una casilla: baja al tope, a la solicitud o al registro.
+    // Clic en una casilla: baja al tope, a la solicitud o al registro. Una
+    // bloqueada lleva igual a lo que se pidio en ella, que hay que rechazar.
     irACelda(fecha, inicio) {
-      const estado = this.estadoCelda(fecha, inicio);
+      const estado = this.estadoPedidos(fecha, inicio);
       const id = estado === "competencia" ? this.ancla(fecha + " " + inicio)
                : estado === "una" ? "sol-" + this.enCelda(fecha, inicio).find(p => this.vivo(p)).sol.id
                : estado === "aprobado" ? "h-resueltas" : null;
@@ -108,6 +119,7 @@ function panelValidador(datos, validador) {
       const p = this.enMini(lista, fecha, inicio);
       if (!p) return "";
       if (this.resoluciones[p.ticket]) return this.resoluciones[p.ticket].estado;
+      if (this.bloqueado(fecha, inicio)) return "bloqueado";
       return this.conTope(p) ? "competencia" : "pendiente";
     },
     // En la casilla con tope va cuantas solicitudes chocan en ese bloque.
@@ -168,7 +180,8 @@ function panelValidador(datos, validador) {
     etiqueta(e) {
       return { pendiente: "Pendiente", en_revision: "En revisión", aprobada: "Aprobada",
                rechazada: "Rechazada", parcial: "Aprobada en parte",
-               aprobado: "Aprobado", rechazado: "Rechazado", competencia: "Con tope" }[e] || e;
+               aprobado: "Aprobado", rechazado: "Rechazado", competencia: "Con tope",
+               bloqueado: "Bloqueado" }[e] || e;
     },
     porque(c) {
       const [a, b] = c.pedidos;
@@ -209,6 +222,14 @@ function panelValidador(datos, validador) {
     aprobar(p) {
       this.limpiarAviso();
       if (!this.vivo(p)) return;
+      // US-17 AC3: un bloque bloqueado no se aprueba. Se rechaza, y el motivo
+      // del bloqueo sirve de motivo del rechazo.
+      const razon = this.bloqueado(p.fecha, p.inicio);
+      if (razon) {
+        this.avisar("La sala está bloqueada en ese bloque (" + razon + "): no se puede aprobar. " +
+                    "Recházalo con ese motivo.", this.conTope(p) ? p.clave : null);
+        return;
+      }
       const rivales = this.rivales(p);
       const motivo = (this.motivos[p.clave] || "").trim();
       if (rivales.length && motivo.length < MINIMO_MOTIVO) {
@@ -271,6 +292,7 @@ function panelValidador(datos, validador) {
         <li><i data-e="una"></i>una solicitud</li>
         <li><i data-e="competencia"></i>con tope</li>
         <li><i data-e="aprobado"></i>aprobado</li>
+        <li><i data-e="bloqueado"></i>bloqueado</li>
       </ul>
     </section>
   </aside>
@@ -297,6 +319,7 @@ function panelValidador(datos, validador) {
     <li><i data-e="competencia">2</i>con tope (el número es cuántas solicitudes chocan)</li>
     <li><i data-e="aprobado"></i>aprobado</li>
     <li><i data-e="rechazado"></i>rechazado</li>
+    <li><i data-e="bloqueado"></i>sala bloqueada</li>
   </ul>
 
   {# AC2. Los bloques con tope se resuelven solo aca. #}
@@ -316,6 +339,8 @@ function panelValidador(datos, validador) {
           <span class="bloque" x-text="nombreBloque(c.pedidos[0])"></span>
           <span class="cuenta" x-text="c.pedidos.length + ' solicitudes'"></span>
           <span class="porque" x-text="porque(c)"></span>
+          <span class="bloqueado" x-show="bloqueado(c.pedidos[0].fecha, c.pedidos[0].inicio)"
+                x-text="'Sala bloqueada (' + bloqueado(c.pedidos[0].fecha, c.pedidos[0].inicio) + ')'"></span>
         </header>
         <div class="cuerpo">
           <div class="postulantes">
@@ -332,7 +357,8 @@ function panelValidador(datos, validador) {
                   También pide: <span x-text="otrosBloques(p)"></span>
                 </p>
                 <span class="acciones">
-                  <button class="btn activa" type="button" @click="aprobar(p)">Aprobar esta</button>
+                  <button class="btn activa" type="button" @click="aprobar(p)"
+                          :disabled="!!bloqueado(p.fecha, p.inicio)">Aprobar esta</button>
                   <button class="btn peligro" type="button" @click="rechazar(p, c.clave)">Rechazar</button>
                 </span>
               </div>
@@ -435,6 +461,9 @@ function panelValidador(datos, validador) {
                   <template x-if="!resoluciones[p.ticket] && !conTope(p)">
                     <span class="estado" data-estado="pendiente">Pendiente</span>
                   </template>
+                  <template x-if="!resoluciones[p.ticket] && bloqueado(p.fecha, p.inicio)">
+                    <span class="bloqueado" x-text="'Sala bloqueada (' + bloqueado(p.fecha, p.inicio) + ')'"></span>
+                  </template>
                 </td>
                 <td class="der">
                   {# Con tope no hay acciones aca: se resuelve en su seccion. #}
@@ -443,7 +472,8 @@ function panelValidador(datos, validador) {
                   </template>
                   <template x-if="!resoluciones[p.ticket] && !conTope(p) && rechazando !== p.ticket">
                     <span class="acciones">
-                      <button class="btn activa" type="button" @click="aprobar(p)">Aprobar</button>
+                      <button class="btn activa" type="button" @click="aprobar(p)"
+                              :disabled="!!bloqueado(p.fecha, p.inicio)">Aprobar</button>
                       <button class="btn peligro" type="button" @click="abrirRechazo(p)">Rechazar</button>
                     </span>
                   </template>
