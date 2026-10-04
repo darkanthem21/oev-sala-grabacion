@@ -22,8 +22,16 @@ entity "<b>personas_usuario</b>" as Usuario {
 entity "<b>personas_area</b>" as Area {
     * <b>id</b> : bigint <<PK>>
     --
-    * nombre : varchar(120)
+    * nombre : varchar(120) <<unique>>
+    * prioridad : smallint
     * activa : boolean
+}
+
+entity "<b>personas_usuario_areas</b>" as UsuarioArea {
+    * <b>id</b> : bigint <<PK>>
+    --
+    * <b>usuario_id</b> : bigint <<FK -> personas_usuario.id>>
+    * <b>area_id</b> : bigint <<FK -> personas_area.id>>
 }
 
 entity "<b>solicitudes_solicitud</b>" as Solicitud {
@@ -35,8 +43,8 @@ entity "<b>solicitudes_solicitud</b>" as Solicitud {
     * motivo : varchar(300)
     observaciones : text
     * personas : smallint
-    * estado_validacion : varchar(20)
-    * estado_confirmacion : varchar(20)
+    * estado_validacion : varchar(20)  /* PENDIENTE | ACEPTADA | RECHAZADA | RETIRADA */
+    * estado_confirmacion : varchar(20)  /* NO_HABILITADA | PENDIENTE | CONFIRMADA | CANCELADA */
     * creado_en : timestamptz
     * actualizado_en : timestamptz
 }
@@ -68,6 +76,8 @@ entity "<b>solicitudes_acompanante</b>" as Acompanante {
 }
 
 ' Relaciones y claves foráneas referenciales
+Usuario ||--o{ UsuarioArea : "puede pedir para"
+Area ||--o{ UsuarioArea
 Usuario ||..o{ Solicitud : "solicita (1:N)"
 Area ||..o{ Solicitud : "pertenece a (1:N)"
 Solicitud ||--|{ SolicitudBloque : "contiene (1:N, on_delete=CASCADE)"

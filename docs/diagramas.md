@@ -57,13 +57,39 @@ La recuperación de clave (AC6) no tiene diagrama propio: son las cuatro vistas
 que trae Django (`PasswordReset`, `Done`, `Confirm` y `Complete`), con enlace
 firmado y sin tabla nuestra. El proyecto solo pone las plantillas.
 
+### Elegir el día y los bloques (US-02)
+
+Todos los pasos del asistente parten igual: `solicitar` lee las áreas activas
+del usuario y `SolicitudWizard.ajustar_area` fija la única que tenga, o lo
+manda a elegir si tiene varias y falta o dejó de estar activa. Después
+`validar_acceso` decide el paso: si la sesión no completó los anteriores, se
+atiende el primero que falta.
+
+![Elegir el día y los bloques](diagramas/us-02/elegir-horario.png)
+
+La fecha y los bloques los valida `SeleccionHorarioForm`, que es la misma regla
+del calendario público: la fecha, con formato y dentro de los límites de
+reserva, y los bloques, que sigan libres para ese usuario. Un bloque que el
+usuario ya tiene pendiente se rechaza aquí, igual que la pantalla lo
+deshabilita. Si todo es válido queda en la sesión y se pasa al paso 2; si no,
+vuelve el calendario con el error y lo que ya tenía elegido.
+
 ### Enviar una solicitud de reserva (US-02)
 
-El envío de la solicitud corresponde al paso final de confirmación en el asistente multipaso. La solicitud exige la aceptación obligatoria de los términos y condiciones del servicio (AC10) antes de procesar el registro.
-
-El guardado se ejecuta en una transacción atómica dentro de `solicitudes.services.guardar_solicitud_completa`: se persiste la `Solicitud` con la fecha elegida y estado de validación pendiente (AC5), se crean los registros de `SolicitudBloque` asociando cada bloque de la plantilla semanal a la solicitud, y se registran los acompañantes declarados en sala (AC6). Si la validación de algún bloque o campo falla, la transacción se cancela por completo sin dejar datos huérfanos. Al finalizar con éxito, se purga la sesión del asistente (`wizard.limpiar()`) y se redirige a `/solicitar/enviada/<id>/`, que lee la solicitud de la base: recargar no reenvía el formulario, y la confirmación muestra el estado actual.
+El envío es el paso 3 del asistente y exige aceptar los términos y condiciones
+(AC10). El guardado es una transacción atómica dentro de
+`guardar_solicitud_completa`: la `Solicitud` con la fecha elegida y la validación
+pendiente (AC5), un `SolicitudBloque` por bloque y los acompañantes declarados
+(AC6). Si un bloque está inactivo, ya tomado o ya pedido, la transacción se
+deshace entera y la vista vuelve a mostrar el paso 3 con el error.
 
 ![Enviar una solicitud de reserva](diagramas/us-02/enviar-solicitud.png)
+
+Al guardar se limpia la sesión del asistente y se redirige a
+`/solicitar/enviada/<id>/`: recargar no reenvía el formulario. La confirmación
+lee la solicitud de la base, solo si es del usuario, y muestra su estado actual.
+`SolicitudBloque.save()` vuelve a llamar a `clean()` después de `full_clean()`,
+así que las consultas de validación de cada bloque se hacen dos veces.
 
 ### Guardar los parámetros del sistema (US-04)
 

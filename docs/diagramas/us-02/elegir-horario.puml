@@ -1,0 +1,85 @@
+@startuml elegir-horario
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Elegir el día y los bloques (US-02, paso 1)
+
+actor "Solicitante" as S
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.forms</b>\n<size:11>solicitudes/forms.py</size>" as F <<presentación>>
+participant "<b>solicitudes.wizard</b>\n<size:11>solicitudes/wizard.py</size>" as W <<presentación>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as A <<dominio>>
+participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+S -> N ++ : POST /solicitar/ (paso=horario, fecha, bloques) → solicitar(request)
+N -> D ++ : $comentario("las áreas activas del usuario")\nSELECT personas_area, personas_usuario_areas
+return filas
+break no tiene áreas activas
+  N --> S : 200 · solicitudes/sin_area.html
+end
+N -> W ++ : SolicitudWizard(request.session)
+return wizard
+N -> W ++ : wizard.ajustar_area(areas)
+note right of W
+  Con una sola área la fija en la sesión. Con
+  varias, pide elegirla si falta o si la elegida
+  ya no está activa.
+end note
+return falta_area
+break falta_area es "elegir" o "cambiar"
+  N --> S : 302 · /solicitar/area/
+end
+N -> W ++ : $comentario("el paso pedido, o el primero que la sesión aún no completó")\nPasoSolicitud.resolver(paso_param).validar_acceso(wizard.datos)
+return paso_actual
+N -> N : manejar = {HORARIO: _manejar_paso_horario, …}[paso_actual]
+
+N -> N ++ : _manejar_paso_horario(request, wizard, puede_cambiar_area)
+N -> F ++ : SeleccionHorarioForm(request.POST, usuario=request.user)
+return form
+N -> F ++ : form.is_valid()
+F -> F ++ : $comentario("formato ISO y dentro de los límites de reserva")\nclean_fecha()
+F -> W ++ : obtener_limites_reserva()
+W -> A ++ : primera_fecha_pedible()
+A -> C ++ : $comentario("día y hora límite, semanas de desfase")\nParametros.cargar()
+C -> D ++ : SELECT configuracion_parametros
+return fila
+return parametros
+return fecha_minima
+return fecha_minima, fecha_maxima
+return fecha
+F -> F ++ : clean()
+F -> V ++ : obtener_bloques_dia_para_usuario(fecha, usuario)
+V -> A ++ : disponibilidad(fecha, fecha)
+A -> A ++ : $comentario("la jornada activa, por día de la semana")\nplantilla_semanal()
+A -> D ++ : SELECT agenda_bloque
+return filas
+return por_dia
+return {fecha: bloques}
+V -> D ++ : $comentario("las pendientes y aceptadas de ese día")\nSELECT solicitudes_solicitudbloque, solicitudes_solicitud, personas_usuario
+return filas
+V -> V : $comentario("quita los aceptados y marca los que el usuario ya tiene pendientes")\nBloqueVista(id, inicio, termino, es_propio)
+return bloques
+F -> F : $comentario("los elegidos que siguen libres para este usuario")\nlibres = [b for b in bloques if b.id in ids and b.disponible_para_reserva]
+note right of F
+  El asistente exige todos libres (exigir_todos).
+  Un bloque propio pendiente se rechaza aquí,
+  igual que la pantalla lo deshabilita.
+end note
+return
+return valido
+
+alt la fecha y todos los bloques son válidos
+  N -> W ++ : wizard.guardar_horario(fecha.isoformat(), [b.id …], ", ".join(b.texto …))
+  return
+  N --> S : 302 · /solicitar/?paso=2
+else fecha fuera de período, sin bloques o alguno ya no está libre
+  N -> F ++ : primer_error(form)
+  return error_bloques
+  ref over N, F, W, V, A, C, D : construir_calendario_contexto(request, wizard.fecha_str, wizard.bloques_ids): el mes con lo que ya tenía elegido
+  N --> S : 200 · solicitudes/solicitar.html con el error
+end
+deactivate N
+deactivate N
+@enduml
