@@ -12,9 +12,6 @@ from configuracion.models import Parametros
 
 from .models import Rol, Usuario
 
-# AC4: el mismo texto para credenciales malas y para correo inexistente. Decir
-# "ese correo no existe" le regalaría al atacante la lista de cuentas.
-ERROR_CREDENCIALES = "Correo o contraseña incorrectos."
 
 
 def destino_tras_login(usuario):
@@ -38,7 +35,16 @@ def destino_tras_login(usuario):
     return reverse("solicitar")
 
 
-def _con_error(request, form, mensaje, ruta):
+def _con_error(request, form, ruta):
+    """AC4: el mismo texto para clave mala, correo inexistente, cuenta sin el rol
+    de la puerta y cuenta bloqueada. Cualquier diferencia le regalaría al atacante
+    la lista de cuentas. La regla del bloqueo (AC5) va en el texto para que quien
+    quedó bloqueado entienda por qué no entra."""
+    parametros = Parametros.cargar()
+    mensaje = (
+        f"Correo o contraseña incorrectos. Tras {parametros.intentos_maximos} intentos "
+        f"seguidos la cuenta se bloquea {parametros.minutos_bloqueo} minutos."
+    )
     return render(
         request,
         "personas/_formulario_ingreso.html",
@@ -81,20 +87,20 @@ def entrar(request, rol, destino, ruta, titulo):
 
     form = AuthenticationForm(request, data=request.POST)
     usuario = Usuario.objects.filter(email__iexact=request.POST.get("username", "")).first()
+    # Se revisa la clave aunque la cuenta esté bloqueada: si no, la respuesta
+    # rápida (sin calcular el hash) delataría qué cuentas existen.
+    valido = form.is_valid()
 
     if usuario and usuario.esta_bloqueado:
-        minutos = max(1, int((usuario.bloqueado_hasta - timezone.now()).total_seconds() // 60) + 1)
-        return _con_error(
-            request, form, f"Cuenta bloqueada. Vuelve a intentar en {minutos} minutos.", ruta
-        )
+        return _con_error(request, form, ruta)
 
-    if form.is_valid():
+    if valido:
         entrante = form.get_user()
         # Una puerta de rol no responde "no eres administrador". Ese mensaje la
         # convertiría en un oráculo para saber qué correos existen y cuáles
         # mandan, así que contesta lo mismo que una clave mala, y sin sesión.
         if not _puede_pasar(entrante, rol):
-            return _con_error(request, form, ERROR_CREDENCIALES, ruta)
+            return _con_error(request, form, ruta)
         if entrante.intentos_fallidos or entrante.bloqueado_hasta:
             entrante.intentos_fallidos = 0
             entrante.bloqueado_hasta = None
@@ -105,7 +111,7 @@ def entrar(request, rol, destino, ruta, titulo):
 
     if usuario:
         _registrar_fallo(usuario)
-    return _con_error(request, form, ERROR_CREDENCIALES, ruta)
+    return _con_error(request, form, ruta)
 
 
 @login_required

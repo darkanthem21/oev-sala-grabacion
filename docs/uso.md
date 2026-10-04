@@ -42,18 +42,20 @@ desde el sitio; las otras tres las conoce quien las usa.
 ### Si no puedes entrar
 
 Si el correo o la contraseña no coinciden, aparece el aviso **Correo o
-contraseña incorrectos.** y el correo queda escrito para que no tengas que
-repetirlo.
+contraseña incorrectos.**, junto con cuántos intentos seguidos bloquean la cuenta
+y por cuántos minutos. El correo queda escrito para que no tengas que repetirlo.
+Las mayúsculas del correo no importan.
 
 ![Aviso de credenciales incorrectas](uso/us-01/ingreso-error.jpg)
 
-El aviso es el mismo cuando el correo no existe o cuando la cuenta no tiene el
-rol de esa puerta. Así nadie puede usar la pantalla para averiguar qué cuentas
-existen.
+El aviso es el mismo cuando el correo no existe, cuando la cuenta no tiene el rol
+de esa puerta o cuando está bloqueada. Así nadie puede usar la pantalla para
+averiguar qué cuentas existen.
 
-Después de varios intentos fallidos seguidos, la cuenta se bloquea por unos
-minutos y la pantalla indica cuánto falta. Cuántos intentos y cuántos minutos lo
-decide el administrador (ver [Reglas](#reglas-los-parámetros-del-sistema)).
+Después de esos intentos fallidos seguidos, la cuenta se bloquea por esos
+minutos: mientras dure, ni la contraseña correcta la abre. Cuántos intentos y
+cuántos minutos lo decide el administrador (ver
+[Reglas](#reglas-los-parámetros-del-sistema)).
 
 ### Recuperar la contraseña
 
