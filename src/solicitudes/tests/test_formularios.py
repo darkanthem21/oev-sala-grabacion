@@ -8,7 +8,7 @@ from agenda.models import Bloque, Dia, primera_fecha_pedible
 from personas.models import Area
 from solicitudes.forms import FechaReservaForm, SeleccionHorarioForm
 from solicitudes.models import Solicitud, SolicitudBloque
-from solicitudes.wizard import obtener_limites_reserva
+from solicitudes.wizard import SolicitudWizard, obtener_limites_reserva
 
 Usuario = get_user_model()
 
@@ -84,3 +84,35 @@ class SeleccionHorarioFormTestCase(TestCase):
         form = self._form(self.b1.id)
         self.assertFalse(form.is_valid())
         self.assertEqual(form.ids_enviados, [self.b1.id])
+
+
+class AjustarAreaTestCase(TestCase):
+    """SolicitudWizard.ajustar_area: cuándo se elige sola el área y cuándo hay que escogerla."""
+
+    def setUp(self):
+        self.informatica = Area.objects.create(nombre="Informática", activa=True)
+        self.medicina = Area.objects.create(nombre="Medicina", activa=True)
+
+    def _wizard(self, **datos):
+        return SolicitudWizard({SolicitudWizard.CLAVE_SESION: datos} if datos else {})
+
+    def test_con_una_sola_area_la_fija_sin_preguntar(self):
+        wizard = self._wizard()
+        self.assertIsNone(wizard.ajustar_area([self.informatica]))
+        self.assertEqual(wizard.area_id, self.informatica.id)
+
+    def test_si_la_unica_area_cambio_se_borra_el_horario(self):
+        wizard = self._wizard(area_id=self.medicina.id, area_nombre="Medicina", fecha="2026-10-19", bloques_ids=[1])
+        self.assertIsNone(wizard.ajustar_area([self.informatica]))
+        self.assertEqual(wizard.area_id, self.informatica.id)
+        self.assertIsNone(wizard.fecha_str)
+        self.assertEqual(wizard.bloques_ids, [])
+
+    def test_con_varias_areas_pide_elegir_o_cambiar(self):
+        areas = [self.informatica, self.medicina]
+        self.assertEqual(self._wizard().ajustar_area(areas), "elegir")
+        vigente = self._wizard(area_id=self.medicina.id, area_nombre="Medicina")
+        self.assertIsNone(vigente.ajustar_area(areas))
+        retirada = Area.objects.create(nombre="Química", activa=False)
+        vieja = self._wizard(area_id=retirada.id, area_nombre="Química")
+        self.assertEqual(vieja.ajustar_area(areas), "cambiar")

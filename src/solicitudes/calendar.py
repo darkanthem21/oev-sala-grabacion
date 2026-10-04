@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from .forms import FechaReservaForm
 from .services import obtener_bloques_dia_para_usuario, obtener_dias_con_disponibilidad
-from .wizard import obtener_limites_reserva
+from .wizard import SolicitudWizard, obtener_limites_reserva
 
 
 class AgendaCalendar(calendar.HTMLCalendar):
@@ -141,9 +141,7 @@ def construir_calendario_contexto(
         for m_num, m_nombre in meses_espanol
     ]
 
-    reserva = {}
-    if hasattr(request, "session"):
-        reserva = request.session.get("solicitud_reserva", {})
+    reserva = SolicitudWizard(request.session).datos if hasattr(request, "session") else {}
 
     return {
         "calendario": html_cal,

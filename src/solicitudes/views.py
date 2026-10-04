@@ -168,17 +168,15 @@ def bloques_dia(request):
 @user_passes_test(es_solicitante, login_url="login_solicitante")
 def solicitar_area(request):
     """Paso previo de selección de área académica para usuarios con múltiples áreas activas."""
-    areas = request.user.areas.filter(activa=True)
-    if not areas.exists():
+    areas = list(request.user.areas.filter(activa=True))
+    if not areas:
         return render(request, "solicitudes/sin_area.html")
 
-    if areas.count() == 1:
-        area_unica = areas.first()
-        wizard = SolicitudWizard(request.session)
-        wizard.guardar_area(area_unica.id, area_unica.nombre)
+    wizard = SolicitudWizard(request.session)
+    if len(areas) == 1:
+        wizard.ajustar_area(areas)
         return redirect(reverse("solicitar"))
 
-    wizard = SolicitudWizard(request.session)
     es_cambio = bool(request.GET.get("cambiar"))
 
     if request.method == "POST":
@@ -194,7 +192,7 @@ def solicitar_area(request):
     else:
         initial = {}
         if wizard.tiene_area and not es_cambio:
-            initial["area"] = wizard.datos.get("area_id")
+            initial["area"] = wizard.area_id
         form = SeleccionAreaForm(initial=initial, usuario=request.user)
 
     return render(request, "solicitudes/seleccionar_area.html", {
@@ -212,53 +210,35 @@ def solicitar(request):
     Paso 2: Datos de la actividad (motivo y acompañantes).
     Paso 3: Revisión de la reserva, aceptación de términos y confirmación.
     """
-    areas = request.user.areas.filter(activa=True)
-    if not areas.exists():
+    areas = list(request.user.areas.filter(activa=True))
+    if not areas:
         return render(request, "solicitudes/sin_area.html")
 
     wizard = SolicitudWizard(request.session)
-    tiene_multiples_areas = areas.count() > 1
+    tiene_multiples_areas = len(areas) > 1
 
-    # Si solicita cambiar área explícitamente y tiene múltiples áreas:
-    if request.GET.get("cambiar_area") or request.GET.get("cambiar"):
-        if tiene_multiples_areas:
-            wizard.limpiar_horario()
-            return redirect(f"{reverse('solicitar_area')}?cambiar=1")
+    if tiene_multiples_areas and (request.GET.get("cambiar_area") or request.GET.get("cambiar")):
+        wizard.limpiar_horario()
+        return redirect(f"{reverse('solicitar_area')}?cambiar=1")
 
-    # Evaluación de área previa:
-    if not wizard.tiene_area:
-        if not tiene_multiples_areas:
-            area_unica = areas.first()
-            wizard.guardar_area(area_unica.id, area_unica.nombre)
-        else:
-            return redirect(reverse("solicitar_area"))
-    else:
-        area_sesion_id = wizard.datos.get("area_id")
-        if not areas.filter(id=area_sesion_id).exists():
-            if not tiene_multiples_areas:
-                area_unica = areas.first()
-                wizard.guardar_area(area_unica.id, area_unica.nombre, reset_horario=True)
-            else:
-                return redirect(f"{reverse('solicitar_area')}?cambiar=1")
+    falta_area = wizard.ajustar_area(areas)
+    if falta_area == "elegir":
+        return redirect(reverse("solicitar_area"))
+    if falta_area == "cambiar":
+        return redirect(f"{reverse('solicitar_area')}?cambiar=1")
 
     paso_param = request.POST.get("paso", request.GET.get("paso"))
-    if not paso_param:
-        paso_solicitado = PasoSolicitud.HORARIO
-    else:
-        paso_solicitado = PasoSolicitud.resolver(paso_param)
-
+    paso_solicitado = PasoSolicitud.resolver(paso_param) if paso_param else PasoSolicitud.HORARIO
     paso_actual = paso_solicitado.validar_acceso(wizard.datos)
     if paso_actual != paso_solicitado and request.method == "GET":
         return redirect(f"{reverse('solicitar')}?paso={paso_actual.value}")
 
-    if paso_actual == PasoSolicitud.HORARIO:
-        return _manejar_paso_horario(request, wizard, puede_cambiar_area=tiene_multiples_areas)
-    elif paso_actual == PasoSolicitud.DATOS:
-        return _manejar_paso_datos(request, wizard, puede_cambiar_area=tiene_multiples_areas)
-    elif paso_actual == PasoSolicitud.CONFIRMACION:
-        return _manejar_paso_confirmacion(request, wizard, puede_cambiar_area=tiene_multiples_areas)
-
-    return _manejar_paso_horario(request, wizard, puede_cambiar_area=tiene_multiples_areas)
+    manejar = {
+        PasoSolicitud.HORARIO: _manejar_paso_horario,
+        PasoSolicitud.DATOS: _manejar_paso_datos,
+        PasoSolicitud.CONFIRMACION: _manejar_paso_confirmacion,
+    }[paso_actual]
+    return manejar(request, wizard, puede_cambiar_area=tiene_multiples_areas)
 
 
 def _manejar_paso_horario(request, wizard: SolicitudWizard, puede_cambiar_area: bool = False):
@@ -276,14 +256,10 @@ def _manejar_paso_horario(request, wizard: SolicitudWizard, puede_cambiar_area: 
             return redirect(f"{reverse('solicitar')}?paso={PasoSolicitud.DATOS.value}")
         error_bloques = primer_error(form)
 
-    datos_sesion = wizard.datos
-    fecha_seleccionada_str = datos_sesion.get("fecha")
-    bloques_seleccionados_ids = datos_sesion.get("bloques_ids", [])
-
     contexto = construir_calendario_contexto(
         request,
-        fecha_str=fecha_seleccionada_str,
-        bloques_seleccionados_ids=bloques_seleccionados_ids,
+        fecha_str=wizard.fecha_str,
+        bloques_seleccionados_ids=wizard.bloques_ids,
         paso=PasoSolicitud.HORARIO.value,
     )
     contexto.update({
@@ -296,7 +272,6 @@ def _manejar_paso_horario(request, wizard: SolicitudWizard, puede_cambiar_area: 
 
 
 def _manejar_paso_datos(request, wizard: SolicitudWizard, puede_cambiar_area: bool = False):
-    datos_sesion = wizard.datos
     errores_acompanantes = []
 
     if request.method == "POST":
@@ -326,16 +301,14 @@ def _manejar_paso_datos(request, wizard: SolicitudWizard, puede_cambiar_area: bo
                 return redirect(f"{reverse('solicitar')}?paso={PasoSolicitud.CONFIRMACION.value}")
     else:
         initial_form = {
-            "motivo": datos_sesion.get("motivo", ""),
-            "observaciones": datos_sesion.get("observaciones", ""),
-            "personas": datos_sesion.get("personas", 1),
+            "motivo": wizard.motivo,
+            "observaciones": wizard.observaciones,
+            "personas": wizard.personas,
         }
         form = SolicitudForm(initial=initial_form, usuario=request.user, exigir_terminos=False)
+        formset = AcompananteFormSet(initial=wizard.acompanantes)
 
-        initial_formset = datos_sesion.get("acompanantes", [])
-        formset = AcompananteFormSet(initial=initial_formset)
-
-    personas_inicial = datos_sesion.get("personas", 1)
+    personas_inicial = wizard.personas
     if form.is_bound and "personas" in form.cleaned_data:
         personas_inicial = form.cleaned_data["personas"]
 
