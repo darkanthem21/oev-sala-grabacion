@@ -61,7 +61,7 @@ firmado y sin tabla nuestra. El proyecto solo pone las plantillas.
 
 El envío de la solicitud corresponde al paso final de confirmación en el asistente multipaso. La solicitud exige la aceptación obligatoria de los términos y condiciones del servicio (AC10) antes de procesar el registro.
 
-El guardado se ejecuta en una transacción atómica dentro de `solicitudes.services.guardar_solicitud_completa`: se persiste la `Solicitud` con estado de validación pendiente (AC5), se crean los registros de `SolicitudBloque` asociando cada bloque de la plantilla semanal con la fecha elegida, y se registran los acompañantes declarados en sala (AC6). Si la validación de algún bloque o campo falla, la transacción se cancela por completo sin dejar datos huérfanos. Al finalizar con éxito, se purga la sesión del asistente (`wizard.limpiar()`) y se presenta la confirmación con el resumen de la solicitud.
+El guardado se ejecuta en una transacción atómica dentro de `solicitudes.services.guardar_solicitud_completa`: se persiste la `Solicitud` con la fecha elegida y estado de validación pendiente (AC5), se crean los registros de `SolicitudBloque` asociando cada bloque de la plantilla semanal a la solicitud, y se registran los acompañantes declarados en sala (AC6). Si la validación de algún bloque o campo falla, la transacción se cancela por completo sin dejar datos huérfanos. Al finalizar con éxito, se purga la sesión del asistente (`wizard.limpiar()`) y se presenta la confirmación con el resumen de la solicitud.
 
 ![Enviar una solicitud de reserva](diagramas/us-02/enviar-solicitud.png)
 
@@ -100,6 +100,45 @@ el bloque elegido.
 Quitar no pide confirmación: desactiva y ofrece deshacer después, que es más
 rápido y no se pierde nada.
 
+### Ver mis solicitudes (US-09)
+
+El historial lista todas las solicitudes del usuario, de cualquiera de sus
+áreas, con el área, la fecha, los bloques y el estado. Se separa en Próximas y
+Anteriores por día calendario: una solicitud es próxima mientras le quede algún
+bloque de hoy en adelante, aunque la hora de hoy ya haya pasado. Esas reglas
+viven en `SolicitudQuerySet` (`de`, `proximas`, `anteriores`, `con_detalle`) y
+no en la vista, porque son del dominio: la vista solo elige la pestaña, pagina y
+responde. La fecha es un campo de la solicitud, así que filtrar y ordenar no
+toca los bloques.
+
+![Ver mis solicitudes](diagramas/us-09/ver-mis-solicitudes.png)
+
+La página trae 20 solicitudes y siempre hace las mismas consultas: tres
+`COUNT` (el paginador y las dos pestañas), la página con su área y los bloques
+de esa página. Cambiar de pestaña o de página es el mismo `GET` con htmx, que
+recibe solo `_tabla_historial.html` y actualiza la dirección. Si htmx restaura
+el historial sin tenerlo en caché, pide la página entera, y `Vary: HX-Request`
+evita que el navegador confunda una respuesta con la otra. El plazo de la nota
+de confirmación se lee de `Parametros`, porque lo cambia administración.
+
+### Retirar una solicitud propia (US-09)
+
+Solo se retira una solicitud que la Oficina todavía no revisa. Pasa a
+`RETIRADA`, un estado más de la validación, y no se borra: sigue en el historial.
+`CANCELADA` queda para el flujo de confirmación. La disponibilidad y la regla de
+bloque ya pedido cuentan solo las pendientes y aceptadas, así que el bloque
+retirado queda libre sin tocarlas.
+
+![Retirar una solicitud propia](diagramas/us-09/retirar-solicitud.png)
+
+La confirmación es un `<dialog>` propio: el script intercepta `htmx:confirm` y
+la petición sale solo si se confirma. El retiro es un único `UPDATE`
+condicionado a que la solicitud siga pendiente y sea del usuario, para no pisar
+al validador si decide en el mismo instante. Si no aplica, el mensaje es el
+mismo sea ajena, inexistente o ya revisada. Con htmx vuelve la tabla en la misma
+pestaña y página, con el mensaje dentro. Sin htmx, la vuelta es por redirección
+al historial.
+
 ### Ver los bloques del día (US-14)
 
 Los tickets todavía no existen en la base, así que `services._tickets()` los lee
@@ -131,7 +170,7 @@ Si registra, la vuelta es por redirección, a la lista del día del bloque.
 
 ### Solicitud de reserva y bloques horarios (US-02)
 
-El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_bloque`, administrada en US-04) de la **instancia concreta de reserva** (`solicitudes_solicitudbloque`), vinculando la fecha seleccionada con el bloque horario y la solicitud.
+El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_bloque`, administrada en US-04) de la **reserva concreta**: la solicitud lleva la fecha, porque es de un solo día, y `solicitudes_solicitudbloque` dice qué bloques de la plantilla se usan ese día. Hasta la migración `0003_fecha_en_solicitud` la fecha vivía en cada bloque, y nada impedía que dos bloques de una misma solicitud tuvieran fechas distintas.
 
 ![Modelo de datos: Solicitud y Bloques](diagramas/us-02/modelo-datos.png)
 
@@ -141,5 +180,5 @@ El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_
   - `solicitudes_solicitud.area_id` → `personas_area.id` (`on_delete=PROTECT`): garantiza la trazabilidad del área académica requirente.
   - `solicitudes_solicitudbloque.solicitud_id` → `solicitudes_solicitud.id` (`on_delete=CASCADE`): mantiene la consistencia de bloques asignados a la solicitud.
   - `solicitudes_solicitudbloque.bloque_id` → `agenda_bloque.id` (`on_delete=PROTECT`): permite desactivar bloques de la plantilla sin alterar las solicitudes históricas ya existentes.
-  - **Restricción de unicidad**: `UniqueConstraint(fields=["solicitud", "bloque", "fecha"])` previene asignar duplicados de un mismo bloque horario en la misma fecha para una solicitud.
+  - **Restricción de unicidad**: `UniqueConstraint(fields=["solicitud", "bloque"])` impide pedir dos veces el mismo bloque en una solicitud. La fecha ya no entra: es la de la solicitud.
 
