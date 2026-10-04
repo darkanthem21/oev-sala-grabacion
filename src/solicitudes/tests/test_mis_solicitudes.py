@@ -428,3 +428,45 @@ class RetirarSolicitudTestCase(TestCase):
             estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA,
         )
         aceptada.clean()
+
+
+class SolicitudQuerySetTestCase(TestCase):
+    """Las reglas del historial, sin pasar por HTTP."""
+
+    def setUp(self):
+        self.area = Area.objects.create(nombre="Informática", activa=True)
+        self.usuario = Usuario.objects.create_user(email="docente@uach.cl", password="x")
+        self.bloque = Bloque.objects.filter(activo=True).first()
+        self.hoy = date(2026, 10, 14)
+
+    def _solicitud(self, *dias, usuario=None):
+        solicitud = Solicitud.objects.create(solicitante=usuario or self.usuario, area=self.area, motivo="Grabar")
+        SolicitudBloque.objects.bulk_create(
+            SolicitudBloque(solicitud=solicitud, bloque=self.bloque, fecha=self.hoy + timedelta(days=d))
+            for d in dias
+        )
+        return solicitud
+
+    def test_proximas_y_anteriores_se_reparten_todas(self):
+        sin_bloques = Solicitud.objects.create(solicitante=self.usuario, area=self.area, motivo="Grabar")
+        hoy, futura, mixta = self._solicitud(0), self._solicitud(5), self._solicitud(-2, 2)
+        pasada = self._solicitud(-1)
+
+        propias = Solicitud.objects.de(self.usuario)
+        # Se ordena por la primera fecha: la mixta parte antes que la de hoy.
+        self.assertEqual(list(propias.proximas(self.hoy)), [mixta, hoy, futura, sin_bloques])
+        self.assertEqual(list(propias.anteriores(self.hoy)), [pasada])
+
+    def test_de_filtra_por_solicitante(self):
+        otro = Usuario.objects.create_user(email="otro@uach.cl", password="x")
+        self._solicitud(1, usuario=otro)
+        propia = self._solicitud(1)
+        self.assertEqual(list(Solicitud.objects.de(self.usuario).proximas(self.hoy)), [propia])
+
+    def test_con_detalle_trae_la_pagina_en_dos_consultas(self):
+        for d in range(1, 6):
+            self._solicitud(d, d + 7)
+        with self.assertNumQueries(2):
+            for solicitud in Solicitud.objects.de(self.usuario).proximas(self.hoy).con_detalle():
+                solicitud.area.nombre
+                [sb.bloque.inicio for sb in solicitud.solicitudes_bloques.all()]

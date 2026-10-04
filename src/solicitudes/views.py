@@ -6,7 +6,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import F, Max, Min, Prefetch, Q
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -64,28 +63,11 @@ def _contexto_historial(usuario, vista, numero_pagina):
     if vista not in VISTAS_HISTORIAL:
         vista = "proximas"
 
-    # Se separa por día calendario: una solicitud es próxima mientras le quede
-    # algún bloque de hoy en adelante, aunque la hora de hoy ya haya pasado.
-    # Una sin bloques no tiene fecha vencida, así que cuenta como próxima.
     hoy = timezone.localdate()
-    base = Solicitud.objects.filter(solicitante=usuario).annotate(
-        primera_fecha=Min("solicitudes_bloques__fecha"),
-        ultima_fecha=Max("solicitudes_bloques__fecha"),
-    )
-    anteriores = base.filter(ultima_fecha__lt=hoy)
-    proximas = base.filter(Q(ultima_fecha__gte=hoy) | Q(ultima_fecha__isnull=True))
+    propias = Solicitud.objects.de(usuario)
+    proximas, anteriores = propias.proximas(hoy), propias.anteriores(hoy)
+    solicitudes = (proximas if vista == "proximas" else anteriores).con_detalle()
 
-    # Las próximas parten por la más cercana; las anteriores, por la más
-    # reciente. El id desempata: sin un orden total, una fila podría repetirse
-    # o saltarse entre páginas.
-    if vista == "proximas":
-        solicitudes = proximas.order_by(F("primera_fecha").asc(nulls_last=True), "id")
-    else:
-        solicitudes = anteriores.order_by("-ultima_fecha", "-id")
-    solicitudes = solicitudes.select_related("area").prefetch_related(Prefetch(
-        "solicitudes_bloques",
-        queryset=SolicitudBloque.objects.select_related("bloque").order_by("fecha", "bloque__inicio"),
-    ))
     contexto = {
         "pagina": Paginator(solicitudes, SOLICITUDES_POR_PAGINA).get_page(numero_pagina),
         "vista": vista,

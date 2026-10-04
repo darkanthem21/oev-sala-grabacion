@@ -2,9 +2,53 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models import F, Max, Min, Prefetch, Q
 
 from agenda.models import Bloque, primera_fecha_pedible
 from personas.models import Area
+
+
+class SolicitudQuerySet(models.QuerySet):
+    """Consultas del historial (US-09): qué es próxima, qué es anterior y en qué orden.
+
+    Viven acá y no en la vista porque son reglas del dominio: los recordatorios
+    de confirmación y la bandeja del validador van a necesitar la misma idea
+    de "próxima".
+    """
+
+    def de(self, usuario):
+        return self.filter(solicitante=usuario)
+
+    def _con_fechas(self):
+        # La primera y la última fecha de sus bloques, en la misma consulta:
+        # filtrar y ordenar no necesita traer los bloques.
+        return self.annotate(
+            primera_fecha=Min("solicitudes_bloques__fecha"),
+            ultima_fecha=Max("solicitudes_bloques__fecha"),
+        )
+
+    def proximas(self, hoy):
+        """Le queda algún bloque de hoy en adelante, aunque la hora de hoy ya
+        haya pasado: se separa por día calendario. La más cercana primero."""
+        return (
+            self._con_fechas()
+            .filter(Q(ultima_fecha__gte=hoy) | Q(ultima_fecha__isnull=True))
+            # El id desempata, sin un orden total, una fila podría repetirse o
+            # saltarse entre páginas.
+            .order_by(F("primera_fecha").asc(nulls_last=True), "id")
+        )
+
+    def anteriores(self, hoy):
+        """Todos sus bloques ya pasaron. La más reciente primero."""
+        return self._con_fechas().filter(ultima_fecha__lt=hoy).order_by("-ultima_fecha", "-id")
+
+    def con_detalle(self):
+        """Con lo que dibuja la tabla: el área y los bloques con su hora, en
+        dos consultas para toda la página."""
+        return self.select_related("area").prefetch_related(Prefetch(
+            "solicitudes_bloques",
+            queryset=SolicitudBloque.objects.select_related("bloque").order_by("fecha", "bloque__inicio"),
+        ))
 
 
 class Solicitud(models.Model):
@@ -69,6 +113,8 @@ class Solicitud(models.Model):
     )
     creado_en = models.DateTimeField(auto_now_add=True, verbose_name="fecha de creación")
     actualizado_en = models.DateTimeField(auto_now=True, verbose_name="última actualización")
+
+    objects = SolicitudQuerySet.as_manager()
 
     class Meta:
         verbose_name = "solicitud de reserva"
