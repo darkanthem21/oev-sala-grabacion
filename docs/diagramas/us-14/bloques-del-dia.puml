@@ -7,7 +7,8 @@ title Ver los bloques del día (US-14)
 actor "Personal de apoyo" as A
 participant "<b>uso.views</b>\n<size:11>uso/views.py</size>" as N <<presentación>>
 participant "<b>uso</b>\n<size:11>uso/services.py</size>" as V <<dominio>>
-participant "<b>bloques_apoyo.json</b>\n<size:11>uso/datos_prueba/</size>" as J <<persistencia>>
+participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as G <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
 A -> N ++ : GET /apoyo/?fecha=AAAA-MM-DD → bloques(request)
 N -> N : hoy = timezone.localdate()
@@ -20,16 +21,16 @@ N -> N ++ : _enviados(request)
 return enviados
 N -> V ++ : bloques_del_dia(fecha, enviados)
 V -> V : ahora = timezone.localtime()
-V -> V ++ : _tickets()
-V -> J ++ : json.load(archivo)
+V -> G ++ : bloqueos_por_fecha(fecha, fecha)
+G -> D ++ : SELECT agenda_bloqueo, agenda_bloque
+return filas
+return bloqueos
+V -> V ++ : _tickets(fecha=fecha)
+V -> D ++ : $comentario("los bloques de solicitudes aceptadas en esa fecha (AC4)")\nSELECT solicitudes_solicitudbloque, solicitudes_solicitud, agenda_bloque, personas_usuario, personas_area
+return filas
+V -> V : $comentario("aprobada, confirmada o cancelada, según la confirmación")\nestado = ESTADOS[f.solicitud.estado_confirmacion]
 return tickets
-return tickets
-note right of V
-  Datos de prueba: Solicitud y Ticket aún no tienen
-  tablas. Cuando las tengan cambia solo _tickets().
-  Las fechas del JSON son relativas a hoy (en_dias).
-end note
-loop cada ticket de esa fecha aprobado, confirmado o cancelado
+loop cada ticket
   V -> V ++ : _armar(t, enviados, ahora)
   return bloque
 end
@@ -38,8 +39,15 @@ note right of V
   deja el check-out completado, pendiente o sin
   check-out (no ha terminado o se canceló).
 end note
+loop cada bloque
+  V -> V : $comentario("el bloqueo que le quitó la sala, si hay uno (US-17 AC2)")\nbloque["bloqueo"] = next((b for b in bloqueos if b.cubre(fecha, bloque["inicio"])), None)
+end
 V -> V : $comentario("en el orden en que van a llegar (AC1)")\nsorted(bloques, key=lambda b: b["inicio"])
 return bloques
+N -> G ++ : $comentario("para avisar del bloqueo aunque ese día no haya reservas")\nbloqueos_por_fecha(fecha, fecha)
+G -> D ++ : SELECT agenda_bloqueo, agenda_bloque
+return filas
+return bloqueos
 N --> A : 200 · uso/bloques.html
 deactivate N
 @enduml

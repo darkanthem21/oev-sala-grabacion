@@ -170,10 +170,9 @@ rápido y no se pierde nada.
 
 ### Ver los bloques del día (US-14)
 
-Los tickets todavía no existen en la base, así que `services._tickets()` los lee
-de un JSON de prueba con fechas relativas a hoy. Es el único punto que sabe de
-dónde vienen: cuando existan Solicitud y Ticket se cambia esa función, y ni
-`bloques_del_dia()` ni `buscar()` ni las vistas se enteran. Todos los del
+Cada ticket es un bloque de una solicitud aceptada en una fecha
+(`SolicitudBloque`), y `services._tickets()` es el único punto que lo consulta.
+Las pendientes no se listan (AC4): todavía pueden rechazarse. Todos los del
 personal de apoyo ven todos los bloques (AC7), porque el modelo no tiene a quién
 asignarlos.
 
@@ -207,8 +206,8 @@ administración de Django.
 
 Para saber a quién le quita la sala, agenda pregunta por la señal
 `reservas_aprobadas` en vez de importar a quien tiene las reservas, porque
-`solicitudes` depende de agenda y no al revés. Hoy contesta `uso` con sus
-tickets de prueba. La primera vez no se guarda nada si hay reservas afectadas
+`solicitudes` depende de agenda y no al revés. Contesta `solicitudes` con las
+aceptadas y no canceladas de esas fechas. La primera vez no se guarda nada si hay reservas afectadas
 (AC4): se muestran, y al confirmar el navegador devuelve sus códigos. Si ya no
 coinciden, se vuelven a mostrar antes de avisar a nadie. Los correos salen con
 `transaction.on_commit`, así un bloqueo que no alcanzó a guardarse no avisa.

@@ -2,11 +2,7 @@
 
 Las reservas aprobadas son de `solicitudes`, que depende de agenda y no al revés
 (README.md). Para saber a quién le quita la sala un bloqueo (US-17 AC4), agenda
-pregunta por esta señal y contesta el módulo que tenga las reservas.
-
-Hoy contesta `uso`, con sus tickets de prueba, porque todavía no existen
-Solicitud ni Ticket. Cuando existan, el receptor se muda a `solicitudes` y
-agenda no se entera.
+pregunta por esta señal y contesta `solicitudes` (`services.reservas_aprobadas`).
 """
 from dataclasses import dataclass
 from datetime import date, time
