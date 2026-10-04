@@ -10,11 +10,11 @@
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
 </head>
 <body>
-{% block barra_superior %}
-  {% if user.is_authenticated %}
-    {% include "solicitudes/componentes/barra_superior.html" %}
-  {% endif %}
-{% endblock %}
+{% comment %}
+  Vacío a propósito: cada panel trae su propio encabezado. Uno por defecto se
+  sumaba al `techo` de configuración, apoyo y validación.
+{% endcomment %}
+{% block barra_superior %}{% endblock %}
 {% block contenido %}{% endblock %}
 {% block scripts %}{% endblock %}
 </body>
