@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from agenda.models import Bloque, Dia, primera_fecha_pedible
+from configuracion.models import Parametros
 from personas.models import Area, Rol
 from solicitudes.models import Solicitud, SolicitudBloque
 from solicitudes.views import SOLICITUDES_POR_PAGINA
@@ -263,3 +264,24 @@ class ProximasAnterioresTestCase(TestCase):
         response = self.client.get(self.url, {"vista": "anteriores"})
         self.assertContains(response, f'hx-get="{self.url}?vista=anteriores&amp;pagina=2"')
         self.assertEqual(len(self._ids(vista="anteriores", pagina=2)), 1)
+
+    def test_nota_de_confirmacion_solo_en_proximas(self):
+        nota = "Confirma tu asistencia."
+        self.assertContains(self.client.get(self.url), nota)
+        self.assertNotContains(self.client.get(self.url, {"vista": "anteriores"}), nota)
+
+    def test_nota_de_confirmacion_usa_el_plazo_configurado(self):
+        parametros = Parametros.cargar()
+        casos = [
+            (2, "recibirás una notificación 2 días antes", "a más tardar el día anterior"),
+            (5, "recibirás una notificación 5 días antes", "a más tardar el día anterior"),
+            (1, "recibirás una notificación el día anterior", "ese mismo día"),
+        ]
+        for plazo, aviso, limite in casos:
+            with self.subTest(plazo=plazo):
+                parametros.plazo_confirmacion_dias = plazo
+                parametros.save()
+                # Sin depender de cómo la plantilla corta las líneas.
+                texto = " ".join(self.client.get(self.url).content.decode().split())
+                self.assertIn(aviso, texto)
+                self.assertIn(limite, texto)

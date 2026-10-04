@@ -95,6 +95,10 @@ def mis_solicitudes(request):
         "total_proximas": proximas.count(),
         "total_anteriores": anteriores.count(),
     }
+    if vista == "proximas":
+        # La nota de confirmación cita el plazo vigente, que lo fija
+        # administración en la configuración.
+        contexto["plazo_confirmacion"] = Parametros.cargar().plazo_confirmacion_dias
 
     # htmx pide solo la tabla. Al volver con el botón Atrás sin la página en su
     # caché, htmx la pide entera (HX-History-Restore-Request), igual que el

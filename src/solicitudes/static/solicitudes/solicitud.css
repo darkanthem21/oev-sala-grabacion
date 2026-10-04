@@ -718,3 +718,15 @@
   background: var(--fondo); border: 1px solid var(--borde);
   font-size: .75rem; text-align: center;
 }
+
+/* --- Nota de confirmación en Próximas --- */
+/* Informa una regla, no un problema: va sobria para no competir con la tabla
+ * ni confundirse con los avisos de lista vacía. */
+.nota-confirmacion {
+  display: flex; align-items: center; gap: .6rem;
+  margin: 0 0 1.25rem; padding: .7rem .85rem;
+  border: 1px solid var(--borde); border-radius: 4px; background: var(--fondo);
+  font-size: .85rem; line-height: 1.5; color: var(--tinta-suave);
+}
+.nota-confirmacion strong { color: var(--tinta); font-weight: 700; }
+.nota-icono { flex-shrink: 0; color: var(--accion); }
