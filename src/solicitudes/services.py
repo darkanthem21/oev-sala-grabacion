@@ -51,15 +51,15 @@ def obtener_dias_con_disponibilidad(year: int, month: int) -> set:
     # Obtener todas las reservas aceptadas en el rango de fechas
     bloques_ocupados = set(
         SolicitudBloque.objects.filter(
-            fecha__gte=desde,
-            fecha__lte=hasta,
+            solicitud__fecha__gte=desde,
+            solicitud__fecha__lte=hasta,
             solicitud__estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
             solicitud__estado_confirmacion__in=[
                 Solicitud.EstadoConfirmacion.NO_HABILITADA,
                 Solicitud.EstadoConfirmacion.PENDIENTE,
                 Solicitud.EstadoConfirmacion.CONFIRMADA,
             ],
-        ).values_list("fecha", "bloque_id")
+        ).values_list("solicitud__fecha", "bloque_id")
     )
 
     dias_disponibles = set()
@@ -88,7 +88,7 @@ def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List[Any]:
     # Obtener relaciones para esa fecha
     relaciones = (
         SolicitudBloque.objects.filter(
-            fecha=fecha,
+            solicitud__fecha=fecha,
             bloque_id__in=bloques_ids,
             solicitud__estado_validacion__in=[
                 Solicitud.EstadoValidacion.PENDIENTE,
@@ -152,6 +152,7 @@ def guardar_solicitud_completa(
         solicitud = Solicitud(
             solicitante=usuario,
             area=area,
+            fecha=fecha_obj,
             motivo=datos_reserva.get("motivo", "").strip(),
             observaciones=datos_reserva.get("observaciones", "").strip(),
             personas=datos_reserva.get("personas", 1),
@@ -167,11 +168,7 @@ def guardar_solicitud_completa(
             raise ValidationError("Uno o más bloques seleccionados no son válidos o ya no están activos.")
 
         for b in bloques_db:
-            sol_bloque = SolicitudBloque(
-                solicitud=solicitud,
-                bloque=b,
-                fecha=fecha_obj,
-            )
+            sol_bloque = SolicitudBloque(solicitud=solicitud, bloque=b)
             sol_bloque.full_clean()
             sol_bloque.save()
 

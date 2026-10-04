@@ -35,10 +35,10 @@ class MisSolicitudesTestCase(TestCase):
 
     def _solicitud(self, usuario, bloques, **estados):
         solicitud = Solicitud.objects.create(
-            solicitante=usuario, area=self.area, motivo="Grabar clase", **estados
+            solicitante=usuario, area=self.area, fecha=self.fecha, motivo="Grabar clase", **estados
         )
         for bloque in bloques:
-            SolicitudBloque.objects.create(solicitud=solicitud, bloque=bloque, fecha=self.fecha)
+            SolicitudBloque.objects.create(solicitud=solicitud, bloque=bloque)
         return solicitud
 
     def test_requiere_ingreso_de_solicitante(self):
@@ -116,8 +116,9 @@ class PaginacionMisSolicitudesTestCase(TestCase):
         self.client.force_login(self.usuario)
         # Sin bloques: la paginación no depende de ellos y así no chocan las
         # validaciones de bloque ya pedido.
+        manana = timezone.localdate() + timedelta(days=1)
         Solicitud.objects.bulk_create(
-            Solicitud(solicitante=self.usuario, area=self.area, motivo=f"Clase {n}")
+            Solicitud(solicitante=self.usuario, area=self.area, fecha=manana, motivo=f"Clase {n}")
             for n in range(SOLICITUDES_POR_PAGINA + 5)
         )
         self.url = reverse("mis_solicitudes")
@@ -186,13 +187,11 @@ class ProximasAnterioresTestCase(TestCase):
         self.hoy = timezone.localdate()
         self.url = reverse("mis_solicitudes")
 
-    def _solicitud(self, *fechas):
-        # bulk_create se salta la regla de anticipación de SolicitudBloque.clean,
-        # que impide registrar fechas pasadas.
-        solicitud = Solicitud.objects.create(solicitante=self.usuario, area=self.area, motivo="Grabar")
-        SolicitudBloque.objects.bulk_create(
-            SolicitudBloque(solicitud=solicitud, bloque=self.bloque, fecha=f) for f in fechas
-        )
+    def _solicitud(self, fecha):
+        # objects.create se salta Solicitud.clean, que impide registrar fechas
+        # pasadas, y bulk_create la de bloque ya pedido.
+        solicitud = Solicitud.objects.create(solicitante=self.usuario, area=self.area, fecha=fecha, motivo="Grabar")
+        SolicitudBloque.objects.bulk_create([SolicitudBloque(solicitud=solicitud, bloque=self.bloque)])
         return solicitud
 
     def _ids(self, **params):
@@ -207,10 +206,13 @@ class ProximasAnterioresTestCase(TestCase):
         self.assertCountEqual(self._ids(), [de_hoy.id, futura.id])
         self.assertEqual(self._ids(vista="anteriores"), [pasada.id])
 
-    def test_con_un_bloque_pendiente_sigue_siendo_proxima(self):
-        mixta = self._solicitud(self.hoy - timedelta(days=1), self.hoy + timedelta(days=1))
-        self.assertEqual(self._ids(), [mixta.id])
-        self.assertEqual(self._ids(vista="anteriores"), [])
+    def test_los_bloques_comparten_la_fecha_de_su_solicitud(self):
+        solicitud = self._solicitud(self.hoy + timedelta(days=1))
+        SolicitudBloque.objects.bulk_create([
+            SolicitudBloque(solicitud=solicitud, bloque=b)
+            for b in Bloque.objects.filter(activo=True).exclude(pk=self.bloque.pk)[:2]
+        ])
+        self.assertEqual({sb.fecha for sb in solicitud.solicitudes_bloques.all()}, {solicitud.fecha})
 
     def test_orden_proximas_por_cercania_y_anteriores_por_recencia(self):
         lejana = self._solicitud(self.hoy + timedelta(days=20))
@@ -253,13 +255,8 @@ class ProximasAnterioresTestCase(TestCase):
 
     def test_paginacion_conserva_la_vista(self):
         Solicitud.objects.bulk_create(
-            Solicitud(solicitante=self.usuario, area=self.area, motivo=f"Clase {n}")
+            Solicitud(solicitante=self.usuario, area=self.area, fecha=self.hoy - timedelta(days=1), motivo=f"Clase {n}")
             for n in range(SOLICITUDES_POR_PAGINA + 1)
-        )
-        ids = list(Solicitud.objects.values_list("id", flat=True))
-        SolicitudBloque.objects.bulk_create(
-            SolicitudBloque(solicitud_id=i, bloque=self.bloque, fecha=self.hoy - timedelta(days=1))
-            for i in ids
         )
         response = self.client.get(self.url, {"vista": "anteriores"})
         self.assertContains(response, f'hx-get="{self.url}?vista=anteriores&amp;pagina=2"')
@@ -303,9 +300,9 @@ class RetirarSolicitudTestCase(TestCase):
 
     def _solicitud(self, usuario=None, **estados):
         solicitud = Solicitud.objects.create(
-            solicitante=usuario or self.usuario, area=self.area, motivo="Grabar", **estados
+            solicitante=usuario or self.usuario, area=self.area, fecha=self.fecha, motivo="Grabar", **estados
         )
-        SolicitudBloque.objects.bulk_create([SolicitudBloque(solicitud=solicitud, bloque=self.bloque, fecha=self.fecha)])
+        SolicitudBloque.objects.bulk_create([SolicitudBloque(solicitud=solicitud, bloque=self.bloque)])
         return solicitud
 
     def _retirar(self, solicitud, **extra):
@@ -345,7 +342,7 @@ class RetirarSolicitudTestCase(TestCase):
     def test_boton_solo_en_las_que_estan_en_revision(self):
         en_revision = self._solicitud()
         Solicitud.objects.create(
-            solicitante=self.usuario, area=self.area, motivo="Otra",
+            solicitante=self.usuario, area=self.area, fecha=self.fecha, motivo="Otra",
             estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
         )
         response = self.client.get(reverse("mis_solicitudes"))
@@ -402,8 +399,8 @@ class RetirarSolicitudTestCase(TestCase):
         self._retirar(solicitud)
         self.assertFalse(propio())
         # La regla de bloque ya pedido tampoco la cuenta.
-        nueva = Solicitud.objects.create(solicitante=self.usuario, area=self.area, motivo="De nuevo")
-        SolicitudBloque.objects.create(solicitud=nueva, bloque=self.bloque, fecha=self.fecha)
+        nueva = Solicitud.objects.create(solicitante=self.usuario, area=self.area, fecha=self.fecha, motivo="De nuevo")
+        SolicitudBloque.objects.create(solicitud=nueva, bloque=self.bloque)
 
     def test_cancelar_solo_cabe_en_una_aceptada(self):
         from django.core.exceptions import ValidationError
@@ -439,23 +436,22 @@ class SolicitudQuerySetTestCase(TestCase):
         self.bloque = Bloque.objects.filter(activo=True).first()
         self.hoy = date(2026, 10, 14)
 
-    def _solicitud(self, *dias, usuario=None):
-        solicitud = Solicitud.objects.create(solicitante=usuario or self.usuario, area=self.area, motivo="Grabar")
+    def _solicitud(self, dias, usuario=None, bloques=1):
+        solicitud = Solicitud.objects.create(
+            solicitante=usuario or self.usuario, area=self.area, fecha=self.hoy + timedelta(days=dias), motivo="Grabar"
+        )
         SolicitudBloque.objects.bulk_create(
-            SolicitudBloque(solicitud=solicitud, bloque=self.bloque, fecha=self.hoy + timedelta(days=d))
-            for d in dias
+            SolicitudBloque(solicitud=solicitud, bloque=b) for b in Bloque.objects.filter(activo=True)[:bloques]
         )
         return solicitud
 
     def test_proximas_y_anteriores_se_reparten_todas(self):
-        sin_bloques = Solicitud.objects.create(solicitante=self.usuario, area=self.area, motivo="Grabar")
-        hoy, futura, mixta = self._solicitud(0), self._solicitud(5), self._solicitud(-2, 2)
-        pasada = self._solicitud(-1)
+        lejana, hoy, cercana = self._solicitud(9), self._solicitud(0), self._solicitud(2)
+        antigua, ayer = self._solicitud(-20), self._solicitud(-1)
 
         propias = Solicitud.objects.de(self.usuario)
-        # Se ordena por la primera fecha: la mixta parte antes que la de hoy.
-        self.assertEqual(list(propias.proximas(self.hoy)), [mixta, hoy, futura, sin_bloques])
-        self.assertEqual(list(propias.anteriores(self.hoy)), [pasada])
+        self.assertEqual(list(propias.proximas(self.hoy)), [hoy, cercana, lejana])
+        self.assertEqual(list(propias.anteriores(self.hoy)), [ayer, antigua])
 
     def test_de_filtra_por_solicitante(self):
         otro = Usuario.objects.create_user(email="otro@uach.cl", password="x")
@@ -465,7 +461,7 @@ class SolicitudQuerySetTestCase(TestCase):
 
     def test_con_detalle_trae_la_pagina_en_dos_consultas(self):
         for d in range(1, 6):
-            self._solicitud(d, d + 7)
+            self._solicitud(d, bloques=2)
         with self.assertNumQueries(2):
             for solicitud in Solicitud.objects.de(self.usuario).proximas(self.hoy).con_detalle():
                 solicitud.area.nombre

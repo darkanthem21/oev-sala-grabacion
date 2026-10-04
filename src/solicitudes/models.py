@@ -2,7 +2,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import F, Max, Min, Prefetch, Q
+from django.db.models import Prefetch
 
 from agenda.models import Bloque, primera_fecha_pedible
 from personas.models import Area
@@ -19,35 +19,23 @@ class SolicitudQuerySet(models.QuerySet):
     def de(self, usuario):
         return self.filter(solicitante=usuario)
 
-    def _con_fechas(self):
-        # La primera y la última fecha de sus bloques, en la misma consulta:
-        # filtrar y ordenar no necesita traer los bloques.
-        return self.annotate(
-            primera_fecha=Min("solicitudes_bloques__fecha"),
-            ultima_fecha=Max("solicitudes_bloques__fecha"),
-        )
-
     def proximas(self, hoy):
-        """Le queda algún bloque de hoy en adelante, aunque la hora de hoy ya
-        haya pasado: se separa por día calendario. La más cercana primero."""
-        return (
-            self._con_fechas()
-            .filter(Q(ultima_fecha__gte=hoy) | Q(ultima_fecha__isnull=True))
-            # El id desempata, sin un orden total, una fila podría repetirse o
-            # saltarse entre páginas.
-            .order_by(F("primera_fecha").asc(nulls_last=True), "id")
-        )
+        """Las de hoy en adelante, aunque la hora de hoy ya haya pasado: se
+        separa por día calendario. La más cercana primero."""
+        # El id desempata: sin un orden total, una fila podría repetirse o
+        # saltarse entre páginas.
+        return self.filter(fecha__gte=hoy).order_by("fecha", "id")
 
     def anteriores(self, hoy):
-        """Todos sus bloques ya pasaron. La más reciente primero."""
-        return self._con_fechas().filter(ultima_fecha__lt=hoy).order_by("-ultima_fecha", "-id")
+        """Las de días que ya pasaron. La más reciente primero."""
+        return self.filter(fecha__lt=hoy).order_by("-fecha", "-id")
 
     def con_detalle(self):
         """Con lo que dibuja la tabla: el área y los bloques con su hora, en
         dos consultas para toda la página."""
         return self.select_related("area").prefetch_related(Prefetch(
             "solicitudes_bloques",
-            queryset=SolicitudBloque.objects.select_related("bloque").order_by("fecha", "bloque__inicio"),
+            queryset=SolicitudBloque.objects.select_related("bloque").order_by("bloque__inicio"),
         ))
 
 
@@ -87,6 +75,10 @@ class Solicitud(models.Model):
         blank=True,
         verbose_name="observaciones y requerimientos técnicos",
     )
+    # Una solicitud es de un solo día: sus bloques comparten esta fecha. Vivía
+    # en cada SolicitudBloque, y nada impedía que dos bloques de la misma
+    # solicitud tuvieran fechas distintas.
+    fecha = models.DateField(verbose_name="fecha de la reserva")
     personas = models.PositiveSmallIntegerField(
         default=1,
         validators=[MinValueValidator(1), MaxValueValidator(5)],
@@ -171,6 +163,17 @@ class Solicitud(models.Model):
 
     def clean(self):
         super().clean()
+        # Solo al crearla: una solicitud ya registrada puede quedar en el pasado.
+        if not self.pk and self.fecha:
+            fecha_minima = primera_fecha_pedible()
+            if self.fecha < fecha_minima:
+                raise ValidationError({
+                    "fecha": (
+                        f"No se puede solicitar una reserva para el {self.fecha}. "
+                        f"Las reservas deben realizarse a partir del lunes {fecha_minima.strftime('%d/%m/%Y')}."
+                    )
+                })
+
         total = self.total_personas
         MinValueValidator(1)(total)
         MaxValueValidator(5)(total)
@@ -193,7 +196,11 @@ class Solicitud(models.Model):
 
 
 class SolicitudBloque(models.Model):
-    """Tabla intermedia explícita entre Solicitud de reserva y Bloque semanal (con fecha)."""
+    """Tabla intermedia explícita entre Solicitud de reserva y Bloque semanal.
+
+    La fecha es la de la solicitud: el bloque de agenda es una plantilla
+    semanal, y la solicitud dice qué día se usa.
+    """
 
     solicitud = models.ForeignKey(
         Solicitud,
@@ -207,24 +214,27 @@ class SolicitudBloque(models.Model):
         related_name="solicitudes_bloques",
         verbose_name="bloque",
     )
-    fecha = models.DateField(verbose_name="fecha de la reserva")
 
     class Meta:
         verbose_name = "bloque de solicitud"
         verbose_name_plural = "bloques de solicitudes"
         constraints = [
             models.UniqueConstraint(
-                fields=["solicitud", "bloque", "fecha"],
-                name="solicitud_bloque_fecha_unica",
+                fields=["solicitud", "bloque"],
+                name="solicitud_bloque_unico",
             )
         ]
 
     def __str__(self):
-        return f"Solicitud #{self.solicitud_id} - Bloque #{self.bloque_id} ({self.fecha})"
+        return f"Solicitud #{self.solicitud_id} - Bloque #{self.bloque_id}"
 
     @property
     def ticket(self):
         return f"T-{self.id:02d}"
+
+    @property
+    def fecha(self):
+        return self.solicitud.fecha
 
     @property
     def inicio(self):
@@ -236,29 +246,25 @@ class SolicitudBloque(models.Model):
 
     def clean(self):
         super().clean()
-        if not self.pk and self.bloque_id and self.fecha:
-            fecha_minima = primera_fecha_pedible()
-            if self.fecha < fecha_minima:
-                raise ValidationError({
-                    "fecha": (
-                        f"No se puede solicitar una reserva para el {self.fecha}. "
-                        f"Las reservas deben realizarse a partir del lunes {fecha_minima.strftime('%d/%m/%Y')}."
-                    )
-                })
+        # El admin valida los bloques antes de guardar la solicitud: puede
+        # venir sin id, pero ya trae su fecha.
+        solicitud = getattr(self, "solicitud", None)
+        if not self.pk and self.bloque_id and solicitud and solicitud.fecha:
+            fecha = solicitud.fecha
 
             if not self.bloque.activo:
                 raise ValidationError({
                     "bloque": f"El bloque #{self.bloque_id} ya no se encuentra activo."
                 })
 
-            if self.bloque.dia != self.fecha.weekday():
+            if self.bloque.dia != fecha.weekday():
                 raise ValidationError({
-                    "fecha": "El día de la semana no coincide con el turno configurado del bloque."
+                    "bloque": "El día de la semana no coincide con el turno configurado del bloque."
                 })
 
             ocupados = SolicitudBloque.objects.filter(
                 bloque_id=self.bloque_id,
-                fecha=self.fecha,
+                solicitud__fecha=fecha,
                 solicitud__estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
                 solicitud__estado_confirmacion__in=[
                     Solicitud.EstadoConfirmacion.NO_HABILITADA,
@@ -271,23 +277,22 @@ class SolicitudBloque(models.Model):
 
             if ocupados.exists():
                 raise ValidationError({
-                    "bloque": f"El bloque #{self.bloque_id} ya se encuentra reservado para la fecha {self.fecha}."
+                    "bloque": f"El bloque #{self.bloque_id} ya se encuentra reservado para la fecha {fecha}."
                 })
 
-            if hasattr(self, "solicitud") and self.solicitud and getattr(self.solicitud, "solicitante_id", None):
-                propias_pendientes = SolicitudBloque.objects.filter(
-                    bloque_id=self.bloque_id,
-                    fecha=self.fecha,
-                    solicitud__solicitante_id=self.solicitud.solicitante_id,
-                    solicitud__estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
-                ).exclude(solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA)
-                if self.solicitud_id:
-                    propias_pendientes = propias_pendientes.exclude(solicitud_id=self.solicitud_id)
+            propias_pendientes = SolicitudBloque.objects.filter(
+                bloque_id=self.bloque_id,
+                solicitud__fecha=fecha,
+                solicitud__solicitante_id=solicitud.solicitante_id,
+                solicitud__estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
+            ).exclude(solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA)
+            if self.solicitud_id:
+                propias_pendientes = propias_pendientes.exclude(solicitud_id=self.solicitud_id)
 
-                if propias_pendientes.exists():
-                    raise ValidationError({
-                        "bloque": f"Ya tienes una solicitud pendiente para el bloque #{self.bloque_id} en la fecha {self.fecha}."
-                    })
+            if propias_pendientes.exists():
+                raise ValidationError({
+                    "bloque": f"Ya tienes una solicitud pendiente para el bloque #{self.bloque_id} en la fecha {fecha}."
+                })
 
     def save(self, *args, **kwargs):
         self.clean()

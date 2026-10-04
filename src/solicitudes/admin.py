@@ -19,13 +19,14 @@ class SolicitudAdmin(admin.ModelAdmin):
         "id",
         "solicitante",
         "area",
+        "fecha",
         "estado_validacion",
         "estado_confirmacion",
         "estado_general",
         "get_total_personas",
         "creado_en",
     ]
-    list_filter = ["estado_validacion", "estado_confirmacion", "area", "creado_en"]
+    list_filter = ["fecha", "estado_validacion", "estado_confirmacion", "area", "creado_en"]
     search_fields = ["solicitante__email", "motivo"]
     inlines = [SolicitudBloqueInline, AcompananteInline]
 
@@ -37,7 +38,10 @@ class SolicitudAdmin(admin.ModelAdmin):
 @admin.register(SolicitudBloque)
 class SolicitudBloqueAdmin(admin.ModelAdmin):
     list_display = ["solicitud", "bloque", "fecha"]
-    list_filter = ["fecha", "bloque__dia"]
+    # La fecha es la de la solicitud (propiedad): se trae junto para no
+    # consultar una vez por fila.
+    list_select_related = ["solicitud", "bloque"]
+    list_filter = ["solicitud__fecha", "bloque__dia"]
 
 
 @admin.register(Acompanante)

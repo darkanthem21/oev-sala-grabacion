@@ -32,7 +32,7 @@ else aceptó los términos
   group @transaction.atomic
     V -> D ++ : SELECT personas_area
     return fila
-    V -> V : $comentario("instancia la solicitud con estado de validación pendiente (AC5)")\nsolicitud = Solicitud(solicitante, area, motivo, personas, ...)
+    V -> V : $comentario("instancia la solicitud con estado de validación pendiente (AC5)")\nsolicitud = Solicitud(solicitante, area, fecha, motivo, personas, ...)
     V -> V ++ : solicitud.full_clean()
     deactivate V
     V -> V ++ : solicitud.save()
@@ -46,7 +46,7 @@ else aceptó los términos
       N --> S : 200 · solicitudes/solicitar.html con mensaje de error
     else bloques vigentes
       loop cada bloque horario seleccionado
-        V -> V : sol_bloque = SolicitudBloque(solicitud, bloque, fecha)
+        V -> V : sol_bloque = SolicitudBloque(solicitud, bloque)
         V -> V ++ : sol_bloque.full_clean()
         deactivate V
         V -> V ++ : sol_bloque.save()

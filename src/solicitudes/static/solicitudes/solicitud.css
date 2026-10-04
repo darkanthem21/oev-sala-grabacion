@@ -527,7 +527,6 @@ a.btn-accion:focus-visible { outline: 2px solid var(--acento); outline-offset: 2
   color: var(--tinta-suave);
 }
 .historial td { padding: .65rem .6rem; border-bottom: 1px solid var(--borde); vertical-align: top; }
-.historial time { display: block; }
 
 .bloques-solicitados { margin: 0; padding: 0; list-style: none; }
 .bloques-solicitados li + li { margin-top: .2rem; }

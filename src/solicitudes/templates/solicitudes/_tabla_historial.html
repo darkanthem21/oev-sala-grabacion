@@ -58,9 +58,7 @@
             <td data-titulo="N.º">#{{ solicitud.id }}</td>
             <td data-titulo="Área">{{ solicitud.area.nombre }}</td>
             <td data-titulo="Fecha">
-              {% for sb in solicitud.solicitudes_bloques.all %}
-                {% ifchanged sb.fecha %}<time datetime="{{ sb.fecha|date:'Y-m-d' }}">{{ sb.fecha|date:"l d/m/Y"|capfirst }}</time>{% endifchanged %}
-              {% empty %}—{% endfor %}
+              <time datetime="{{ solicitud.fecha|date:'Y-m-d' }}">{{ solicitud.fecha|date:"l d/m/Y"|capfirst }}</time>
             </td>
             <td data-titulo="Bloque">
               <ul class="bloques-solicitados">
