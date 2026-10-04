@@ -1,7 +1,6 @@
 from datetime import datetime
 from urllib.parse import urlencode
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
@@ -16,7 +15,7 @@ from configuracion.models import Parametros
 from personas.models import Rol
 
 from . import validacion
-from .calendar import AgendaCalendar, construir_calendario_contexto
+from .calendar import construir_calendario_contexto
 from .forms import (
     MAXIMO_ACOMPANANTES,
     MAXIMO_PERSONAS,
@@ -24,7 +23,7 @@ from .forms import (
     SeleccionAreaForm,
     SolicitudForm,
 )
-from .models import Solicitud, SolicitudBloque
+from .models import Solicitud
 from .services import (
     guardar_solicitud_completa,
     obtener_bloques_dia_para_usuario,
@@ -345,7 +344,6 @@ def _manejar_paso_horario(request, wizard: SolicitudWizard, puede_cambiar_area: 
     contexto.update({
         "paso": PasoSolicitud.HORARIO.value,
         "error_paso": error_bloques,
-        "error_bloques": error_bloques,
         "reserva": wizard.obtener_resumen(),
         "puede_cambiar_area": puede_cambiar_area,
     })

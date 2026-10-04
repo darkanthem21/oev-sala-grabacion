@@ -4,7 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Prefetch
 
-from agenda.models import Bloque, primera_fecha_pedible
+from agenda.models import primera_fecha_pedible
 from personas.models import Area
 
 

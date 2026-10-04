@@ -1,20 +1,9 @@
 import calendar
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time
 from enum import IntEnum
 from typing import Any, Dict, List, Optional, Tuple
 
 from django.conf import settings
-
-
-def obtener_lunes_semana_subsiguiente(fecha_referencia: Optional[date] = None) -> date:
-    """
-    Retorna la primera fecha pedible (lunes mínimo permitido por desfase).
-    """
-    from agenda.models import primera_fecha_pedible
-    from django.utils import timezone
-    if fecha_referencia is not None:
-        return primera_fecha_pedible(datetime.combine(fecha_referencia, time(9, 0), tzinfo=timezone.get_current_timezone()))
-    return primera_fecha_pedible()
 
 
 def obtener_limites_reserva(fecha_referencia: Optional[date] = None) -> Tuple[date, date]:

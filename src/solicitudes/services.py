@@ -1,12 +1,12 @@
 import calendar
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from agenda.models import Bloque, disponibilidad, primera_fecha_pedible
+from agenda.models import Bloque, disponibilidad
 from personas.models import Area
 from .models import Acompanante, Solicitud, SolicitudBloque
 
