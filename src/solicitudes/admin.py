@@ -22,10 +22,15 @@ class SolicitudAdmin(admin.ModelAdmin):
         "estado_validacion",
         "estado_confirmacion",
         "estado_general",
+        "sobre_tope_mensual",
+        "sobre_bloques_por_solicitud",
         "get_total_personas",
         "creado_en",
     ]
-    list_filter = ["estado_validacion", "estado_confirmacion", "area", "creado_en"]
+    list_filter = [
+        "estado_validacion", "estado_confirmacion", "sobre_tope_mensual",
+        "sobre_bloques_por_solicitud", "area", "creado_en",
+    ]
     search_fields = ["solicitante__email", "motivo"]
     inlines = [SolicitudBloqueInline, AcompananteInline]
 

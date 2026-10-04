@@ -126,8 +126,8 @@ Cada fila explica qué hace el sistema con ese valor.
 
 | Grupo | Parámetros |
 |---|---|
-| Recepción de solicitudes | Día y hora límite para pedir la semana siguiente, desfase mínimo en semanas |
-| Reserva | Días de anticipación para confirmar, tope mensual por persona, bloques por solicitud |
+| Recepción de solicitudes | Día y hora límite para pedir la semana siguiente, desfase mínimo en semanas, anticipación máxima en meses |
+| Reserva | Días de anticipación para confirmar, tope mensual por persona, bloques por solicitud. Pasar un tope no impide enviar: la solicitud llega marcada al validador |
 | Cierre y sanciones | Inasistencias para sancionar, duración de la sanción |
 | Acceso | Intentos antes de bloquear una cuenta, duración del bloqueo |
 | Términos y condiciones | El texto que acepta el solicitante al enviar una solicitud |
@@ -245,7 +245,8 @@ borra el día y los bloques que ya habías marcado.
    administrador (ver [Reglas](#reglas-los-parámetros-del-sistema)). Sábados y
    domingos no se pueden pedir.
 2. Para moverte entre meses usa **Anterior** y **Siguiente**, o los selectores
-   de mes y año. Solo se puede pedir con unos meses de anticipación.
+   de mes y año. Se puede pedir hasta donde llega la anticipación máxima (ver
+   [Reglas](#reglas-los-parámetros-del-sistema)).
 3. Haz clic en un día. Abajo aparecen sus bloques horarios.
 4. Marca uno o más bloques. Cada uno dice **Disponible** o, al marcarlo,
    **Seleccionado**. Los que ya están reservados no aparecen, y los que ya
@@ -287,6 +288,10 @@ completo:
    casilla.
 3. Pulsa **Confirmar y enviar solicitud**.
 
+Si la solicitud pasa el máximo de bloques por solicitud o tu tope mensual de
+bloques, el paso 3 lo avisa arriba del resumen. Se envía igual: llega marcada al
+validador, que decide.
+
 ![Paso 3: revisión y confirmación](uso/us-02/paso3-confirmacion.png)
 
 Al enviarla aparece **Solicitud completa**, con el número de la solicitud, que
@@ -312,6 +317,9 @@ de nuevo.
 | 2 | Dos acompañantes tienen el mismo correo | Hay un correo repetido entre los acompañantes. |
 | 2 | Se incluyó tu propio correo como acompañante | Tu propio correo ya está incluido: eres parte de la cuenta de personas. |
 | 3 | No se aceptaron los términos | Tienes que aceptar los términos y condiciones para enviar la solicitud. |
+| 3 | La sala se bloqueó en ese horario mientras completabas el formulario | El bloque de 14:10–15:40 no se puede pedir: la sala está bloqueada el lunes 19 de octubre (Feriado). |
+| 3 | Alguien obtuvo el bloque mientras completabas el formulario | El bloque de 14:10–15:40 del 19/10 ya se encuentra reservado. |
+| 3 | Pasó el límite para pedir esa semana | No se puede solicitar una reserva para el 19/10/2026. Las reservas deben realizarse a partir del lunes 26/10/2026. |
 
 Lo que eliges en cada paso queda guardado mientras completas el formulario. La
 solicitud se registra recién al pulsar **Confirmar y enviar solicitud**.

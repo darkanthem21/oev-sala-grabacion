@@ -3,7 +3,7 @@ from datetime import date, datetime, time, timedelta
 from enum import IntEnum
 from typing import Any, Dict, List, Optional, Tuple
 
-from django.conf import settings
+from configuracion.models import Parametros
 
 
 def obtener_lunes_semana_subsiguiente(fecha_referencia: Optional[date] = None) -> date:
@@ -33,13 +33,7 @@ def obtener_limites_reserva(fecha_referencia: Optional[date] = None) -> Tuple[da
         fecha_minima = primera_fecha_pedible()
         base = fecha_minima
 
-    meses_anticipacion = getattr(settings, "MESES_ANTICIPACION_MAXIMA", 4)
-    try:
-        meses_anticipacion = int(meses_anticipacion)
-    except (ValueError, TypeError):
-        meses_anticipacion = 4
-
-    total_meses = (base.year * 12) + (base.month - 1) + max(meses_anticipacion, 0)
+    total_meses = (base.year * 12) + (base.month - 1) + Parametros.cargar().meses_anticipacion
     max_year = total_meses // 12
     max_month = (total_meses % 12) + 1
     _, ultimo_dia = calendar.monthrange(max_year, max_month)

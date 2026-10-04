@@ -13,6 +13,9 @@ SECCIONES = [
         ("Desfase mínimo", ["semanas_desfase"],
          "Semanas completas entre la solicitud y la fecha pedida. Con 1, lo que se "
          "pide esta semana es para dentro de dos."),
+        ("Anticipación máxima", ["meses_anticipacion"],
+         "Hasta dónde se puede pedir. Con 4, si la fecha más cercana es en octubre, "
+         "se puede pedir hasta fines de febrero."),
     ]),
     ("Reserva", [
         ("Confirmación previa", ["plazo_confirmacion_dias"],
@@ -44,6 +47,7 @@ SECCIONES = [
 # Va pegada al último control de la fila, porque "8" no dice nada y "8 bloques" sí.
 UNIDADES = {
     "semanas_desfase": "semanas",
+    "meses_anticipacion": "meses",
     "plazo_confirmacion_dias": "días antes",
     "tope_mensual": "bloques al mes",
     "max_bloques_solicitud": "bloques",

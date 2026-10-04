@@ -33,12 +33,19 @@ class Parametros(models.Model):
         "desfase mínimo", default=1,
         validators=[MinValueValidator(0), MaxValueValidator(8)],
     )
+    # Hasta dónde se puede pedir: el fin del mes que queda a tantos meses de la
+    # fecha más cercana. Estaba fija en el código del formulario.
+    meses_anticipacion = models.PositiveSmallIntegerField(
+        "anticipación máxima", default=4,
+        validators=[MinValueValidator(1), MaxValueValidator(12)],
+    )
 
     plazo_confirmacion_dias = models.PositiveSmallIntegerField(
         "plazo de confirmación previa", default=2,
         validators=[MinValueValidator(1), MaxValueValidator(30)],
     )
-    # Los dos topes marcan la solicitud, no la impiden (arquitectura.md §5.2).
+    # Los dos topes no impiden enviar: marcan la solicitud y decide el validador
+    # (`solicitudes.services.marcas`).
     tope_mensual = models.PositiveSmallIntegerField(
         "tope mensual por usuario", default=8,
         validators=[MinValueValidator(1), MaxValueValidator(40)],

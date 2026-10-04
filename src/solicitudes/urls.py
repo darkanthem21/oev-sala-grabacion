@@ -7,5 +7,4 @@ urlpatterns = [
     path("area/", views.solicitar_area, name="solicitar_area"),
     path("calendario/", views.calendario, name="calendario"),
     path("bloques/", views.bloques_dia, name="bloques_dia"),
-    path("validacion/", views.panel_validador, name="panel_validador"),
 ]

@@ -8,6 +8,8 @@ actor "Docente / Solicitante" as S
 participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
 participant "<b>solicitudes.wizard</b>\n<size:11>solicitudes/wizard.py</size>" as W <<presentación>>
 participant "<b>solicitudes</b>\n<size:11>solicitudes/services.py</size>\n<size:11>solicitudes/models.py</size>" as V <<dominio>>
+participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
+participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as A <<dominio>>
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
 S -> N ++ : POST /solicitar/ (paso=confirmacion) → solicitar(request)
@@ -32,7 +34,20 @@ else aceptó los términos
   group @transaction.atomic
     V -> D ++ : SELECT personas_area
     return fila
-    V -> V : $comentario("instancia la solicitud con estado de validación pendiente (AC5)")\nsolicitud = Solicitud(solicitante, area, motivo, personas, ...)
+    V -> V ++ : marcas(usuario, fecha, len(bloques_ids))
+    V -> C ++ : Parametros.cargar()
+    C -> D ++ : SELECT configuracion_parametros
+    return fila
+    return parametros
+    V -> D ++ : $comentario("los bloques vivos de la persona en ese mes")\nSELECT solicitudes_solicitudbloque, solicitudes_solicitud
+    return filas
+    return marcas
+    note right of V
+      US-04: pasar un tope no impide enviar.
+      La marca queda guardada para el validador
+      y no cambia si después cambia el tope (AC3).
+    end note
+    V -> V : $comentario("la solicitud pendiente (AC5), con sus marcas")\nsolicitud = Solicitud(solicitante, area, motivo, personas, ...,\n**{campo: True for campo in marcas})
     V -> V ++ : solicitud.full_clean()
     deactivate V
     V -> V ++ : solicitud.save()
@@ -48,7 +63,18 @@ else aceptó los términos
       loop cada bloque horario seleccionado
         V -> V : sol_bloque = SolicitudBloque(solicitud, bloque, fecha)
         V -> V ++ : sol_bloque.full_clean()
+        V -> A ++ : $comentario("US-17 AC3: lo bloqueado no se puede pedir")\nbloqueo_de(fecha, bloque.inicio)
+        A -> D ++ : SELECT agenda_bloqueo, agenda_bloque
+        return filas
+        return bloqueo
+        V -> D ++ : $comentario("¿ya reservado o ya pedido por la misma persona?")\nSELECT solicitudes_solicitudbloque, solicitudes_solicitud
+        return filas
         deactivate V
+        note right of V
+          Fecha fuera de plazo, bloque bloqueado,
+          reservado o ya pedido: ValidationError,
+          no se guarda nada y el paso 3 lo avisa.
+        end note
         V -> V ++ : sol_bloque.save()
         V -> D ++ : INSERT solicitudes_solicitudbloque
         deactivate D

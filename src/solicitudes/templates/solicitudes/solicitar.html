@@ -196,6 +196,12 @@
       </div>
     {% endif %}
 
+    {% if marcas %}
+      <div class="aviso" role="status">
+        {% for aviso in marcas %}{{ aviso }} {% endfor %}La solicitud se envía igual: llega marcada al validador, que decide.
+      </div>
+    {% endif %}
+
     <section class="resumen-confirmacion">
       <h2>Resumen de la reserva</h2>
       <dl class="ficha">

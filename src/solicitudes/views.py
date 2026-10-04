@@ -21,6 +21,7 @@ from .forms import (
 from .models import Solicitud, SolicitudBloque
 from .services import (
     guardar_solicitud_completa,
+    marcas,
     obtener_bloques_dia_para_usuario,
     revisar_acompanantes,
 )
@@ -368,6 +369,8 @@ def _manejar_paso_confirmacion(request, wizard: SolicitudWizard, puede_cambiar_a
     contexto = {
         "paso": PasoSolicitud.CONFIRMACION.value,
         "reserva": resumen,
+        # US-04: si pasa un tope se avisa antes de enviar; se envía igual.
+        "marcas": marcas(request.user, resumen["fecha"], len(resumen["bloques_ids"])).values(),
         "error_terminos": error_terminos,
         "terminos": terminos_texto,
         "puede_cambiar_area": puede_cambiar_area,

@@ -4,9 +4,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils.formats import date_format
 
 from agenda.models import Bloque, disponibilidad, primera_fecha_pedible
 from agenda.signals import Reserva
+from configuracion.models import Parametros
 from personas.models import Area
 from .models import Acompanante, Solicitud, SolicitudBloque
 
@@ -122,7 +124,6 @@ def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List[Any]:
             "texto": f"{b.inicio.strftime('%H:%M')} – {b.termino.strftime('%H:%M')}",
             "disponible": True,
             "es_propio": False,
-            "disponible_para_reserva": True,
         })()
 
         # Si el usuario actual tiene una solicitud PENDIENTE para este bloque:
@@ -130,11 +131,42 @@ def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List[Any]:
             s.solicitante_id == usuario_id and s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE
             for s in sols
         ):
+            # Se ve, pero no se puede volver a pedir: el paso 1 lo rechaza.
             item.es_propio = True
-            item.disponible_para_reserva = False
+            item.disponible = False
 
         resultado.append(item)
 
+    return resultado
+
+
+def marcas(usuario, fecha, cantidad) -> Dict[str, str]:
+    """US-04: los topes no impiden enviar, marcan la solicitud para el validador.
+
+    Devuelve {campo de Solicitud: aviso para el solicitante}, solo con las que
+    aplican. El tope mensual cuenta los bloques vivos de la persona en el mes de
+    `fecha`: pendientes y aceptados que no se cancelaron.
+    """
+    parametros = Parametros.cargar()
+    en_el_mes = cantidad + SolicitudBloque.objects.filter(
+        solicitud__solicitante=usuario,
+        fecha__year=fecha.year,
+        fecha__month=fecha.month,
+        solicitud__estado_validacion__in=[
+            Solicitud.EstadoValidacion.PENDIENTE,
+            Solicitud.EstadoValidacion.ACEPTADA,
+        ],
+    ).exclude(solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA).count()
+    resultado = {}
+    if cantidad > parametros.max_bloques_solicitud:
+        resultado["sobre_bloques_por_solicitud"] = (
+            f"Pides {cantidad} bloques y el máximo por solicitud es {parametros.max_bloques_solicitud}."
+        )
+    if en_el_mes > parametros.tope_mensual:
+        resultado["sobre_tope_mensual"] = (
+            f"Con esta solicitud sumas {en_el_mes} bloques en {date_format(fecha, 'F')} "
+            f"y el tope mensual es {parametros.tope_mensual}."
+        )
     return resultado
 
 
@@ -148,6 +180,7 @@ def guardar_solicitud_completa(
         fecha_obj = datos_reserva.get("fecha")
         if isinstance(fecha_obj, str):
             fecha_obj = datetime.strptime(fecha_obj, "%Y-%m-%d").date()
+        bloques_ids = datos_reserva.get("bloques_ids", [])
 
         solicitud = Solicitud(
             solicitante=usuario,
@@ -157,11 +190,11 @@ def guardar_solicitud_completa(
             personas=datos_reserva.get("personas", 1),
             estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
             estado_confirmacion=Solicitud.EstadoConfirmacion.NO_HABILITADA,
+            **{campo: True for campo in marcas(usuario, fecha_obj, len(bloques_ids))},
         )
         solicitud.full_clean()
         solicitud.save()
 
-        bloques_ids = datos_reserva.get("bloques_ids", [])
         bloques_db = Bloque.objects.filter(id__in=bloques_ids, activo=True)
         if len(bloques_db) != len(bloques_ids):
             raise ValidationError("Uno o más bloques seleccionados no son válidos o ya no están activos.")

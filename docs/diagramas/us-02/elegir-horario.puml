@@ -18,6 +18,8 @@ W -> A ++ : primera_fecha_pedible()
 A -> D ++ : SELECT configuracion_parametros
 return fila
 return fecha_minima
+W -> D ++ : $comentario("la anticipación máxima, de Parametros.cargar()")\nSELECT configuracion_parametros
+return fila
 W -> W : $comentario("último día del mes que permite la anticipación máxima")\nfecha_maxima = date(max_year, max_month, ultimo_dia)
 return fecha_minima, fecha_maxima
 alt la fecha está dentro del período permitido

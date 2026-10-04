@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from agenda.models import Bloque, primera_fecha_pedible
+from agenda.models import Bloque, bloqueo_de, primera_fecha_pedible
 from personas.models import Area
 
 
@@ -57,6 +57,13 @@ class Solicitud(models.Model):
         choices=EstadoConfirmacion.choices,
         default=EstadoConfirmacion.NO_HABILITADA,
         verbose_name="estado de confirmación",
+    )
+    # US-04: los topes no impiden enviar; marcan la solicitud para que decida el
+    # validador. Se fijan al enviar (`services.marcas`), así cambiar un tope
+    # después no toca las ya enviadas (AC3).
+    sobre_tope_mensual = models.BooleanField(default=False, verbose_name="sobre el tope mensual")
+    sobre_bloques_por_solicitud = models.BooleanField(
+        default=False, verbose_name="sobre el máximo de bloques por solicitud"
     )
 
     bloques = models.ManyToManyField(
@@ -160,23 +167,33 @@ class SolicitudBloque(models.Model):
     def clean(self):
         super().clean()
         if not self.pk and self.bloque_id and self.fecha:
+            horas = f"{self.bloque.inicio:%H:%M}–{self.bloque.termino:%H:%M}"
             fecha_minima = primera_fecha_pedible()
             if self.fecha < fecha_minima:
                 raise ValidationError({
                     "fecha": (
-                        f"No se puede solicitar una reserva para el {self.fecha}. "
+                        f"No se puede solicitar una reserva para el {self.fecha:%d/%m/%Y}. "
                         f"Las reservas deben realizarse a partir del lunes {fecha_minima.strftime('%d/%m/%Y')}."
                     )
                 })
 
             if not self.bloque.activo:
                 raise ValidationError({
-                    "bloque": f"El bloque #{self.bloque_id} ya no se encuentra activo."
+                    "bloque": f"El bloque de {horas} ya no se encuentra activo."
                 })
 
             if self.bloque.dia != self.fecha.weekday():
                 raise ValidationError({
                     "fecha": "El día de la semana no coincide con el turno configurado del bloque."
+                })
+
+            # US-17 AC3: lo bloqueado no se puede pedir, aunque se haya bloqueado
+            # después de elegirlo en el paso 1.
+            bloqueo = bloqueo_de(self.fecha, self.bloque.inicio)
+            if bloqueo is not None:
+                raise ValidationError({
+                    "bloque": f"El bloque de {horas} no se puede pedir: la sala está bloqueada "
+                              f"{bloqueo.periodo} ({bloqueo.razon})."
                 })
 
             ocupados = SolicitudBloque.objects.filter(
@@ -194,7 +211,7 @@ class SolicitudBloque(models.Model):
 
             if ocupados.exists():
                 raise ValidationError({
-                    "bloque": f"El bloque #{self.bloque_id} ya se encuentra reservado para la fecha {self.fecha}."
+                    "bloque": f"El bloque de {horas} del {self.fecha:%d/%m} ya se encuentra reservado."
                 })
 
             if hasattr(self, "solicitud") and self.solicitud and getattr(self.solicitud, "solicitante_id", None):
@@ -209,7 +226,7 @@ class SolicitudBloque(models.Model):
 
                 if propias_pendientes.exists():
                     raise ValidationError({
-                        "bloque": f"Ya tienes una solicitud pendiente para el bloque #{self.bloque_id} en la fecha {self.fecha}."
+                        "bloque": f"Ya tienes una solicitud pendiente para el bloque de {horas} del {self.fecha:%d/%m}."
                     })
 
     def save(self, *args, **kwargs):
