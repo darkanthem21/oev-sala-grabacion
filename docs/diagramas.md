@@ -199,12 +199,18 @@ y el correo sale solo cuando la transacción se confirma.
 
 La pantalla cambia solo si el servidor respondió `{"ok": true}`. Si la sesión
 venció, la respuesta es la página de ingreso y no JSON, y el panel avisa que no
-se pudo guardar.
+se pudo guardar. Mientras va el pedido los botones se apagan (`enviando`): un
+doble clic mandaría dos, y el segundo respondería que ya fue resuelta aunque se
+guardó.
+
+El correo de una aprobada trae el enlace para confirmar la asistencia (US-03).
+La vista le pasa a `resolver()` el esquema y el dominio del sitio (`url_base`)
+para armar el enlace completo; sin ellos, el correo sale sin enlace.
 
 ### Resolver una solicitud sin tope (US-07)
 
 Sin rivales, aprobar no pide motivo. Rechazar sí, y se confirma en la misma
-tarjeta. Si otro validador ya la resolvió o el solicitante la retiró, el
+tarjeta, donde sale también el aviso si falta. Si otro validador ya la resolvió o el solicitante la retiró, el
 servidor lo dice y el panel lo muestra.
 
 ![Resolver una solicitud sin tope](diagramas/us-07/resolver-sin-tope.png)
@@ -408,6 +414,7 @@ El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_
 - **Integridad referencial y claves foráneas**:
   - `solicitudes_solicitud.solicitante_id` → `personas_usuario.id` (`on_delete=PROTECT`): protege el historial de solicitudes y auditoría.
   - `solicitudes_solicitud.area_id` → `personas_area.id` (`on_delete=PROTECT`): garantiza la trazabilidad del área académica requirente.
+  - `solicitudes_solicitud.resuelta_por_id` → `personas_usuario.id` (`on_delete=PROTECT`, vacío mientras está pendiente): quién la resolvió en el panel del validador, con `resuelta_en` y `motivo_resolucion` (US-07 AC5, migración `0004_solicitud_resolucion`).
   - `solicitudes_solicitudbloque.solicitud_id` → `solicitudes_solicitud.id` (`on_delete=CASCADE`): mantiene la consistencia de bloques asignados a la solicitud.
   - `solicitudes_solicitudbloque.bloque_id` → `agenda_bloque.id` (`on_delete=PROTECT`): permite desactivar bloques de la plantilla sin alterar las solicitudes históricas ya existentes.
   - `personas_usuario_areas` (`Usuario.areas`): las áreas para las que una persona puede solicitar. El asistente lee de aquí las activas para fijar el área o pedir que la elija.

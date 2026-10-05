@@ -12,22 +12,26 @@ participant "<b>notificaciones</b>\n<size:11>notificaciones/services.py</size>" 
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
 A -> P ++ : clic «Rechazar solicitud» → abrirRechazo(bloquesDe(s)[0])
-P --> A : el campo del motivo en la tarjeta
+P -> P : $comentario("abre el campo y deja el cursor en él")\nrechazando = p.ticket; enfocarMotivo("sol-" + p.sol.id)
+P --> A : el campo «Motivo del rechazo» en la tarjeta
 deactivate P
-A -> P ++ : clic «Confirmar» → rechazar(p)
+A -> P ++ : clic «Confirmar rechazo» → rechazar(p)
 P -> P : motivo = (motivos[p.ticket] || "").trim()
+P -> P : $comentario("el aviso sale en la tarjeta de esta solicitud")\nenTarjeta = "sol-" + p.sol.id
 break el motivo tiene menos de 10 caracteres
-  P -> P : avisar("Para rechazar escribe el motivo …")
-  P --> A : aviso arriba de la bandeja
+  P -> P : avisar("Para rechazar escribe el motivo …", enTarjeta)
+  P --> A : aviso en la tarjeta, con el cursor en el motivo
 end
+P -> P : $comentario("apaga los botones mientras va el pedido: un doble clic mandaría dos")\nenviando = true
 P -> N ++ : $comentario("enviar(p.sol, 'rechazar', motivo)")\nfetch POST /validador/resolver/ → resolver_solicitud(request)
-N -> V ++ : resolver(solicitud_id, False, motivo, request.user)
+N -> V ++ : $comentario("url_base: esquema y dominio del sitio, para el enlace del correo")\nresolver(solicitud_id, False, motivo, request.user, url_base=request.build_absolute_uri("/").rstrip("/"))
 V -> D ++ : $comentario("la solicitud, bloqueada para que nadie la resuelva a la vez")\nSELECT … FROM solicitudes_solicitud FOR UPDATE
 return fila
 alt ya no está pendiente (otro la resolvió o la retiraron)
   V --> N -- : ValidationError
   N --> P -- : 400 · {"error": "Esta solicitud ya fue resuelta o retirada."}
-  P --> A : el aviso
+  P -> P : avisar(error, enTarjeta)
+  P --> A : el aviso en la tarjeta
 else
   V -> D ++ : $comentario("RECHAZADA, con motivo, resuelta_por y resuelta_en (AC5)")\nUPDATE solicitudes_solicitud
   return fila
@@ -42,7 +46,8 @@ end
 note right of P
   Aprobar sin tope es el mismo camino con
   aprobar(p): sin rivales, el motivo no se
-  exige y queda solo la aprobada.
+  exige y queda solo la aprobada. Su correo
+  trae el enlace para confirmar (US-03).
 end note
 deactivate P
 @enduml
