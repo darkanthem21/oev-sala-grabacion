@@ -3,8 +3,9 @@
 {% comment %}
   Encabezado común de las pantallas del solicitante: el mismo techo con
   pestañas del panel de configuración. La pestaña activa sale de la ruta, así
-  ninguna vista tiene que avisarla; todo lo que no es el historial es parte de
-  solicitar (área, asistente, envío).
+  ninguna vista tiene que avisarla; el historial y la confirmación de asistencia
+  son "Mis solicitudes", y todo lo demás es parte de solicitar (área, asistente,
+  envío).
 {% endcomment %}
 {% block estilos %}
   <link rel="stylesheet" href="{% static 'css/panel.css' %}">
@@ -29,10 +30,10 @@
     </div>
 
     <nav class="pestanas" aria-label="Secciones del solicitante">
-      <a class="pestana {% if ruta != 'mis_solicitudes' %}activa{% endif %}" href="{% url 'solicitar' %}"
-         {% if ruta != "mis_solicitudes" %}aria-current="page"{% endif %}>Solicitar reserva</a>
-      <a class="pestana {% if ruta == 'mis_solicitudes' %}activa{% endif %}" href="{% url 'mis_solicitudes' %}"
-         {% if ruta == "mis_solicitudes" %}aria-current="page"{% endif %}>Mis solicitudes</a>
+      <a class="pestana {% if ruta != 'mis_solicitudes' and ruta != 'confirmar_solicitud' %}activa{% endif %}" href="{% url 'solicitar' %}"
+         {% if ruta != "mis_solicitudes" and ruta != "confirmar_solicitud" %}aria-current="page"{% endif %}>Solicitar reserva</a>
+      <a class="pestana {% if ruta == 'mis_solicitudes' or ruta == 'confirmar_solicitud' %}activa{% endif %}" href="{% url 'mis_solicitudes' %}"
+         {% if ruta == "mis_solicitudes" or ruta == "confirmar_solicitud" %}aria-current="page"{% endif %}>Mis solicitudes</a>
     </nav>
   </div>
 </header>

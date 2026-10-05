@@ -8,6 +8,7 @@ Este manual cubre lo que hoy está disponible en el sistema:
 |---|---|---|
 | US-01 Inicio de sesión | Todos | [Iniciar sesión](#1-iniciar-sesión) |
 | US-02 Solicitud de reserva | Solicitante | [Solicitar una reserva](#4-solicitar-una-reserva) |
+| US-03 Confirmar la asistencia | Solicitante | [Confirmar la asistencia](#confirmar-la-asistencia) |
 | US-04 Panel de administrador | Administrador | [Configurar la sala](#2-configurar-la-sala) |
 | US-07 Panel del validador | Validador | [Panel del validador](#5-panel-del-validador) |
 | US-14 Bloques del personal de apoyo | Personal de apoyo | [Bloques del día](#3-bloques-del-día) |
@@ -315,6 +316,21 @@ de nuevo.
 
 Lo que eliges en cada paso queda guardado mientras completas el formulario. La
 solicitud se registra recién al pulsar **Confirmar y enviar solicitud**.
+
+### Confirmar la asistencia
+
+Cuando la Oficina acepta una reserva llega un correo con un enlace para
+confirmarla. El mismo enlace está en **Mis solicitudes**, como **Confirmar
+asistencia** bajo el estado de cada reserva aceptada.
+
+| Paso | Qué pasa |
+|---|---|
+| Abrir el enlace | Sin sesión iniciada, pide entrar y después vuelve a la reserva |
+| Ver la reserva | Muestra la fecha, el horario, el área y el motivo. Abrirla no confirma nada |
+| **Confirmar asistencia** | La reserva queda **Confirmada** y vuelve a Mis solicitudes con el aviso |
+
+Se puede confirmar hasta el día anterior a la reserva. Si ya está confirmada,
+cancelada o es el mismo día, la página lo dice y no muestra el botón.
 ## 5. Panel del validador
 
 Aquí el validador revisa las solicitudes pendientes y aprueba o rechaza cada
@@ -399,8 +415,9 @@ calendario.
 La solicitud se resuelve entera:
 
 - **Aprobar solicitud**: se aprueba de inmediato.
-- **Rechazar solicitud**: pide escribir el motivo (mínimo 10 caracteres) y luego
-  **Confirmar**.
+- **Rechazar solicitud**: abre el campo **Motivo del rechazo** (mínimo 10
+  caracteres) y luego **Confirmar rechazo**. Si el motivo es corto, el aviso
+  sale en la misma tarjeta. **Cancelar** o Esc lo cierran.
 
 Una solicitud que choca con otra en algún bloque no aparece aquí: se resuelve
 en **Con tope**.

@@ -30,6 +30,7 @@ from .forms import (
 )
 from .models import Solicitud
 from .services import (
+    confirmar_solicitud,
     guardar_solicitud_completa,
     obtener_bloques_dia_para_usuario,
     resolver,
@@ -85,7 +86,8 @@ def resolver_solicitud(request):
     if solicitud_id is None or accion not in ("aprobar", "rechazar"):
         return JsonResponse({"error": "Pedido inválido. Recarga la página."}, status=400)
     try:
-        resolver(solicitud_id, accion == "aprobar", request.POST.get("motivo", ""), request.user)
+        resolver(solicitud_id, accion == "aprobar", request.POST.get("motivo", ""), request.user,
+                 url_base=request.build_absolute_uri("/").rstrip("/"))
     except ValidationError as error:
         return JsonResponse({"error": " ".join(error.messages)}, status=400)
     return JsonResponse({"ok": True})
@@ -111,10 +113,6 @@ def _contexto_historial(usuario, vista, numero_pagina):
         "total_proximas": proximas.count(),
         "total_anteriores": anteriores.count(),
     }
-    if vista == "proximas":
-        # La nota de confirmación cita el plazo vigente, que lo fija
-        # administración en la configuración.
-        contexto["plazo_confirmacion"] = Parametros.cargar().plazo_confirmacion_dias
     return contexto
 
 
@@ -160,6 +158,22 @@ def retirar(request, solicitud_id):
     if request.headers.get("HX-Request"):
         return render(request, "solicitudes/_tabla_historial.html", _contexto_historial(request.user, vista, pagina))
     return redirect(f"{reverse('mis_solicitudes')}?{urlencode({'vista': vista or 'proximas', 'pagina': pagina or 1})}")
+
+
+@user_passes_test(es_solicitante, login_url="login_solicitante")
+def confirmar(request, solicitud_id):
+    """US-03: la página del enlace para confirmar asistencia. Es el mismo enlace
+    de Mis solicitudes y del correo de aceptación. El GET solo muestra la
+    reserva y confirma el POST, para que un lector de correo que abre los
+    enlaces no confirme solo."""
+    solicitud = get_object_or_404(Solicitud.objects.de(request.user).con_detalle(), pk=solicitud_id)
+    if request.method == "POST":
+        if confirmar_solicitud(request.user, solicitud_id):
+            messages.success(request, f"Confirmaste tu asistencia a la reserva #{solicitud_id}.")
+        else:
+            messages.error(request, f"La reserva #{solicitud_id} ya no se puede confirmar.")
+        return redirect(f"{reverse('mis_solicitudes')}?vista=proximas")
+    return render(request, "solicitudes/confirmar.html", {"solicitud": solicitud})
 
 
 def calendario(request):
