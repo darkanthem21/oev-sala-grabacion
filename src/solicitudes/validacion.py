@@ -1,32 +1,73 @@
-"""US-07: de donde salen los datos del panel del validador.
+"""US-07: los datos del panel del validador.
 
-POR AHORA SON DE PRUEBA. Todo lo que muestra el panel se lee de
-`datos_prueba/panel_validador.json`, no de PostgreSQL. Todavia no existen las
-tablas de Solicitud ni de Ticket: cual de las dos guarda el estado de la
-validacion es la decision abierta del modelo de datos (tarea 2 de US-07).
-
-Cuando exista el modelo, se reemplaza `cargar` por la consulta a la base y se
-devuelve la misma forma de datos; la plantilla no se entera del cambio.
+`cargar` lee las solicitudes pendientes de la base y las entrega con la forma
+que espera el componente de Alpine (`_validacion.html`), así la plantilla no
+sabe de modelos.
 """
-import json
 from datetime import date, time, timedelta
-from pathlib import Path
 
-from agenda.models import bloqueos_por_fecha
+from django.utils import timezone
 
-ORIGEN = "prueba"
-RUTA = Path(__file__).resolve().parent / "datos_prueba" / "panel_validador.json"
+from agenda.models import Bloque, Dia, bloqueos_por_fecha
+from personas.models import Area
+
+from .models import Solicitud
 
 
-def cargar():
-    """Las solicitudes pendientes, con sus areas y bloques.
+def _bloques(s):
+    return [
+        {
+            "ticket": sb.ticket,
+            "fecha": s.fecha.isoformat(),
+            "dia": Dia(s.fecha.weekday()).label,
+            "inicio": f"{sb.bloque.inicio:%H:%M}",
+            "termino": f"{sb.bloque.termino:%H:%M}",
+        }
+        for sb in s.solicitudes_bloques.all()
+    ]
 
-    Forma: {"areas": [...], "solicitudes": [...]}. Cada solicitud trae todos sus
-    bloques pedidos, y cada bloque su fecha: el Bloque de agenda es una plantilla
-    semanal sin fecha, asi que la fecha viaja con el pedido.
+
+def cargar(hoy=None):
+    """Las solicitudes pendientes desde hoy, con sus áreas y bloques (AC1).
+
+    Forma: {"jornada", "areas", "solicitudes"}. Cada bloque trae su fecha: el
+    Bloque de agenda es una plantilla semanal sin fecha. Una pendiente sin
+    bloques no se muestra: no hay nada que resolver y la grilla no tendría
+    semana.
     """
-    with RUTA.open(encoding="utf-8") as archivo:
-        return json.load(archivo)
+    hoy = hoy or timezone.localdate()
+    solicitudes = (
+        Solicitud.objects
+        .filter(estado_validacion=Solicitud.EstadoValidacion.PENDIENTE, fecha__gte=hoy,
+                solicitudes_bloques__isnull=False)
+        .distinct()
+        .con_detalle()
+        .select_related("solicitante")
+        .prefetch_related("acompanantes")
+        .order_by("fecha", "id")
+    )
+    jornada = sorted({(b.inicio, b.termino) for b in Bloque.objects.filter(activo=True)})
+    return {
+        "jornada": [{"inicio": f"{i:%H:%M}", "termino": f"{t:%H:%M}"} for i, t in jornada],
+        "areas": [{"id": a.pk, "nombre": a.nombre, "prioridad": a.prioridad} for a in Area.objects.all()],
+        "solicitudes": [
+            {
+                "id": s.pk,
+                "encargado": {
+                    "nombre": s.solicitante.get_full_name() or s.solicitante.email,
+                    "correo": s.solicitante.email,
+                },
+                "area": s.area_id,
+                "motivo": s.motivo,
+                "observaciones": s.observaciones,
+                "personas": s.personas,
+                "acompanantes": [{"nombre": a.nombre, "correo": a.correo} for a in s.acompanantes.all()],
+                "enviada": timezone.localtime(s.creado_en).strftime("%Y-%m-%dT%H:%M"),
+                "bloques": _bloques(s),
+            }
+            for s in solicitudes
+        ],
+    }
 
 
 def marcar_bloqueos(datos):

@@ -1,15 +1,6 @@
 /* US-07. Solo variables de marca.css: ningun color literal (docs/estilo.md).
  * El cascaron (techo, panel, .btn) viene de css/panel.css. */
 
-/* Los datos son de prueba y tiene que notarse: nadie deberia creer que esta
- * aprobando algo de verdad. */
-.prueba {
-  border: 1px solid var(--borde); border-left: 3px solid var(--precaucion);
-  background: var(--superficie); padding: .7rem .9rem; margin-bottom: 1.25rem; font-size: .88rem;
-}
-.prueba p { margin: .2rem 0 0; }
-.prueba code { font-size: .8rem; }
-
 .resumen { display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
 .resumen div { font-size: .8rem; color: var(--tinta-suave); }
 .resumen b { display: block; font-family: var(--fuente-titulo); font-size: 1.4rem; color: var(--tinta); }
@@ -88,6 +79,7 @@
 .compite { font-size: .8rem; color: var(--tinta); border-left: 3px solid var(--alerta); padding-left: .4rem; }
 
 .acciones, .rechazo { display: inline-flex; gap: .4rem; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.pie-acciones { display: flex; justify-content: flex-end; padding: .75rem 1rem 1rem; }
 .btn.peligro { color: var(--tinta); border-color: var(--alerta); }
 .btn.peligro:hover { background: var(--fondo); }
 a.btn { text-decoration: none; }
