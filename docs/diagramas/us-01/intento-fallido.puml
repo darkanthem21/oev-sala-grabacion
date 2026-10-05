@@ -17,12 +17,8 @@ N -> V ++ : $comentario("la cuenta con ese correo, sin distinguir mayúsculas")\
 V -> D ++ : SELECT personas_usuario
 return fila
 return usuario
-opt el correo existe
-  N -> V ++ : usuario.esta_bloqueado
-  return False
-end
-N -> A ++ : form.is_valid()
-A -> V ++ : $comentario("la cuenta con ese correo exacto")\nUsuario._default_manager.get_by_natural_key(correo)
+N -> A ++ : valido = form.is_valid()
+A -> V ++ : $comentario("la cuenta con ese correo, sin distinguir mayúsculas")\nUsuario._default_manager.get_by_natural_key(correo)
 V -> D ++ : SELECT personas_usuario
 return fila
 alt el correo no existe
@@ -40,8 +36,9 @@ else el correo existe
   return False
 end
 return False
-
 opt el correo existe
+  N -> V ++ : usuario.esta_bloqueado
+  return False
   N -> N ++ : _registrar_fallo(usuario)
   N -> C ++ : Parametros.cargar()
   C -> D ++ : SELECT configuracion_parametros
@@ -62,11 +59,18 @@ opt el correo existe
   deactivate N
 end
 
-N --> P : 200 · personas/_formulario_ingreso.html con ERROR_CREDENCIALES
+N -> N ++ : _con_error(request, form, ruta)
+N -> C ++ : Parametros.cargar()
+C -> D ++ : SELECT configuracion_parametros
+return fila
+return parametros
+N -> N : $comentario("el aviso genérico, con la regla del bloqueo (AC5)")\nmensaje = f"Correo o contraseña incorrectos. Tras {intentos_maximos}\nintentos seguidos la cuenta se bloquea {minutos_bloqueo} minutos."
+deactivate N
+N --> P : 200 · personas/_formulario_ingreso.html con el aviso
 note left of N
-  Mismo mensaje para clave incorrecta
-  y correo inexistente (AC4): la respuesta
-  no dice si el correo tiene cuenta.
+  Mismo aviso para clave incorrecta,
+  correo inexistente y cuenta bloqueada
+  (AC4): no dice si el correo tiene cuenta.
 end note
 deactivate N
 @enduml

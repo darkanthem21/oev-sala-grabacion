@@ -142,6 +142,18 @@ a.btn { text-decoration: none; }
 .celda[data-e="una"], .leyenda i[data-e="una"] { background: var(--superficie); border-color: var(--tinta-suave); }
 .celda[data-e="competencia"], .leyenda i[data-e="competencia"] { background: var(--superficie); border: 2px solid var(--alerta); }
 .celda[data-e="aprobado"], .leyenda i[data-e="aprobado"] { background: var(--exito-suave); border-color: var(--exito-suave); }
+/* US-17: rayado claro y filete del color que marca un bloqueo en todo el
+ * sistema. El rayado de «rechazado» es más oscuro y va con filete de alerta. */
+.celda[data-e="bloqueado"], .leyenda i[data-e="bloqueado"],
+.mini-celda[data-e="bloqueado"], .marcas i[data-e="bloqueado"] {
+  background: repeating-linear-gradient(135deg, var(--fondo) 0 3px, var(--superficie) 3px 6px);
+  border: 2px solid var(--destacado);
+}
+.bloqueado {
+  display: inline-block; font-size: .75rem; padding: .05rem .4rem;
+  border: 1px solid var(--destacado); color: var(--tinta); background: var(--superficie);
+}
+.btn:disabled { cursor: not-allowed; color: var(--tinta-suave); background: var(--fondo); border-color: var(--borde); }
 
 /* --- Mini calendario de cada solicitud y de cada tope --- */
 .cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: start; }

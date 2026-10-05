@@ -1,0 +1,47 @@
+@startuml ver-panel
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Abrir el panel del validador (US-07)
+
+actor "Validador" as A
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.validacion</b>\n<size:11>solicitudes/validacion.py</size>" as V <<dominio>>
+participant "<b>panel_validador.json</b>\n<size:11>solicitudes/datos_prueba/</size>" as J <<persistencia>>
+participant "<b>panelValidador</b>\n<size:11>solicitudes/validador.html</size>" as P <<presentación>>
+
+A -> N ++ : GET /validador/ → panel_validador(request)
+N -> V ++ : validacion.cargar()
+V -> J ++ : json.load(archivo)
+return datos
+return datos
+note right of V
+  Datos de prueba: las solicitudes de la base todavía
+  no llegan al panel. Cuando lleguen cambia solo
+  cargar(), que devuelve la misma forma de datos.
+end note
+N --> A : 200 · solicitudes/validador.html con datos y origen
+deactivate N
+
+A -> P ++ : $comentario("Alpine arranca con los datos incrustados en la página")\npanelValidador(JSON.parse(datos-panel), validador)
+P -> P : $comentario("un pedido es un bloque de una solicitud en una fecha")\npedidos = [{...b, sol: s, clave: b.fecha + " " + b.inicio} for b in s.bloques]
+P -> P ++ : get competencias()
+loop cada clave (fecha y hora) con pedidos sin resolver
+  opt la piden dos o más solicitudes
+    P -> P : $comentario("P1 primero (AC2)")\nsort((a, b) => area(a.sol).prioridad - area(b.sol).prioridad)
+  end
+end
+return competencias
+P -> P ++ : get pendientes()
+note right of P
+  Una tarjeta por solicitud con algún bloque sin
+  tope por resolver (AC1), ordenadas por su fecha
+  más próxima. Los bloques con tope se resuelven
+  solo en «Con tope».
+end note
+return pendientes
+P -> P ++ : get semana()
+return lunes a viernes del pendiente más próximo
+P --> A : la pantalla: semana, resumen, «Con tope», «Sin tope» y «Resueltas»
+deactivate P
+@enduml

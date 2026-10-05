@@ -26,6 +26,9 @@
 
   /* --- Estado. Son RELLENOS: el texto encima va en --tinta, nunca blanco --- */
   --alerta:       #dd5829;  /* Pantone Orange 021 C. Error */
+  /* El rojo pastel del rayado de lo bloqueado (US-17): el mismo naranja de
+   * marca, aclarado sobre blanco. Es solo relleno, nunca lleva texto encima. */
+  --alerta-suave: color-mix(in srgb, var(--alerta) 35%, var(--superficie));
   --precaucion:   #e3994c;
   --exito:        #aebe4c;
   --exito-suave:  #9ec089;

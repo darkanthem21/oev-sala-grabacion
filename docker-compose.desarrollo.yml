@@ -10,6 +10,8 @@ services:
   db:
     environment:
       POSTGRES_PASSWORD: oev
+    ports:
+      - "5432:5432"
 
   web:
     build:

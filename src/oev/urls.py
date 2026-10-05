@@ -71,6 +71,7 @@ urlpatterns = [
     path("configuracion/", RedirectView.as_view(pattern_name="panel_bloques")),
     path("configuracion/bloques/", agenda.bloques, name="panel_bloques"),
     path("configuracion/bloques/editar/", agenda.editar_bloque, name="editar_bloque"),
+    path("configuracion/bloqueos/", agenda.editar_bloqueo, name="editar_bloqueo"),
     path("configuracion/areas/", configuracion.seccion, {"pestana": "areas"}, name="panel_areas"),
     path("configuracion/reglas/", configuracion.reglas, name="panel_reglas"),
     path("admin/", admin.site.urls),

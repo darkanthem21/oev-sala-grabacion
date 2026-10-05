@@ -1,0 +1,67 @@
+@startuml elegir-area
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Elegir el área académica (US-02)
+
+actor "Solicitante" as S
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.forms</b>\n<size:11>solicitudes/forms.py</size>" as F <<presentación>>
+participant "<b>solicitudes.wizard</b>\n<size:11>solicitudes/wizard.py</size>" as W <<presentación>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+== Entrar al formulario ==
+S -> N ++ : GET /solicitar/ → solicitar(request)
+N -> N : $comentario("solo las áreas activas del usuario (AC1)")\nareas = request.user.areas.filter(activa=True)
+N -> D ++ : SELECT personas_area, personas_usuario_areas
+return filas
+break no pertenece a ningún área activa
+  N --> S : 200 · solicitudes/sin_area.html
+  note right of N
+    Toda solicitud se vincula a un área
+    (US-05 AC4): sin área no hay formulario.
+  end note
+end
+N -> W ++ : SolicitudWizard(request.session)
+return wizard
+opt la sesión no tiene área y pertenece a una sola
+  N -> W ++ : wizard.guardar_area(area_unica.id, area_unica.nombre)
+  deactivate W
+  note right of N : Nada que elegir: sigue directo\nal paso 1.
+end
+break la sesión no tiene área y pertenece a varias
+  N --> S : 302 · /solicitar/area/
+end
+N --> S : 200 · solicitudes/solicitar.html (paso 1)
+deactivate N
+
+== Elegir entre varias áreas ==
+S -> N ++ : POST /solicitar/area/ → solicitar_area(request)
+N -> N : areas = request.user.areas.filter(activa=True)
+N -> D ++ : SELECT personas_area, personas_usuario_areas
+return filas
+N -> W ++ : SolicitudWizard(request.session)
+return wizard
+N -> N : $comentario("viene de «Cambiar área» en el paso 1")\nes_cambio = bool(request.GET.get("cambiar"))
+N -> F ++ : SeleccionAreaForm(request.POST, usuario=request.user)
+return form
+N -> F ++ : form.is_valid()
+F -> D ++ : SELECT personas_area
+return fila
+return valido
+break no eligió un área de su lista
+  N --> S : 200 · solicitudes/seleccionar_area.html con el error
+end
+N -> W ++ : wizard.guardar_area(area.id, area.nombre, reset_horario=es_cambio)
+opt cambió de área
+  W -> W : $comentario("el horario elegido era para la otra área")\nreserva.pop("fecha"); reserva.pop("bloques_ids")
+end
+W -> W : self._session[CLAVE_SESION] = reserva
+deactivate W
+note right of N
+  Django guarda la sesión al responder
+  (SessionMiddleware: UPDATE django_session).
+end note
+N --> S : 302 · /solicitar/
+deactivate N
+@enduml
