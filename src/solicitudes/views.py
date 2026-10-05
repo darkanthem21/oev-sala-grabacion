@@ -1,9 +1,11 @@
 from urllib.parse import urlencode
 
 from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -30,6 +32,7 @@ from .models import Solicitud
 from .services import (
     guardar_solicitud_completa,
     obtener_bloques_dia_para_usuario,
+    resolver,
     retirar_solicitud,
     revisar_acompanantes,
 )
@@ -48,16 +51,44 @@ def es_validador(usuario):
     return usuario.is_authenticated and usuario.tiene_rol(Rol.VALIDADOR)
 
 
+def puede_validar(usuario):
+    """Decisión del 04/10: el administrador también valida."""
+    return usuario.is_authenticated and (usuario.is_staff or usuario.tiene_rol(Rol.VALIDADOR))
+
+
+def _datos_validacion():
+    return {"datos": validacion.marcar_bloqueos(validacion.cargar())}
+
+
 @user_passes_test(es_validador, login_url="login_validacion")
 def panel_validador(request):
-    """Bandeja del validador, con datos de prueba mientras no exista el modelo.
+    """Bandeja del validador (US-07)."""
+    return render(request, "solicitudes/validador.html", _datos_validacion())
 
-    `validacion.cargar` es el único punto que sabe de dónde vienen los datos.
-    """
-    return render(request, "solicitudes/validador.html", {
-        "datos": validacion.marcar_bloqueos(validacion.cargar()),
-        "origen": validacion.ORIGEN,
-    })
+
+@staff_member_required(login_url="login_gestion")
+def panel_validacion_admin(request):
+    """La misma bandeja como pestaña del panel del administrador."""
+    return render(request, "solicitudes/validacion_admin.html", {**_datos_validacion(), "pestana": "validacion"})
+
+
+@user_passes_test(puede_validar, login_url="login_validacion")
+@require_POST
+def resolver_solicitud(request):
+    """Aprobar o rechazar desde el panel. Responde JSON al fetch de Alpine: la
+    pantalla cambia solo si esto guardó."""
+    accion = request.POST.get("accion")
+    try:
+        solicitud_id = int(request.POST.get("solicitud", ""))
+    except ValueError:
+        solicitud_id = None
+    if solicitud_id is None or accion not in ("aprobar", "rechazar"):
+        return JsonResponse({"error": "Pedido inválido. Recarga la página."}, status=400)
+    try:
+        resolver(solicitud_id, accion == "aprobar", request.POST.get("motivo", ""), request.user)
+    except ValidationError as error:
+        return JsonResponse({"error": " ".join(error.messages)}, status=400)
+    return JsonResponse({"ok": True})
 
 
 SOLICITUDES_POR_PAGINA = 20

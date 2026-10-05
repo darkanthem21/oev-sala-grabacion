@@ -119,37 +119,43 @@ así que las consultas de validación de cada bloque se hacen dos veces.
 
 ### Abrir el panel del validador (US-07)
 
-Las solicitudes todavía no llegan al panel desde la base: `validacion.cargar()`
-lee un JSON de prueba y es el único punto que sabe de dónde vienen. Cuando se
-conecte, cambia esa función y devuelve la misma forma de datos; la vista y la
-plantilla no se enteran.
+`validacion.cargar()` lee las solicitudes pendientes desde hoy que tienen
+bloques, con un número fijo de consultas: las solicitudes con su área y
+solicitante, y después sus bloques y acompañantes en dos consultas para todas.
+Devuelve la forma que espera la plantilla, que no sabe de modelos. La pestaña
+Validación del administrador es la misma vista con otro envoltorio:
+`panel_validacion_admin` incluye `_validacion.html` dentro de `panel.html`.
 
 ![Abrir el panel del validador](diagramas/us-07/ver-panel.png)
 
 El resto ocurre en el navegador. `panelValidador`, el componente de Alpine de
-`validador.html`, parte cada solicitud en pedidos (un bloque en una fecha) y de
-ahí arma los topes, ordenados por prioridad del área, y las tarjetas sin tope.
+`_validacion.html`, parte cada solicitud en pedidos (un bloque en una fecha) y
+de ahí arma los topes, ordenados por prioridad del área, y las tarjetas sin
+tope.
 
-### Resolver un bloque con tope (US-07)
+### Resolver una solicitud con tope (US-07)
 
-Aprobar una solicitud rechaza a las demás solo en ese bloque, no en toda su
-solicitud. Por eso el motivo es obligatorio: es lo que les llega a quienes
-pierden el bloque (AC4). Cada resolución queda con validador, hora y motivo
-(AC5).
+Se aprueba o se rechaza la solicitud entera. Aprobar una que choca con otras
+las rechaza enteras con el mismo motivo, por eso el motivo es obligatorio: es
+lo que les llega a quienes pierden (AC4). `resolver()` bloquea la solicitud y
+sus rivales en orden de id, así dos validadores que deciden el mismo bloque a
+la vez quedan en fila y el segundo ve lo que hizo el primero (AC3). Cada
+resolución queda con `resuelta_por`, `resuelta_en` y `motivo_resolucion` (AC5),
+y el correo sale solo cuando la transacción se confirma.
 
-![Resolver un bloque con tope](diagramas/us-07/resolver-tope.png)
+![Resolver una solicitud con tope](diagramas/us-07/resolver-tope.png)
 
-Nada de esto se guarda: con datos de prueba, aprobar y rechazar solo cambian la
-pantalla. La regla de un aprobado por bloque y fecha (AC3) la tendrá que
-garantizar la base cuando exista el modelo.
+La pantalla cambia solo si el servidor respondió `{"ok": true}`. Si la sesión
+venció, la respuesta es la página de ingreso y no JSON, y el panel avisa que no
+se pudo guardar.
 
-### Resolver un bloque sin tope (US-07)
+### Resolver una solicitud sin tope (US-07)
 
 Sin rivales, aprobar no pide motivo. Rechazar sí, y se confirma en la misma
-fila. El estado de la solicitud no se guarda: `estadoSolicitud` lo deduce de
-sus bloques, así que puede quedar aprobada en parte.
+tarjeta. Si otro validador ya la resolvió o el solicitante la retiró, el
+servidor lo dice y el panel lo muestra.
 
-![Resolver un bloque sin tope](diagramas/us-07/resolver-sin-tope.png)
+![Resolver una solicitud sin tope](diagramas/us-07/resolver-sin-tope.png)
 
 ### Guardar los parámetros del sistema (US-04)
 

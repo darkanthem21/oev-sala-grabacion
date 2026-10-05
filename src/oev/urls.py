@@ -14,6 +14,7 @@ urlpatterns = [
     path("", views.panel, name="panel"),
     path("solicitar/", include("solicitudes.urls")),
     path("validador/", solicitudes.panel_validador, name="panel_validador"),
+    path("validador/resolver/", solicitudes.resolver_solicitud, name="resolver_solicitud"),
     # La puerta del solicitante vivió acá; se redirige para no romper enlaces.
     path("login/", RedirectView.as_view(pattern_name="login_solicitante", permanent=True)),
     path("logout/", auth.LogoutView.as_view(next_page="login_solicitante"), name="logout"),
@@ -74,5 +75,6 @@ urlpatterns = [
     path("configuracion/bloqueos/", agenda.editar_bloqueo, name="editar_bloqueo"),
     path("configuracion/areas/", configuracion.seccion, {"pestana": "areas"}, name="panel_areas"),
     path("configuracion/reglas/", configuracion.reglas, name="panel_reglas"),
+    path("configuracion/validacion/", solicitudes.panel_validacion_admin, name="panel_validacion"),
     path("admin/", admin.site.urls),
 ]

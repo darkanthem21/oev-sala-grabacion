@@ -162,14 +162,35 @@ El grupo y las áreas de cada cuenta se asignan en `/admin/` > **Usuarios**.
 
 - Entrar por `/solicitante/entrar/` con una cuenta que tenga área y ver el paso
   1 del formulario en `/solicitar/`.
-- Entrar por `/validacion/entrar/` con una cuenta validadora y ver el recuadro
-  **Datos de prueba** en `/validador/`.
+- Entrar por `/validacion/entrar/` con una cuenta validadora y ver en
+  `/validador/` las solicitudes pendientes reales.
 
-### Pendiente
+## Validación conectada a la base (US-07)
 
-El panel del validador lee `src/solicitudes/datos_prueba/panel_validador.json`,
-no la base de datos. Cuando se conecte a las solicitudes reales puede traer
-otra migración: repetir el respaldo antes de ese despliegue.
+### Antes de desplegar
+
+Esta versión trae la migración `solicitudes.0004_solicitud_resolucion`, que
+agrega a la solicitud quién la resolvió, cuándo y con qué motivo. Hacer el
+respaldo de la base (ver [Respaldo de la base](#respaldo-de-la-base)) antes de
+bajar la imagen.
+
+No hay variables nuevas en el `.env`. Los correos de resolución salen por el
+`EMAIL_BACKEND` configurado, igual que los avisos de bloqueo.
+
+### Rutas nuevas
+
+| Ruta | Quién entra |
+|---|---|
+| `/configuracion/validacion/` | Pestaña **Validación** del administrador. Cuentas con `is_staff` |
+| `/validador/resolver/` | Lo llama el panel al aprobar o rechazar. Validadores y cuentas con `is_staff` |
+
+### Verificar después de desplegar
+
+- Aprobar o rechazar una solicitud en `/validador/`, recargar y ver que quedó
+  resuelta.
+- Entrar como el solicitante y ver el estado y el motivo en **Mis solicitudes**.
+- `docker logs grupo6_frontend` muestra el correo de la resolución si el
+  backend de correo es la consola.
 
 ## Problemas conocidos
 

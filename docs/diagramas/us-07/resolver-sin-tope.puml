@@ -2,59 +2,47 @@
 !include ../estilo.iuml
 hide footbox
 autonumber
-title Resolver un bloque sin tope (US-07)
+title Resolver una solicitud sin tope (US-07)
 
 actor "Validador" as A
-participant "<b>panelValidador</b>\n<size:11>solicitudes/validador.html</size>" as P <<presentación>>
+participant "<b>panelValidador</b>\n<size:11>solicitudes/_validacion.html</size>" as P <<presentación>>
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>notificaciones</b>\n<size:11>notificaciones/services.py</size>" as M <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
-== Aprobar ==
-A -> P ++ : clic «Aprobar» en la fila del bloque → aprobar(p)
-P -> P : limpiarAviso()
-P -> P ++ : rivales(p)
-return []
-P -> P : motivo = (motivos[p.clave] || "").trim()
-note right of P
-  Sin rivales no se pide motivo:
-  se aprueba de inmediato (AC3).
-end note
-P -> P ++ : registrar(p, "aprobado", motivo, "")
+A -> P ++ : clic «Rechazar solicitud» → abrirRechazo(bloquesDe(s)[0])
+P --> A : el campo del motivo en la tarjeta
 deactivate P
-P --> A : la fila queda «Aprobado» y el bloque pasa a «Resueltas»
-deactivate P
-
-== Rechazar ==
-A -> P ++ : clic «Rechazar» → abrirRechazo(p)
-P -> P : rechazando = p.ticket
-P --> A : la fila muestra el campo del motivo y «Confirmar»
-deactivate P
-A -> P ++ : clic «Confirmar» o Enter → rechazar(p)
-P -> P : $comentario("sin tope, el motivo es el de la fila")\nmotivo = (motivos[p.ticket] || "").trim()
+A -> P ++ : clic «Confirmar» → rechazar(p)
+P -> P : motivo = (motivos[p.ticket] || "").trim()
 break el motivo tiene menos de 10 caracteres
-  P -> P ++ : avisar("Para rechazar escribe el motivo (mínimo 10 caracteres): le llega al encargado.")
-  deactivate P
-  P --> A : aviso arriba del panel
-  note right of P : AC4: no se rechaza sin motivo.
+  P -> P : avisar("Para rechazar escribe el motivo …")
+  P --> A : aviso arriba de la bandeja
 end
-P -> P ++ : registrar(p, "rechazado", motivo, "")
-deactivate P
-P -> P : rechazando = null
-P -> P : limpiarAviso()
-
-P -> P ++ : estadoSolicitud(s)
-alt le quedan bloques sin resolver
-  P -> P : $comentario("«En revisión» si ya resolvió alguno")\n"pendiente" o "en_revision"
-else todos aprobados
-  P -> P : "aprobada"
-else todos rechazados
-  P -> P : "rechazada"
-else unos y otros
-  P -> P : "parcial"
+P -> N ++ : $comentario("enviar(p.sol, 'rechazar', motivo)")\nfetch POST /validador/resolver/ → resolver_solicitud(request)
+N -> V ++ : resolver(solicitud_id, False, motivo, request.user)
+V -> D ++ : $comentario("la solicitud, bloqueada para que nadie la resuelva a la vez")\nSELECT … FROM solicitudes_solicitud FOR UPDATE
+return fila
+alt ya no está pendiente (otro la resolvió o la retiraron)
+  V --> N -- : ValidationError
+  N --> P -- : 400 · {"error": "Esta solicitud ya fue resuelta o retirada."}
+  P --> A : el aviso
+else
+  V -> D ++ : $comentario("RECHAZADA, con motivo, resuelta_por y resuelta_en (AC5)")\nUPDATE solicitudes_solicitud
+  return fila
+  V -> V : transaction.on_commit(partial(avisar, correo, …), robust=True)
+  V --> N : [solicitud]
+  V -> M ++ : avisar(correo, asunto, "notificaciones/resolucion.txt", contexto)
+  deactivate M
+  N --> P : 200 · {"ok": true}
+  P -> P : registrarSol(p.sol, "rechazado", motivo, "")
+  P --> A : la solicitud pasa a «Resueltas»
 end
-return estado
 note right of P
-  El estado de la solicitud no se guarda:
-  se deduce de sus bloques cada vez.
+  Aprobar sin tope es el mismo camino con
+  aprobar(p): sin rivales, el motivo no se
+  exige y queda solo la aprobada.
 end note
-P --> A : la fila queda «Rechazado» con su motivo en «Resueltas»
 deactivate P
 @enduml

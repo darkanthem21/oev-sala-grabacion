@@ -20,6 +20,8 @@
 }
 .sub { color: var(--tinta-suave); font-size: .9rem; margin: 0 0 1.75rem; }
 .pista { display: block; color: var(--tinta-suave); font-size: .8rem; margin: .35rem 0 0; }
+/* US-09 AC2: el motivo que dejó el validador, bajo el estado. */
+.motivo-rechazo { margin: .3rem 0 0; font-size: .8rem; color: var(--tinta-suave); max-width: 28rem; }
 
 .hoja section { margin-bottom: 2rem; }
 

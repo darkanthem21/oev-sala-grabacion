@@ -96,6 +96,18 @@ class Solicitud(models.Model):
         default=EstadoConfirmacion.NO_HABILITADA,
         verbose_name="estado de confirmación",
     )
+    # US-07 AC5: quién resolvió, cuándo y por qué. Los escribe solo
+    # services.resolver; en /admin/ son de solo lectura.
+    motivo_resolucion = models.TextField(blank=True, verbose_name="motivo de la resolución")
+    resuelta_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+        verbose_name="resuelta por",
+    )
+    resuelta_en = models.DateTimeField(null=True, blank=True, verbose_name="resuelta el")
 
     bloques = models.ManyToManyField(
         "agenda.Bloque",

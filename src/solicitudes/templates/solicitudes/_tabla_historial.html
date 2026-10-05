@@ -69,6 +69,9 @@
             </td>
             <td data-titulo="Estado">
               <span class="estado estado-{{ solicitud.estado_clave }}">{{ solicitud.estado_general }}</span>
+              {% if solicitud.estado_clave == "rechazada" and solicitud.motivo_resolucion %}
+                <p class="motivo-rechazo">{{ solicitud.motivo_resolucion }}</p>
+              {% endif %}
               {% if solicitud.puede_retirarse %}
                 {% url 'retirar_solicitud' solicitud.id as url_retirar %}
                 <form class="form-retirar" method="post" action="{{ url_retirar }}"

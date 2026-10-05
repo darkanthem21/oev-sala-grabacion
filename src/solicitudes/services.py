@@ -1,5 +1,6 @@
 import calendar
 from dataclasses import dataclass
+from functools import partial
 from datetime import date, datetime, time
 from typing import Any, Dict, List, Tuple
 
@@ -7,8 +8,9 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from agenda.models import Bloque, disponibilidad
+from agenda.models import Bloque, bloqueo_de, disponibilidad
 from agenda.signals import Reserva
+from notificaciones.services import avisar
 from personas.models import Area
 from .models import Acompanante, Solicitud, SolicitudBloque
 
@@ -234,3 +236,103 @@ def reservas_aprobadas(sender, desde, hasta, **kwargs):
         )
         for f in filas
     ]
+
+
+# US-07 AC4: el motivo le llega al solicitante, así que tiene que decir algo.
+# El panel exige lo mismo antes de enviar.
+MINIMO_MOTIVO = 10
+
+
+def _rivales(solicitud):
+    """US-07 AC2: las otras pendientes que piden alguno de sus bloques el mismo día."""
+    return Solicitud.objects.filter(
+        fecha=solicitud.fecha,
+        estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
+        solicitudes_bloques__bloque__in=solicitud.solicitudes_bloques.values("bloque"),
+    ).exclude(pk=solicitud.pk)
+
+
+def _avisar_resolucion(solicitud, asignada=None):
+    """AC4: un correo por solicitud, cuando la resolución se confirma."""
+    persona = solicitud.solicitante
+    transaction.on_commit(
+        partial(
+            avisar,
+            persona.email,
+            f"Tu solicitud de la sala de grabación fue {solicitud.get_estado_validacion_display().lower()}",
+            "notificaciones/resolucion.txt",
+            {
+                "nombre": persona.get_full_name() or persona.email,
+                "solicitud": solicitud,
+                "bloques": [
+                    sb.bloque for sb in
+                    solicitud.solicitudes_bloques.select_related("bloque").order_by("bloque__inicio")
+                ],
+                "asignada": asignada,
+            },
+        ),
+        robust=True,
+    )
+
+
+@transaction.atomic
+def resolver(solicitud_id, aprobar, motivo, quien):
+    """US-07: aprueba o rechaza una solicitud entera; devuelve las que cambiaron.
+
+    Aprobar rechaza enteras a sus rivales con el mismo motivo (AC2 y AC4). AC3
+    se sostiene con bloqueos de fila: la solicitud y sus rivales se bloquean en
+    orden de id, así dos validadores que resuelven el mismo bloque a la vez
+    quedan en fila y el segundo ve lo que decidió el primero.
+    """
+    solicitud = Solicitud.objects.filter(pk=solicitud_id).first()
+    if solicitud is None:
+        raise ValidationError("Esta solicitud ya no existe.")
+    # FOR UPDATE no admite DISTINCT, así que primero los ids y después el bloqueo.
+    ids = {solicitud.pk, *_rivales(solicitud).values_list("pk", flat=True)}
+    filas = {s.pk: s for s in Solicitud.objects.select_for_update().filter(pk__in=ids).order_by("pk")}
+    solicitud = filas.pop(solicitud.pk)
+    if solicitud.estado_validacion != Solicitud.EstadoValidacion.PENDIENTE:
+        raise ValidationError("Esta solicitud ya fue resuelta o retirada.")
+    rivales = [s for s in filas.values() if s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE]
+    motivo = (motivo or "").strip()
+
+    if aprobar:
+        pedidos = list(solicitud.solicitudes_bloques.select_related("bloque"))
+        for pedido in pedidos:
+            # US-17 AC3: lo bloqueado no se aprueba; se rechaza con ese motivo.
+            bloqueo = bloqueo_de(solicitud.fecha, pedido.bloque.inicio)
+            if bloqueo is not None:
+                raise ValidationError(
+                    f"La sala está bloqueada a las {pedido.bloque.inicio:%H:%M} ({bloqueo.razon}): "
+                    "no se puede aprobar. Recházala con ese motivo."
+                )
+        ocupada = Solicitud.objects.filter(
+            fecha=solicitud.fecha,
+            estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
+            solicitudes_bloques__bloque__in=[p.bloque_id for p in pedidos],
+        ).exclude(estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA)
+        if ocupada.exists():
+            raise ValidationError("Uno de sus bloques ya está aprobado para otra solicitud ese día.")
+        if rivales and len(motivo) < MINIMO_MOTIVO:
+            raise ValidationError(
+                f"Sus bloques los piden {len(rivales) + 1} solicitudes: escribe el motivo "
+                f"(mínimo {MINIMO_MOTIVO} caracteres). Le llega a quien no los obtiene."
+            )
+    elif len(motivo) < MINIMO_MOTIVO:
+        raise ValidationError(
+            f"Para rechazar escribe el motivo (mínimo {MINIMO_MOTIVO} caracteres): le llega al encargado."
+        )
+
+    estado = Solicitud.EstadoValidacion.ACEPTADA if aprobar else Solicitud.EstadoValidacion.RECHAZADA
+    cambios = [(solicitud, estado)]
+    if aprobar:
+        cambios += [(r, Solicitud.EstadoValidacion.RECHAZADA) for r in rivales]
+    ahora = timezone.now()
+    for s, e in cambios:
+        s.estado_validacion, s.motivo_resolucion = e, motivo
+        s.resuelta_por, s.resuelta_en = quien, ahora
+        s.save(update_fields=[
+            "estado_validacion", "motivo_resolucion", "resuelta_por", "resuelta_en", "actualizado_en",
+        ])
+        _avisar_resolucion(s, asignada=None if s is solicitud else solicitud)
+    return [s for s, _ in cambios]
