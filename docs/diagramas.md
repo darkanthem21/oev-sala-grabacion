@@ -298,9 +298,7 @@ La página trae 20 solicitudes y siempre hace las mismas consultas: tres
 de esa página. Cambiar de pestaña o de página es el mismo `GET` con htmx, que
 recibe solo `_tabla_historial.html` y actualiza la dirección. Si htmx restaura
 el historial sin tenerlo en caché, pide la página entera, y `Vary: HX-Request`
-evita que el navegador confunda una respuesta con la otra. El plazo de la nota
-de confirmación se lee de `Parametros`, porque lo cambia administración, y solo
-en Próximas, que es la única pestaña que muestra la nota.
+evita que el navegador confunda una respuesta con la otra.
 
 ### Retirar una solicitud propia (US-09)
 

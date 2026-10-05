@@ -9,7 +9,6 @@ participant "<b>diálogo de confirmación</b>\n<size:11>solicitudes/mis_solicitu
 participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
 participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
 participant "<b>solicitudes.models</b>\n<size:11>solicitudes/models.py</size>\n<size:11>SolicitudQuerySet</size>" as M <<dominio>>
-participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
 S -> P ++ : clic en Retirar de una solicitud en revisión
@@ -58,12 +57,6 @@ else Retirar solicitud
   M -> D ++ : SELECT COUNT solicitudes_solicitud
   return filas
   return total_anteriores
-  opt vista == "proximas"
-    N -> C ++ : Parametros.cargar().plazo_confirmacion_dias
-    C -> D ++ : SELECT configuracion_parametros
-    return fila
-    return plazo_confirmacion
-  end
   return contexto
   N -> N ++ : render(request, "solicitudes/_tabla_historial.html", contexto)
   N -> M ++ : $comentario("la plantilla recorre la página; trae los mensajes de messages")\npagina.object_list
