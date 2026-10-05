@@ -1,36 +1,37 @@
 import pytest
 from django.urls import reverse
+from django.contrib.auth.models import Group
 from personas.models import Usuario, Rol
 
 pytestmark = pytest.mark.django_db
 
 @pytest.fixture
-def solicitante_activo():
+def solicitante_activo(db):
     '''
     Setup básico para tener un usuario solicitante de prueba activo.
     '''
-    user = Usuario.objects.create_user(
-        email="solicitante.activo@uach.cl", 
-        password="ClaveCorrecta123"
+    grupo, _ = Group.objects.get_or_create(name=Rol.SOLICITANTE)
+    
+    usuario = Usuario.objects.create(
+        email='solicitante.activo@uach.cl',
+        is_active=True
     )
-    try:
-        rol_solicitante, _ = Rol.objects.get_or_create(nombre=Rol.SOLICITANTE)
-        user.roles.add(rol_solicitante)
-    except Exception:
-        pass
-    return user
+
+    usuario.set_password('ClaveCorrecta123')
+    usuario.save()
+    
+    usuario.groups.add(grupo)
+    
+    return usuario
 
 def test_ac3_001_login_ok(client, solicitante_activo):
-    '''
-    Caso de Prueba [AC3-001]: Inicio de sesión exitoso y redirección (Happy Path)
-    '''
     url = reverse('login_solicitante')
     response = client.post(url, {
         'username': 'solicitante.activo@uach.cl',
         'password': 'ClaveCorrecta123'
     })
-    assert response.status_code == 302
-    assert response.url == reverse('solicitar') or response.url.startswith('/')
+    assert response.status_code == 204
+    assert response.headers['HX-Redirect'] == reverse('solicitar')
 
 def test_ac4_001_error_correo(client):
     '''

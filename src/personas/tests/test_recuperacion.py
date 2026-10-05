@@ -49,7 +49,9 @@ def test_ac6_003_token_corrupto(client, solicitante_activo):
     url_alterada = reverse('password_reset_confirm', kwargs={'uidb64': 'Mw', 'token': 'set-password-token-invalido'})
     response = client.get(url_alterada)
     assert response.status_code == 200
-    assert "inválido" in response.content.decode('utf-8').lower() or "invalid" in response.content.decode('utf-8').lower()
+    
+    content = response.content.decode('utf-8').lower()
+    assert "pedir otro enlace" in content
 
 def test_ac6_004_token_expirado(client, solicitante_activo):
     '''
