@@ -218,7 +218,7 @@ def reservas_aprobadas(sender, desde, hasta, **kwargs):
     """US-17 AC4: las reservas aceptadas y no canceladas de esas fechas, para que
     agenda sepa a quién le quita la sala un bloqueo. Se conecta en `apps.py`."""
     filas = SolicitudBloque.objects.filter(
-        fecha__range=(desde, hasta),
+        solicitud__fecha__range=(desde, hasta),
         solicitud__estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
     ).exclude(
         solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA,

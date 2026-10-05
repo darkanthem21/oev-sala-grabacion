@@ -71,7 +71,7 @@ def bloques_del_dia(fecha, enviados=(), ahora=None):
     """
     ahora = timezone.localtime(ahora)
     bloqueos = bloqueos_por_fecha(fecha, fecha).get(fecha, [])
-    bloques = [_armar(t, enviados, ahora) for t in _tickets(fecha=fecha)]
+    bloques = [_armar(t, enviados, ahora) for t in _tickets(solicitud__fecha=fecha)]
     for bloque in bloques:
         bloque["bloqueo"] = next((b for b in bloqueos if b.cubre(fecha, bloque["inicio"])), None)
     # AC1: en el orden en que van a llegar.
