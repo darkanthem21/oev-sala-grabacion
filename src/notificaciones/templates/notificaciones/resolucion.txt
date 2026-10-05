@@ -1,0 +1,14 @@
+{% autoescape off %}Hola, {{ nombre }}:
+
+Tu solicitud #{{ solicitud.pk }} para el {{ solicitud.fecha|date:"l j \d\e F" }} fue {{ solicitud.get_estado_validacion_display|lower }}:
+{% for b in bloques %}  - de {{ b.inicio|time:"H:i" }} a {{ b.termino|time:"H:i" }}
+{% endfor %}{% if asignada %}
+Uno o más de esos bloques se asignaron a otra solicitud.
+{% endif %}{% if solicitud.motivo_resolucion %}
+Motivo: {{ solicitud.motivo_resolucion }}
+{% endif %}{% if solicitud.estado_validacion == "RECHAZADA" %}
+Si todavía necesitas grabar, puedes pedir otro horario en el sistema.
+{% endif %}
+Oficina de Educación Virtual
+Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile
+{% endautoescape %}
