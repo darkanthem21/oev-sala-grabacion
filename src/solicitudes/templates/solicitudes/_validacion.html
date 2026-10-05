@@ -36,7 +36,7 @@ function panelValidador(datos, validador, urlResolver) {
   })));
 
   return {
-    resoluciones: {}, motivos: {}, rechazando: null, error: "", errorEn: null,
+    resoluciones: {}, motivos: {}, rechazando: null, error: "", errorEn: null, enviando: false,
     jornada, semanaDe,
 
     // La semana del cuadro es la del bloque pendiente mas proximo. Con datos
@@ -186,6 +186,9 @@ function panelValidador(datos, validador, urlResolver) {
     registrarSol(s, estado, motivo, nota) { this.bloquesDe(s).forEach(p => this.registrar(p, estado, motivo, nota)); },
     // Devuelve null si se guardó, o el texto del error para el aviso.
     async enviar(s, accion, motivo) {
+      // Mientras va el pedido los botones se apagan: un doble clic mandaría
+      // dos, y el segundo respondería "ya fue resuelta" aunque se guardó.
+      this.enviando = true;
       try {
         const r = await fetch(urlResolver, {
           method: "POST",
@@ -199,15 +202,21 @@ function panelValidador(datos, validador, urlResolver) {
       } catch {
         // Sesión vencida, CSRF o sin red: la respuesta no es JSON.
         return "No se pudo guardar. Recarga la página e inténtalo de nuevo.";
+      } finally {
+        this.enviando = false;
       }
     },
-    // El aviso sale donde se hizo clic: en la tarjeta del tope (`clave`), o
-    // arriba si es una fila de "Sin tope". En el tope ademas deja el cursor en
-    // el motivo, que es lo que falta.
-    avisar(texto, clave = null) {
+    // El aviso sale en la tarjeta donde se hizo clic: la del tope (`clave` del
+    // bloque) o la de "Sin tope" ("sol-" + id), y deja el cursor en el motivo,
+    // que es lo que falta.
+    idTarjeta(clave) { return clave.startsWith("sol-") ? clave : this.ancla(clave); },
+    enfocarMotivo(clave) {
+      this.$nextTick(() => document.querySelector("#" + this.idTarjeta(clave) + " .motivo input")?.focus());
+    },
+    avisar(texto, clave) {
       this.error = texto;
       this.errorEn = clave;
-      if (clave) this.$nextTick(() => document.querySelector("#" + this.ancla(clave) + " .motivo input")?.focus());
+      this.enfocarMotivo(clave);
     },
     limpiarAviso() { this.error = ""; this.errorEn = null; },
     // AC3 y AC6: se aprueba a mano la solicitud entera. Si choca con otras, el
@@ -216,7 +225,7 @@ function panelValidador(datos, validador, urlResolver) {
       this.limpiarAviso();
       const s = p.sol;
       if (!this.vivo(p)) return;
-      const enTope = this.conTopeSol(s) ? p.clave : null;
+      const enTope = this.conTopeSol(s) ? p.clave : "sol-" + s.id;
       // US-17 AC3: con un bloque bloqueado no se aprueba; se rechaza con ese motivo.
       const bloqueado = this.bloquesDe(s).find(o => this.bloqueado(o.fecha, o.inicio));
       if (bloqueado) {
@@ -238,12 +247,12 @@ function panelValidador(datos, validador, urlResolver) {
       // Pierden la solicitud entera, no solo el bloque que comparten.
       rivales.forEach(r => this.registrarSol(r, "rechazado", motivo, "Se asignó a la solicitud #" + s.id));
     },
-    abrirRechazo(p) { this.limpiarAviso(); this.rechazando = p.ticket; },
+    abrirRechazo(p) { this.limpiarAviso(); this.rechazando = p.ticket; this.enfocarMotivo("sol-" + p.sol.id); },
     // AC4: rechazar sin motivo no se puede. En un tope el motivo es el de la
     // tarjeta (clave del bloque); sin tope, el de la solicitud (su primer ticket).
     async rechazar(p, clave = p.ticket) {
       const motivo = (this.motivos[clave] || "").trim();
-      const enTarjeta = clave === p.ticket ? null : clave;
+      const enTarjeta = clave === p.ticket ? "sol-" + p.sol.id : clave;
       if (motivo.length < MINIMO_MOTIVO) {
         this.avisar("Para rechazar escribe el motivo (mínimo " + MINIMO_MOTIVO + " caracteres): le llega al encargado.",
                     enTarjeta);
@@ -351,8 +360,8 @@ function panelValidador(datos, validador, urlResolver) {
                 </p>
                 <span class="acciones">
                   <button class="btn activa" type="button" @click="aprobar(p)"
-                          :disabled="bloquesDe(p.sol).some(o => !!bloqueado(o.fecha, o.inicio))">Aprobar esta solicitud</button>
-                  <button class="btn peligro" type="button" @click="rechazar(p, c.clave)">Rechazar</button>
+                          :disabled="enviando || bloquesDe(p.sol).some(o => !!bloqueado(o.fecha, o.inicio))">Aprobar esta solicitud</button>
+                  <button class="btn peligro" type="button" :disabled="enviando" @click="rechazar(p, c.clave)">Rechazar</button>
                 </span>
               </div>
             </template>
@@ -451,23 +460,29 @@ function panelValidador(datos, validador, urlResolver) {
             </template>
           </tbody>
         </table>
-        <div class="pie-acciones">
-          <template x-if="rechazando !== bloquesDe(s)[0].ticket">
-            <span class="acciones">
-              <button class="btn activa" type="button" @click="aprobar(bloquesDe(s)[0])"
-                      :disabled="bloquesDe(s).some(p => !!bloqueado(p.fecha, p.inicio))">Aprobar solicitud</button>
-              <button class="btn peligro" type="button" @click="abrirRechazo(bloquesDe(s)[0])">Rechazar solicitud</button>
-            </span>
-          </template>
-          <template x-if="rechazando === bloquesDe(s)[0].ticket">
-            <span class="rechazo">
-              <input type="text" x-model="motivos[bloquesDe(s)[0].ticket]"
-                     @keydown.enter.prevent="rechazar(bloquesDe(s)[0])"
-                     placeholder="Motivo del rechazo (mínimo 10 caracteres)">
-              <button class="btn peligro" type="button" @click="rechazar(bloquesDe(s)[0])">Confirmar</button>
-              <button class="btn" type="button" @click="rechazando = null; limpiarAviso()">Cancelar</button>
-            </span>
-          </template>
+        <p class="error en-tarjeta" role="alert" x-show="errorEn === 'sol-' + s.id" x-text="error" x-cloak></p>
+        <div class="pie-acciones" x-show="rechazando !== bloquesDe(s)[0].ticket">
+          <span class="acciones">
+            <button class="btn activa" type="button" @click="aprobar(bloquesDe(s)[0])"
+                    :disabled="enviando || bloquesDe(s).some(p => !!bloqueado(p.fecha, p.inicio))">Aprobar solicitud</button>
+            <button class="btn peligro" type="button" :disabled="enviando"
+                    @click="abrirRechazo(bloquesDe(s)[0])">Rechazar solicitud</button>
+          </span>
+        </div>
+        {# AC4: el motivo se escribe en la misma fila que el del tope, con su etiqueta. #}
+        <div class="motivo" x-show="rechazando === bloquesDe(s)[0].ticket" x-cloak
+             @keydown.escape="rechazando = null; limpiarAviso()">
+          <label :for="'rechazo-' + s.id">Motivo del rechazo</label>
+          <input type="text" :id="'rechazo-' + s.id" x-model="motivos[bloquesDe(s)[0].ticket]"
+                 :class="{ falta: errorEn === 'sol-' + s.id }"
+                 @input="errorEn === 'sol-' + s.id && limpiarAviso()"
+                 @keydown.enter.prevent="rechazar(bloquesDe(s)[0])"
+                 placeholder="Le llega al encargado (mínimo 10 caracteres)">
+          <span class="acciones">
+            <button class="btn peligro" type="button" :disabled="enviando"
+                    @click="rechazar(bloquesDe(s)[0])">Confirmar rechazo</button>
+            <button class="btn" type="button" @click="rechazando = null; limpiarAviso()">Cancelar</button>
+          </span>
         </div>
       </article>
     </template>
