@@ -77,12 +77,13 @@ def _puede_pasar(usuario, rol):
     return usuario.tiene_rol(rol)
 
 
-def entrar(request, rol, destino, ruta, titulo):
-    """Las puertas del sistema. Cada una cambia el título, a quién deja pasar y a
-    qué panel lo lleva (`destino`, nombre de URL). La plantilla, la
-    autenticación, el bloqueo por intentos y la recuperación de clave son las
-    mismas para todas."""
-    contexto = {"form": AuthenticationForm(), "ruta": ruta, "titulo": titulo, "next": request.GET.get("next", "")}
+def entrar(request, rol, destino, ruta, titulo, puerta, nombre):
+    """Las puertas del sistema. Cada una cambia el título, a quién deja pasar, a
+    qué panel lo lleva (`destino`, nombre de URL) y su panel de color (`puerta`
+    y `nombre`). La plantilla, la autenticación, el bloqueo por intentos y la
+    recuperación de clave son las mismas para todas."""
+    contexto = {"form": AuthenticationForm(), "ruta": ruta, "titulo": titulo, "next": request.GET.get("next", ""),
+                "puerta": puerta, "nombre": nombre}
     if request.method != "POST":
         return render(request, "personas/login.html", contexto)
 
