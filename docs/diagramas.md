@@ -68,6 +68,23 @@ La recuperación de clave (AC6) no tiene diagrama propio: son las cuatro vistas
 que trae Django (`PasswordReset`, `Done`, `Confirm` y `Complete`), con enlace
 firmado y sin tabla nuestra. El proyecto solo pone las plantillas.
 
+### Ir al panel desde la raíz (US-08)
+
+Al entrar, cada puerta lleva a su `destino`. La raíz `/` es para quien ya tiene
+sesión y vuelve al sitio. Como los roles son grupos de Django y una persona
+puede tener varios (AC6), `destino_tras_login` los pregunta en orden de
+prioridad, administración, validación y personal de apoyo, y manda al panel del
+primero que tiene. Sin ninguno va al formulario de reserva, que es el panel del
+solicitante (US-01 AC3). `is_staff` cuenta como administrador sin consultar la
+base, porque el superusuario que crea el despliegue no pertenece a ningún grupo.
+
+![Ir al panel desde la raíz](diagramas/us-08/ir-al-panel.png)
+
+Cada `tiene_rol` es una consulta, y se deja de preguntar en el primer rol que la
+persona tiene. Sin sesión, `login_required` manda a la puerta del solicitante con
+`?next=/`. Cerrar sesión no tiene diagrama: es `LogoutView` de Django, que
+vuelve a esa misma puerta.
+
 ### Elegir el área académica (US-02)
 
 La solicitud siempre queda vinculada a un área, así que es lo primero que se
