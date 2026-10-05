@@ -1,0 +1,88 @@
+@startuml cambiar-mes
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Cambiar de mes en el calendario (US-02, paso 1)
+
+actor "Solicitante" as S
+participant "<b>componente del calendario</b>\n<size:11>solicitudes/componentes/</size>\n<size:11>calendario_disponibilidad.html</size>" as P <<presentación>>
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.calendar</b>\n<size:11>solicitudes/calendar.py</size>" as K <<presentación>>
+participant "<b>solicitudes.forms</b>\n<size:11>solicitudes/forms.py</size>" as F <<presentación>>
+participant "<b>solicitudes.wizard</b>\n<size:11>solicitudes/wizard.py</size>" as W <<presentación>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as A <<dominio>>
+participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+S -> P ++ : clic en «Anterior» o «Siguiente», o elige mes y año en el selector
+P -> N ++ : $comentario("hx-get; hx-include suma la fecha ya elegida en el paso 1")\nGET /solicitar/calendario/?year=…&month=…&paso=1&fecha=… → calendario(request)
+N -> N : fecha_str = request.GET.get("fecha")
+N -> K ++ : construir_calendario_contexto(request, fecha_str=fecha_str, bloques_seleccionados_ids=[])
+K -> W ++ : obtener_limites_reserva()
+W -> A ++ : primera_fecha_pedible()
+A -> C ++ : Parametros.cargar()
+C -> D ++ : SELECT configuracion_parametros
+return fila
+return parametros
+return fecha_minima
+return fecha_minima, fecha_maxima
+K -> K : $comentario("el mes pedido; si cae antes o después de los límites, el más cercano que sí")\nyear, month = int(request.GET["year"]), int(request.GET["month"])
+
+opt hay una fecha elegida
+  K -> F ++ : $comentario("la misma validación de fecha del formulario")\nFechaReservaForm.fecha_de(fecha_str)
+  F -> W ++ : obtener_limites_reserva()
+  W -> A ++ : primera_fecha_pedible()
+  A -> C ++ : Parametros.cargar()
+  C -> D ++ : SELECT configuracion_parametros
+  return fila
+  return parametros
+  return fecha_minima
+  return fecha_minima, fecha_maxima
+  return fecha_seleccionada
+  K -> V ++ : obtener_bloques_dia_para_usuario(fecha_seleccionada, usuario)
+  V -> A ++ : disponibilidad(fecha, fecha)
+  A -> A ++ : plantilla_semanal()
+  A -> D ++ : SELECT agenda_bloque
+  return filas
+  return plantilla
+  A -> A ++ : bloqueos_por_fecha(fecha, fecha)
+  A -> D ++ : SELECT agenda_bloqueo ⋈ agenda_bloque
+  return filas
+  return bloqueos
+  return {fecha: bloques}
+  V -> D ++ : SELECT solicitudes_solicitudbloque, solicitudes_solicitud, personas_usuario
+  return filas
+  return bloques_seleccionados
+  note right of K
+    Van en la respuesta, pero htmx se queda
+    solo con el calendario: la lista de
+    bloques del paso 1 no cambia.
+  end note
+end
+
+K -> V ++ : $comentario("qué días del mes tienen algún bloque libre")\nobtener_dias_con_disponibilidad(year, month)
+V -> A ++ : disponibilidad(primero_del_mes, ultimo_del_mes)
+A -> A ++ : plantilla_semanal()
+A -> D ++ : SELECT agenda_bloque
+return filas
+return plantilla
+A -> A ++ : bloqueos_por_fecha(desde, hasta)
+A -> D ++ : SELECT agenda_bloqueo ⋈ agenda_bloque
+return filas
+return bloqueos
+return jornada_mes
+V -> D ++ : $comentario("los bloques aceptados del mes, sin los cancelados")\nSELECT solicitudes_solicitudbloque, solicitudes_solicitud
+return filas
+return dias_disponibles
+K -> K : $comentario("la grilla HTML del mes; un día con bloque libre y dentro de los límites lleva su enlace")\nAgendaCalendar(dias_disponibles, year, month, …).formatmonth(year, month)
+K -> W ++ : SolicitudWizard(request.session).datos
+return reserva
+return contexto
+N -> N : render(request, "solicitudes/calendario.html", contexto)
+N --> P -- : 200 · solicitudes/calendario.html
+P -> P : $comentario("htmx toma de la página solo el calendario y lo reemplaza")\nhx-select="#calendario-componente" hx-swap="outerHTML"
+P -> P : $comentario("si el día elegido está en este mes, lo vuelve a marcar")\n@htmx:after-swap: td[data-date=fecha].classList.add("selected")
+P --> S : el mes nuevo, con los días que se pueden pedir
+deactivate P
+@enduml

@@ -114,6 +114,35 @@ usuario ya tiene pendiente se rechaza aquí, igual que la pantalla lo
 deshabilita. Si todo es válido queda en la sesión y se pasa al paso 2; si no,
 vuelve el calendario con el error y lo que ya tenía elegido.
 
+### Ver los bloques de un día (US-02)
+
+Elegir un día no envía el paso 1. Cada día pedible del calendario es un enlace
+con `hx-get` a `/solicitar/bloques/`, que devuelve solo la lista de bloques, y
+htmx la pone en el panel. La fecha pasa por `FechaReservaForm.fecha_de`, la
+misma regla del paso 1: una fecha escrita a mano fuera del período no muestra
+bloques. La lista sale de `obtener_bloques_dia_para_usuario`, igual que en la
+validación del paso 1: sin lo bloqueado (US-17) ni lo ya aceptado, y con lo que
+el usuario ya pidió marcado y sin poder elegirse.
+
+![Ver los bloques de un día](diagramas/us-02/consultar-bloques.png)
+
+### Cambiar de mes en el calendario (US-02)
+
+Las flechas y el selector de mes y año piden `/solicitar/calendario/` con htmx.
+Esa vista responde la página del calendario (`calendario.html`) y htmx toma de
+ella solo el componente (`hx-select="#calendario-componente"`).
+`construir_calendario_contexto` lleva el mes pedido a los límites de reserva y
+marca qué días tienen algún bloque libre (`obtener_dias_con_disponibilidad`).
+
+![Cambiar de mes en el calendario](diagramas/us-02/cambiar-mes.png)
+
+La petición incluye la fecha ya elegida (`hx-include`), para que el día siga
+marcado en el mes nuevo. Con esa fecha la vista también calcula sus bloques, que
+van en la respuesta pero quedan fuera de lo que htmx toma: la lista del paso 1 no
+cambia. El `POST` de esa vista, con su propio botón de confirmar, no tiene
+diagrama: no es parte del asistente y solo se alcanza sin JavaScript, desde el
+selector rápido.
+
 ### Completar los datos de la actividad (US-02)
 
 `SolicitudForm` se usa sin el campo de términos (`exigir_terminos=False`),
