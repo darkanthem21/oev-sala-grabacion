@@ -6,6 +6,9 @@ Tu solicitud #{{ solicitud.pk }} para el {{ solicitud.fecha|date:"l j \d\e F" }}
 Uno o más de esos bloques se asignaron a otra solicitud.
 {% endif %}{% if solicitud.motivo_resolucion %}
 Motivo: {{ solicitud.motivo_resolucion }}
+{% endif %}{% if url_confirmar %}
+Confirma tu asistencia a más tardar el día anterior en:
+{{ url_confirmar }}
 {% endif %}{% if solicitud.estado_validacion == "RECHAZADA" %}
 Si todavía necesitas grabar, puedes pedir otro horario en el sistema.
 {% endif %}

@@ -574,6 +574,16 @@ a.btn-accion:focus-visible { outline: 2px solid var(--acento); outline-offset: 2
 }
 .hoja .btn-retirar:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 
+/* US-03: confirmar sí es lo esperado de una aceptada, así que lleva el color
+ * de acción; es un enlace a la página de confirmación, no confirma solo. */
+.hoja .btn-confirmar {
+  display: block; width: fit-content; margin: .4rem 0 0; padding: .3rem .65rem;
+  background: var(--accion); color: var(--superficie); border-radius: 3px;
+  font-size: .78rem; font-weight: 700; text-decoration: none;
+}
+.hoja .btn-confirmar:hover { background: var(--tinta); }
+.hoja .btn-confirmar:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
 /* En pantallas angostas cada solicitud pasa a ser una ficha. */
 @media (max-width: 36rem) {
   .historial thead { display: none; }

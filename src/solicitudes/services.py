@@ -12,6 +12,8 @@ from agenda.models import Bloque, bloqueo_de, disponibilidad
 from agenda.signals import Reserva
 from notificaciones.services import avisar
 from personas.models import Area
+from django.urls import reverse
+
 from .models import Acompanante, Solicitud, SolicitudBloque
 
 
@@ -252,9 +254,13 @@ def _rivales(solicitud):
     ).exclude(pk=solicitud.pk)
 
 
-def _avisar_resolucion(solicitud, asignada=None):
-    """AC4: un correo por solicitud, cuando la resolución se confirma."""
+def _avisar_resolucion(solicitud, asignada=None, url_base=""):
+    """AC4: un correo por solicitud, cuando la resolución se confirma. El de una
+    aceptada trae el enlace para confirmar la asistencia (US-03)."""
     persona = solicitud.solicitante
+    url_confirmar = ""
+    if url_base and solicitud.estado_validacion == Solicitud.EstadoValidacion.ACEPTADA:
+        url_confirmar = url_base + reverse("confirmar_solicitud", args=[solicitud.pk])
     transaction.on_commit(
         partial(
             avisar,
@@ -269,6 +275,7 @@ def _avisar_resolucion(solicitud, asignada=None):
                     solicitud.solicitudes_bloques.select_related("bloque").order_by("bloque__inicio")
                 ],
                 "asignada": asignada,
+                "url_confirmar": url_confirmar,
             },
         ),
         robust=True,
@@ -276,13 +283,16 @@ def _avisar_resolucion(solicitud, asignada=None):
 
 
 @transaction.atomic
-def resolver(solicitud_id, aprobar, motivo, quien):
+def resolver(solicitud_id, aprobar, motivo, quien, url_base=""):
     """US-07: aprueba o rechaza una solicitud entera; devuelve las que cambiaron.
 
     Aprobar rechaza enteras a sus rivales con el mismo motivo (AC2 y AC4). AC3
     se sostiene con bloqueos de fila: la solicitud y sus rivales se bloquean en
     orden de id, así dos validadores que resuelven el mismo bloque a la vez
     quedan en fila y el segundo ve lo que decidió el primero.
+
+    `url_base` (esquema y dominio) arma el enlace absoluto de confirmación del
+    correo; sin él, el correo sale sin enlace.
     """
     solicitud = Solicitud.objects.filter(pk=solicitud_id).first()
     if solicitud is None:
@@ -334,5 +344,22 @@ def resolver(solicitud_id, aprobar, motivo, quien):
         s.save(update_fields=[
             "estado_validacion", "motivo_resolucion", "resuelta_por", "resuelta_en", "actualizado_en",
         ])
-        _avisar_resolucion(s, asignada=None if s is solicitud else solicitud)
+        _avisar_resolucion(s, asignada=None if s is solicitud else solicitud, url_base=url_base)
     return [s for s, _ in cambios]
+
+
+def confirmar_solicitud(usuario, solicitud_id):
+    """US-03: quien pidió confirma que va a usar la sala, a más tardar el día
+    anterior. Un solo UPDATE condicionado, como retirar_solicitud: si ya no
+    cumple (ajena, sin aceptar, ya confirmada o cancelada, o es hoy), no cambia
+    nada. Devuelve si se confirmó."""
+    return Solicitud.objects.filter(
+        pk=solicitud_id,
+        solicitante=usuario,
+        estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
+        estado_confirmacion__in=[Solicitud.EstadoConfirmacion.NO_HABILITADA, Solicitud.EstadoConfirmacion.PENDIENTE],
+        fecha__gt=timezone.localdate(),
+    ).update(
+        estado_confirmacion=Solicitud.EstadoConfirmacion.CONFIRMADA,
+        actualizado_en=timezone.now(),
+    ) == 1

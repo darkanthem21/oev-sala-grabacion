@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Prefetch
+from django.utils import timezone
 
 from agenda.models import primera_fecha_pedible
 from personas.models import Area
@@ -167,6 +168,16 @@ class Solicitud(models.Model):
     def puede_retirarse(self):
         """Solo mientras la Oficina no la haya revisado (ver services.retirar_solicitud)."""
         return self.estado_validacion == self.EstadoValidacion.PENDIENTE
+
+    @property
+    def puede_confirmarse(self):
+        """US-03: aceptada, sin confirmar ni cancelar, y a más tardar el día
+        anterior (ver services.confirmar_solicitud)."""
+        return (
+            self.estado_validacion == self.EstadoValidacion.ACEPTADA
+            and self.estado_confirmacion in (self.EstadoConfirmacion.NO_HABILITADA, self.EstadoConfirmacion.PENDIENTE)
+            and self.fecha > timezone.localdate()
+        )
 
     @property
     def estado_general(self):

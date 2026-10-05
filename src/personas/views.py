@@ -6,6 +6,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 
 from configuracion.models import Parametros
@@ -48,7 +49,7 @@ def _con_error(request, form, ruta):
     return render(
         request,
         "personas/_formulario_ingreso.html",
-        {"form": form, "error": mensaje, "ruta": ruta},
+        {"form": form, "error": mensaje, "ruta": ruta, "next": request.POST.get("next", "")},
     )
 
 
@@ -81,7 +82,7 @@ def entrar(request, rol, destino, ruta, titulo):
     qué panel lo lleva (`destino`, nombre de URL). La plantilla, la
     autenticación, el bloqueo por intentos y la recuperación de clave son las
     mismas para todas."""
-    contexto = {"form": AuthenticationForm(), "ruta": ruta, "titulo": titulo}
+    contexto = {"form": AuthenticationForm(), "ruta": ruta, "titulo": titulo, "next": request.GET.get("next", "")}
     if request.method != "POST":
         return render(request, "personas/login.html", contexto)
 
@@ -106,8 +107,13 @@ def entrar(request, rol, destino, ruta, titulo):
             entrante.bloqueado_hasta = None
             entrante.save(update_fields=["intentos_fallidos", "bloqueado_hasta"])
         login(request, entrante)
+        # Vuelve a la página que pidió el ingreso (p. ej. el enlace de
+        # confirmación del correo), solo si es de este sitio.
+        siguiente = request.POST.get("next", "")
+        if not url_has_allowed_host_and_scheme(siguiente, {request.get_host()}, request.is_secure()):
+            siguiente = reverse(destino)
         # 204 sin cuerpo porque no hay nada que pegar; el navegador navega.
-        return HttpResponse(status=204, headers={"HX-Redirect": reverse(destino)})
+        return HttpResponse(status=204, headers={"HX-Redirect": siguiente})
 
     if usuario:
         _registrar_fallo(usuario)

@@ -7,7 +7,6 @@ from django.urls import reverse
 from django.utils import timezone
 
 from agenda.models import Bloque, Dia, primera_fecha_pedible
-from configuracion.models import Parametros
 from personas.models import Area, Rol
 from solicitudes.models import Solicitud, SolicitudBloque
 from solicitudes.views import SOLICITUDES_POR_PAGINA
@@ -267,21 +266,13 @@ class ProximasAnterioresTestCase(TestCase):
         self.assertContains(self.client.get(self.url), nota)
         self.assertNotContains(self.client.get(self.url, {"vista": "anteriores"}), nota)
 
-    def test_nota_de_confirmacion_usa_el_plazo_configurado(self):
-        parametros = Parametros.cargar()
-        casos = [
-            (2, "recibirás una notificación 2 días antes", "a más tardar el día anterior"),
-            (5, "recibirás una notificación 5 días antes", "a más tardar el día anterior"),
-            (1, "recibirás una notificación el día anterior", "ese mismo día"),
-        ]
-        for plazo, aviso, limite in casos:
-            with self.subTest(plazo=plazo):
-                parametros.plazo_confirmacion_dias = plazo
-                parametros.save()
-                # Sin depender de cómo la plantilla corta las líneas.
-                texto = " ".join(self.client.get(self.url).content.decode().split())
-                self.assertIn(aviso, texto)
-                self.assertIn(limite, texto)
+    def test_nota_de_confirmacion_dice_como_confirmar(self):
+        """US-03: la nota describe lo que el sistema hace hoy (correo con el
+        enlace y confirmar aquí) y no promete avisos ni cancelaciones automáticas."""
+        texto = " ".join(self.client.get(self.url).content.decode().split())
+        self.assertIn("te llegará un correo con el enlace para confirmarla", texto)
+        self.assertIn("a más tardar el día anterior", texto)
+        self.assertNotIn("se cancelará", texto)
 
 
 class RetirarSolicitudTestCase(TestCase):
