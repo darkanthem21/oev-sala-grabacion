@@ -222,6 +222,20 @@ servidor. La vuelta por redirección es para que recargar no reenvíe el
 formulario y duplique filas en la bitácora. `changed_data` deja fuera lo que no
 cambió, así que guardar sin tocar nada no ensucia el historial.
 
+### Ver los parámetros y los últimos cambios (US-04)
+
+Es la vuelta de Guardar: la pestaña Reglas con los valores vigentes y los últimos
+15 cambios de la bitácora, con quién los hizo (AC4). El historial completo está
+en la administración de Django; aquí basta con lo último, que es como se nota un
+cambio ajeno. `Parametros.cargar()` es el único punto de entrada a la fila y la
+crea con los valores del cliente si todavía no existe (AC2).
+
+![Ver los parámetros y los últimos cambios](diagramas/us-04/ver-reglas.png)
+
+`?guardados=` llega por la barra de direcciones, así que `_guardados` acepta
+solo un número: con él la página dice cuántos cambios quedaron, y con 0, que no
+había nada que cambiar.
+
 ### Editar la plantilla semanal de bloques (US-04)
 
 Un bloque es un tramo de la semana, no una fecha: el cambio vale para ese día
@@ -243,6 +257,22 @@ el bloque elegido.
 
 Quitar no pide confirmación: desactiva y ofrece deshacer después, que es más
 rápido y no se pierde nada.
+
+### Ver la jornada en la vista mensual (US-04)
+
+Es la vista con que abre el panel del administrador: la mensual es la de por
+defecto, a pedido del cliente. Sirve para revisar, no para editar. Como la
+jornada es la misma todas las semanas, se resume una vez por columna: cuántos
+bloques y horas tiene ese día de la semana, y si se sale del molde. Las celdas
+muestran lo que cambia por fecha, que son los bloqueos (US-17), y al pie va el
+registro de los últimos bloqueos y levantamientos (US-17 AC6).
+
+![Ver la jornada en la vista mensual](diagramas/us-04/ver-mes.png)
+
+El panel de cada bloqueo dice quién lo puso, y `bloqueos_por_fecha` trae el
+bloque pero no a esa persona: la plantilla hace una consulta por cada bloqueo
+del mes. La pestaña Áreas no tiene diagrama: hoy es un marcador que solo dibuja
+la plantilla, y su contenido llega con US-05.
 
 ### Ver mis solicitudes (US-09)
 
