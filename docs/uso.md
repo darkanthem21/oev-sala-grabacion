@@ -17,14 +17,15 @@ Este manual cubre lo que hoy está disponible en el sistema:
 ## Puertas de acceso
 
 Cada rol entra por su propia dirección. Solo la del solicitante está enlazada
-desde el sitio; las otras tres las conoce quien las usa.
+desde el sitio; las otras tres las conoce quien las usa. Cada puerta se reconoce
+por el panel de la izquierda, con el nombre y el color del rol.
 
-| Rol | Dirección |
-|---|---|
-| Solicitante | `/solicitante/entrar/` |
-| Administrador | `/configuracion/entrar/` |
-| Validador | `/validacion/entrar/` |
-| Personal de apoyo | `/apoyo/entrar/` |
+| Rol | Dirección | Panel |
+|---|---|---|
+| Solicitante | `/solicitante/entrar/` | Azul, **Solicitantes** |
+| Administrador | `/configuracion/entrar/` | Azul petróleo, **Administración** |
+| Validador | `/validacion/entrar/` | Vino, **Validación** |
+| Personal de apoyo | `/apoyo/entrar/` | Gris azulado, **Personal de apoyo** |
 
 ---
 
@@ -75,8 +76,8 @@ pantalla ofrece **Pedir otro enlace**.
 
 ## 2. Configurar la sala
 
-El panel del administrador tiene tres pestañas: **Bloques**, **Áreas** y
-**Reglas**. Se entra por `/configuracion/entrar/`.
+El panel del administrador tiene cuatro pestañas: **Bloques**, **Áreas**,
+**Reglas** y **Validación**. Se entra por `/configuracion/entrar/`.
 
 ![Puerta de la administración](uso/us-04/puerta-administracion.png)
 

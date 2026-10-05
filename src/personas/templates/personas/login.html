@@ -4,31 +4,22 @@
 {% block estilos %}<link rel="stylesheet" href="{% static 'personas/ingreso.css' %}">{% endblock %}
 
 {% block contenido %}
-<video id="fondo" class="fondo" muted loop playsinline
-       poster="{% static 'video/fondo.jpg' %}"
-       data-src="{% static 'video/fondo.mp4' %}"></video>
-
-<script>
-  (function () {
-    var v = document.getElementById('fondo');
-    function arranca() {
-      if (matchMedia('(min-width: 700px)').matches &&
-          !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        v.src = v.dataset.src;
-        v.play();
-      }
-    }
-    document.readyState === 'complete'
-      ? arranca()
-      : window.addEventListener('load', arranca);
-  })();
-</script>
-
-<main class="tarjeta">
-  <h1>{{ titulo }}</h1>
-  <p class="sub">Sala de grabación · Oficina de Educación Virtual</p>
-  {% include "personas/_formulario_ingreso.html" %}
-  <img class="logo" src="{% static 'img/Facultad-color-negro.png' %}"
-       alt="Universidad Austral de Chile · Facultad de Ciencias de la Ingeniería">
-</main>
+{% comment %}
+  Las cuatro puertas comparten esta plantilla y se reconocen por el panel de la
+  izquierda: el color del rol (ingreso.css, por data-puerta) y su nombre.
+{% endcomment %}
+<div class="ingreso" data-puerta="{{ puerta }}">
+  <aside class="panel-rol">
+    <p class="rol">{{ nombre }}</p>
+    <p class="sala">Sala de grabación · Oficina de Educación Virtual</p>
+  </aside>
+  <main class="lado-form">
+    <div class="tarjeta">
+      <h1>{{ titulo }}</h1>
+      {% include "personas/_formulario_ingreso.html" %}
+      <img class="logo" src="{% static 'img/Facultad-color-negro.png' %}"
+           alt="Universidad Austral de Chile · Facultad de Ciencias de la Ingeniería">
+    </div>
+  </main>
+</div>
 {% endblock %}

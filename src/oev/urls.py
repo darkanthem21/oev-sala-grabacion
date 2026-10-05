@@ -37,34 +37,35 @@ urlpatterns = [
     # US-08 AC4: una puerta por rol, todas en `<rol>/entrar/`. Solo la del
     # solicitante se enlaza desde el sitio público. Todas reusan `entrar`, así que
     # comparten plantilla, autenticación, bloqueo por intentos y recuperación de
-    # clave. Lo que cambia es el título, el grupo que dejan pasar y el panel al
-    # que llevan.
+    # clave. Lo que cambia es el título, el grupo que dejan pasar, el panel al
+    # que llevan y cómo se ven: `puerta` elige el color del rol y `nombre` es lo
+    # que dice el panel de la izquierda.
     path(
         "solicitante/entrar/",
         views.entrar,
         {"ruta": "login_solicitante", "rol": Rol.SOLICITANTE, "destino": "solicitar",
-         "titulo": "Ingreso de solicitantes"},
+         "titulo": "Ingreso de solicitantes", "puerta": "solicitante", "nombre": "Solicitantes"},
         name="login_solicitante",
     ),
     path(
         "configuracion/entrar/",
         views.entrar,
         {"ruta": "login_gestion", "rol": Rol.ADMINISTRADOR, "destino": "panel_bloques",
-         "titulo": "Ingreso de administración"},
+         "titulo": "Ingreso de administración", "puerta": "gestion", "nombre": "Administración"},
         name="login_gestion",
     ),
     path(
         "validacion/entrar/",
         views.entrar,
         {"ruta": "login_validacion", "rol": Rol.VALIDADOR, "destino": "panel_validador",
-         "titulo": "Ingreso de validadores"},
+         "titulo": "Ingreso de validadores", "puerta": "validacion", "nombre": "Validación"},
         name="login_validacion",
     ),
     path(
         "apoyo/entrar/",
         views.entrar,
         {"ruta": "login_apoyo", "rol": Rol.APOYO, "destino": "panel_apoyo",
-         "titulo": "Ingreso del personal de apoyo"},
+         "titulo": "Ingreso del personal de apoyo", "puerta": "apoyo", "nombre": "Personal de apoyo"},
         name="login_apoyo",
     ),
     path("apoyo/", uso.bloques, name="panel_apoyo"),

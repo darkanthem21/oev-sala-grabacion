@@ -1,6 +1,31 @@
 /* Solo variables de marca.css, ningún color literal (docs/estilo.md). */
+
+/* Cada puerta se reconoce por el color de su rol. Son los únicos cuatro colores
+ * del manual que admiten texto blanco con 4.5:1 o más, así que la línea chica
+ * de la sala también se lee. */
+[data-puerta="solicitante"] { --rol: var(--accion); }       /* 6.3:1 */
+[data-puerta="validacion"]  { --rol: var(--destacado); }    /* 5.8:1 */
+[data-puerta="gestion"]     { --rol: var(--tinta); }        /* 10.3:1 */
+[data-puerta="apoyo"]       { --rol: var(--tinta-suave); }  /* 5.4:1 */
+
+.ingreso {
+  min-height: 100vh; display: grid; grid-template-columns: minmax(18rem, 32.5rem) 1fr;
+  background: var(--fondo);
+}
+/* El nombre del rol arriba y la sala abajo; el color hace el resto. */
+.panel-rol {
+  background: var(--rol); color: var(--superficie); padding: 4rem 3.5rem 3.5rem;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 2rem;
+}
+.panel-rol .rol {
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: clamp(2.25rem, 4vw, 3.25rem);
+  line-height: 1.05; letter-spacing: -.01em; margin: 0;
+}
+.panel-rol .sala { margin: 0; font-size: 1.05rem; line-height: 1.45; max-width: 24ch; }
+.lado-form { display: grid; place-items: center; padding: 2rem 1rem; }
+
 .tarjeta {
-  width: 100%; max-width: 23rem; margin: 4rem auto;
+  width: 100%; max-width: 23rem; box-sizing: border-box;
   background: var(--superficie); border: 1px solid var(--borde); border-radius: 4px;
   padding: 2rem 1.75rem;
   /* Las etiquetas son de bloque y ocupan el ancho entero de la tarjeta, así que
@@ -12,8 +37,7 @@
   display: block; width: 100%; max-width: 16rem; height: auto;
   margin: 2rem auto 0;
 }
-.tarjeta h1 { font-size: 1.35rem; margin: 0 0 .25rem; }
-.sub { color: var(--tinta-suave); font-size: .9rem; margin: 0 0 1.75rem; }
+.tarjeta h1 { font-size: 1.35rem; margin: 0 0 1.75rem; }
 
 label { display: block; font-weight: 500; font-size: .85rem; margin-bottom: .35rem; }
 input[type=email], input[type=password], input[type=text] {
@@ -25,10 +49,13 @@ input[type=email], input[type=password], input[type=text] {
 
 button {
   width: 100%; padding: .7rem; border: 0; border-radius: 3px; cursor: pointer;
-  background: var(--accion); color: var(--superficie);
+  background: var(--rol); color: var(--superficie);
   font-family: var(--fuente-titulo); font-weight: 700; font-size: .9rem;
 }
 button:hover { background: var(--tinta); }
+/* En administración el botón ya es del color de la tinta. */
+[data-puerta="gestion"] button:hover { background: var(--tinta-suave); }
+.ingreso a { color: var(--rol); }
 
 /* El error va en tinta con una marca naranja al costado, porque el naranja da
  * 3.5:1 sobre el fondo y el texto normal exige 4.5:1. */
@@ -43,15 +70,11 @@ button:hover { background: var(--tinta); }
 
 .pie { margin-top: 1.25rem; font-size: .85rem; text-align: center; }
 
-.fondo {
-  position: fixed; inset: 0; width: 100%; height: 100%;
-  object-fit: cover;
-  /* Con z-index -1 quedaría detrás del fondo del body, que es opaco y lo
-   * taparía. Con 0 se pinta encima de ese fondo y la tarjeta sube a 1. */
-  z-index: 0;
-  /* Es decoración y no debe interceptar ningún clic, aunque cubra la ventana. */
-  pointer-events: none;
+/* En pantallas angostas el panel pasa a ser una franja arriba del formulario. */
+@media (max-width: 52rem) {
+  .ingreso { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  .panel-rol { padding: 1.75rem 1.5rem 1.5rem; gap: .4rem; }
+  .panel-rol .rol { font-size: 1.85rem; }
+  .panel-rol .sala { font-size: .9rem; max-width: none; }
+  .lado-form { place-items: start center; padding: 1.25rem 1rem 2rem; }
 }
-/* La tarjeta se mantiene opaca para que el texto nunca quede sobre el video y
- * los contrastes medidos sigan valiendo. */
-.tarjeta { position: relative; z-index: 1; box-shadow: 0 2px 24px rgb(0 0 0 / .18); }
