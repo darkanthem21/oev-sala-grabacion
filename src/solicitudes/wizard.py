@@ -1,20 +1,9 @@
 import calendar
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time
 from enum import IntEnum
 from typing import Any, Dict, List, Optional, Tuple
 
 from django.conf import settings
-
-
-def obtener_lunes_semana_subsiguiente(fecha_referencia: Optional[date] = None) -> date:
-    """
-    Retorna la primera fecha pedible (lunes mínimo permitido por desfase).
-    """
-    from agenda.models import primera_fecha_pedible
-    from django.utils import timezone
-    if fecha_referencia is not None:
-        return primera_fecha_pedible(datetime.combine(fecha_referencia, time(9, 0), tzinfo=timezone.get_current_timezone()))
-    return primera_fecha_pedible()
 
 
 def obtener_limites_reserva(fecha_referencia: Optional[date] = None) -> Tuple[date, date]:
@@ -115,6 +104,55 @@ class SolicitudWizard:
         """Indica si la sesión ya cuenta con un área académica fijada."""
         datos = self.datos
         return bool(datos.get("area_id") and datos.get("area_nombre"))
+
+    # Lo que guarda cada paso. Las vistas leen estas propiedades y no las
+    # claves de la sesión, que solo se escriben en esta clase.
+    @property
+    def area_id(self) -> Optional[int]:
+        return self.datos.get("area_id")
+
+    @property
+    def fecha_str(self) -> Optional[str]:
+        return self.datos.get("fecha")
+
+    @property
+    def bloques_ids(self) -> List[int]:
+        return self.datos.get("bloques_ids", [])
+
+    @property
+    def motivo(self) -> str:
+        return self.datos.get("motivo", "")
+
+    @property
+    def observaciones(self) -> str:
+        return self.datos.get("observaciones", "")
+
+    @property
+    def personas(self) -> int:
+        return self.datos.get("personas", 1)
+
+    @property
+    def acompanantes(self) -> List[Dict[str, str]]:
+        return self.datos.get("acompanantes", [])
+
+    def ajustar_area(self, areas) -> Optional[str]:
+        """Deja en la sesión un área vigente cuando no hay nada que elegir.
+
+        `areas` son las áreas activas del usuario. Con una sola, se fija esa (y
+        si cambió, se borra el horario elegido para la anterior). Con varias,
+        devuelve "elegir" si todavía no escogió ninguna, o "cambiar" si la que
+        escogió ya no está entre las activas. None: el asistente puede seguir.
+        """
+        if len(areas) == 1:
+            unica = areas[0]
+            if self.area_id != unica.id:
+                self.guardar_area(unica.id, unica.nombre)
+            return None
+        if not self.tiene_area:
+            return "elegir"
+        if self.area_id not in {area.id for area in areas}:
+            return "cambiar"
+        return None
 
     def guardar_area(self, area_id: int, area_nombre: str, reset_horario: bool = False) -> None:
         """Almacena el área académica seleccionada."""

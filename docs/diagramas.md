@@ -76,16 +76,20 @@ elegidos, porque se habían elegido para la otra.
 
 ### Elegir el día y los bloques (US-02)
 
-Cada clic en un día del calendario pide por htmx solo la lista de bloques de
-esa fecha. `obtener_bloques_dia_para_usuario` parte de la plantilla semanal
-(`agenda.disponibilidad`), esconde los bloques que ya tienen una reserva
-aceptada y marca los que el mismo usuario ya pidió.
+Todos los pasos del asistente parten igual: `solicitar` lee las áreas activas
+del usuario y `SolicitudWizard.ajustar_area` fija la única que tenga, o lo
+manda a elegir si tiene varias y falta o dejó de estar activa. Después
+`validar_acceso` decide el paso: si la sesión no completó los anteriores, se
+atiende el primero que falta.
 
 ![Elegir el día y los bloques](diagramas/us-02/elegir-horario.png)
 
-Al continuar, la vista vuelve a consultar los bloques en vez de fiarse de lo que
-mostró la pantalla: entre el clic y el envío alguien pudo ocuparlos. Lo elegido
-se guarda en la sesión; la base no se toca hasta el paso 3.
+La fecha y los bloques los valida `SeleccionHorarioForm`, que es la misma regla
+del calendario público: la fecha, con formato y dentro de los límites de
+reserva, y los bloques, que sigan libres para ese usuario. Un bloque que el
+usuario ya tiene pendiente se rechaza aquí, igual que la pantalla lo
+deshabilita. Si todo es válido queda en la sesión y se pasa al paso 2; si no,
+vuelve el calendario con el error y lo que ya tenía elegido.
 
 ### Completar los datos de la actividad (US-02)
 
@@ -98,11 +102,20 @@ acompañante están en formularios distintos, así que la regla que las cruza
 
 ### Enviar una solicitud de reserva (US-02)
 
-El envío de la solicitud corresponde al paso final de confirmación en el asistente multipaso. La solicitud exige la aceptación obligatoria de los términos y condiciones del servicio (AC10) antes de procesar el registro.
-
-El guardado se ejecuta en una transacción atómica dentro de `solicitudes.services.guardar_solicitud_completa`: se persiste la `Solicitud` con estado de validación pendiente (AC5), se crean los registros de `SolicitudBloque` asociando cada bloque de la plantilla semanal con la fecha elegida, y se registran los acompañantes declarados en sala (AC6). Si la validación de algún bloque o campo falla, la transacción se cancela por completo sin dejar datos huérfanos. Al finalizar con éxito, se purga la sesión del asistente (`wizard.limpiar()`) y se presenta la confirmación con el resumen de la solicitud.
+El envío es el paso 3 del asistente y exige aceptar los términos y condiciones
+(AC10). El guardado es una transacción atómica dentro de
+`guardar_solicitud_completa`: la `Solicitud` con la fecha elegida y la validación
+pendiente (AC5), un `SolicitudBloque` por bloque y los acompañantes declarados
+(AC6). Si un bloque está inactivo, ya tomado o ya pedido, la transacción se
+deshace entera y la vista vuelve a mostrar el paso 3 con el error.
 
 ![Enviar una solicitud de reserva](diagramas/us-02/enviar-solicitud.png)
+
+Al guardar se limpia la sesión del asistente y se redirige a
+`/solicitar/enviada/<id>/`: recargar no reenvía el formulario. La confirmación
+lee la solicitud de la base, solo si es del usuario, y muestra su estado actual.
+`SolicitudBloque.save()` vuelve a llamar a `clean()` después de `full_clean()`,
+así que las consultas de validación de cada bloque se hacen dos veces.
 
 ### Abrir el panel del validador (US-07)
 
@@ -173,6 +186,46 @@ el bloque elegido.
 Quitar no pide confirmación: desactiva y ofrece deshacer después, que es más
 rápido y no se pierde nada.
 
+### Ver mis solicitudes (US-09)
+
+El historial lista todas las solicitudes del usuario, de cualquiera de sus
+áreas, con el área, la fecha, los bloques y el estado. Se separa en Próximas y
+Anteriores por día calendario: una solicitud es próxima si su fecha es hoy o
+posterior, aunque la hora de sus bloques ya haya pasado. Esas reglas
+viven en `SolicitudQuerySet` (`de`, `proximas`, `anteriores`, `con_detalle`) y
+no en la vista, porque son del dominio: la vista solo elige la pestaña, pagina y
+responde. La fecha es un campo de la solicitud, así que filtrar y ordenar no
+toca los bloques.
+
+![Ver mis solicitudes](diagramas/us-09/ver-mis-solicitudes.png)
+
+La página trae 20 solicitudes y siempre hace las mismas consultas: tres
+`COUNT` (el paginador y las dos pestañas), la página con su área y los bloques
+de esa página. Cambiar de pestaña o de página es el mismo `GET` con htmx, que
+recibe solo `_tabla_historial.html` y actualiza la dirección. Si htmx restaura
+el historial sin tenerlo en caché, pide la página entera, y `Vary: HX-Request`
+evita que el navegador confunda una respuesta con la otra. El plazo de la nota
+de confirmación se lee de `Parametros`, porque lo cambia administración, y solo
+en Próximas, que es la única pestaña que muestra la nota.
+
+### Retirar una solicitud propia (US-09)
+
+Solo se retira una solicitud que la Oficina todavía no revisa. Pasa a
+`RETIRADA`, un estado más de la validación, y no se borra: sigue en el historial.
+`CANCELADA` queda para el flujo de confirmación. La disponibilidad y la regla de
+bloque ya pedido cuentan solo las pendientes y aceptadas, así que el bloque
+retirado queda libre sin tocarlas.
+
+![Retirar una solicitud propia](diagramas/us-09/retirar-solicitud.png)
+
+La confirmación es un `<dialog>` propio: el script intercepta `htmx:confirm` y
+la petición sale solo si se confirma. El retiro es un único `UPDATE`
+condicionado a que la solicitud siga pendiente y sea del usuario, para no pisar
+al validador si decide en el mismo instante. Si no aplica, el mensaje es el
+mismo sea ajena, inexistente o ya revisada. Con htmx vuelve la tabla en la misma
+pestaña y página, con el mensaje dentro. Sin htmx, la vuelta es por redirección
+al historial.
+
 ### Ver los bloques del día (US-14)
 
 Cada ticket es un bloque de una solicitud aceptada en una fecha
@@ -242,7 +295,7 @@ viene, porque la rejilla es de lunes a viernes.
 
 ### Solicitud de reserva y bloques horarios (US-02)
 
-El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_bloque`, administrada en US-04) de la **instancia concreta de reserva** (`solicitudes_solicitudbloque`), vinculando la fecha seleccionada con el bloque horario y la solicitud.
+El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_bloque`, administrada en US-04) de la **reserva concreta**: la solicitud lleva la fecha, porque es de un solo día, y `solicitudes_solicitudbloque` dice qué bloques de la plantilla se usan ese día. Hasta la migración `0003_fecha_en_solicitud` la fecha vivía en cada bloque, y nada impedía que dos bloques de una misma solicitud tuvieran fechas distintas.
 
 ![Modelo de datos: Solicitud y Bloques](diagramas/us-02/modelo-datos.png)
 
@@ -252,5 +305,10 @@ El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_
   - `solicitudes_solicitud.area_id` → `personas_area.id` (`on_delete=PROTECT`): garantiza la trazabilidad del área académica requirente.
   - `solicitudes_solicitudbloque.solicitud_id` → `solicitudes_solicitud.id` (`on_delete=CASCADE`): mantiene la consistencia de bloques asignados a la solicitud.
   - `solicitudes_solicitudbloque.bloque_id` → `agenda_bloque.id` (`on_delete=PROTECT`): permite desactivar bloques de la plantilla sin alterar las solicitudes históricas ya existentes.
-  - **Restricción de unicidad**: `UniqueConstraint(fields=["solicitud", "bloque", "fecha"])` previene asignar duplicados de un mismo bloque horario en la misma fecha para una solicitud.
+  - `personas_usuario_areas` (`Usuario.areas`): las áreas para las que una persona puede solicitar. El asistente lee de aquí las activas para fijar el área o pedir que la elija.
+  - **Restricción de unicidad**: `UniqueConstraint(fields=["solicitud", "bloque"])` impide pedir dos veces el mismo bloque en una solicitud. La fecha ya no entra: es la de la solicitud.
+- **Estados**: cada solicitud tiene dos, uno por quien decide.
+  - `estado_validacion` lo decide la Oficina: `PENDIENTE`, `ACEPTADA` o `RECHAZADA`. `RETIRADA` es la excepción: la pone el propio solicitante cuando la retira antes de que se revise (US-09).
+  - `estado_confirmacion` es del solicitante una vez aceptada: `NO_HABILITADA` hasta que se acepta, y después `PENDIENTE`, `CONFIRMADA` o `CANCELADA`. `Solicitud.clean()` exige que solo una solicitud aceptada pueda estar pendiente de confirmar, confirmada o cancelada.
+  - Lo que ve el solicitante combina los dos (`Solicitud.estado_general`): "En revisión por la Oficina", "Aceptada", "Pendiente de confirmación", "Confirmada", "Rechazada", "Cancelada" o "Retirada".
 

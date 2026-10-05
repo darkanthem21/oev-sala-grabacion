@@ -1,12 +1,19 @@
 {% extends "base.html" %}
 {% load static %}
-{% comment %} Encabezado común de las pantallas del solicitante. {% endcomment %}
+{% comment %}
+  Encabezado común de las pantallas del solicitante: el mismo techo con
+  pestañas del panel de configuración. La pestaña activa sale de la ruta, así
+  ninguna vista tiene que avisarla; todo lo que no es el historial es parte de
+  solicitar (área, asistente, envío).
+{% endcomment %}
 {% block estilos %}
   <link rel="stylesheet" href="{% static 'css/panel.css' %}">
+  {% block estilos_hoja %}{% endblock %}
   <link rel="stylesheet" href="{% static 'solicitudes/solicitud.css' %}">
 {% endblock %}
 
 {% block contenido %}
+{% with ruta=request.resolver_match.url_name %}
 <header class="techo">
   <div class="dentro">
     <div class="fila">
@@ -20,7 +27,15 @@
         </form>
       </div>
     </div>
+
+    <nav class="pestanas" aria-label="Secciones del solicitante">
+      <a class="pestana {% if ruta != 'mis_solicitudes' %}activa{% endif %}" href="{% url 'solicitar' %}"
+         {% if ruta != "mis_solicitudes" %}aria-current="page"{% endif %}>Solicitar reserva</a>
+      <a class="pestana {% if ruta == 'mis_solicitudes' %}activa{% endif %}" href="{% url 'mis_solicitudes' %}"
+         {% if ruta == "mis_solicitudes" %}aria-current="page"{% endif %}>Mis solicitudes</a>
+    </nav>
   </div>
 </header>
+{% endwith %}
 {% block hoja %}{% endblock %}
 {% endblock %}

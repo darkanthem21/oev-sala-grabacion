@@ -1,15 +1,8 @@
-{% extends "base.html" %}
+{% extends "solicitudes/_base.html" %}
 {% load static %}
 {% block titulo %}Seleccionar área académica · Sala de grabación{% endblock %}
-{% block estilos %}
-<link rel="stylesheet" href="{% static 'solicitudes/solicitud.css' %}">
-{% endblock %}
 
-{% block barra_superior %}
-{% include "solicitudes/componentes/barra_superior.html" %}
-{% endblock %}
-
-{% block contenido %}
+{% block hoja %}
 <main class="hoja">
   <h1>Selecciona el área académica</h1>
   <p class="sub">Indica para qué unidad o área académica estás realizando esta solicitud antes de consultar la disponibilidad en el calendario.</p>

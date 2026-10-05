@@ -1,16 +1,11 @@
-{% extends "base.html" %}
+{% extends "solicitudes/_base.html" %}
 {% load static %}
 {% block titulo %}Solicitar reserva · Paso {{ paso }} de 3{% endblock %}
-{% block estilos %}
+{% block estilos_hoja %}
 <link rel="stylesheet" href="{% static 'solicitudes/calendario.css' %}">
-<link rel="stylesheet" href="{% static 'solicitudes/solicitud.css' %}">
 {% endblock %}
 
-{% block barra_superior %}
-{% include "solicitudes/componentes/barra_superior.html" %}
-{% endblock %}
-
-{% block contenido %}
+{% block hoja %}
 <main class="hoja {% if paso == 1 %}hoja-calendario{% endif %}"
       {% if paso == 2 %}x-data="{ personas: {{ personas_inicial }} }"{% elif paso == 3 %}x-data="{ acepta: {{ acepta_inicial|yesno:'true,false' }} }"{% endif %}>
 

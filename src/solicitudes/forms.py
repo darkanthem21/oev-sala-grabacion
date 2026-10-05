@@ -1,7 +1,11 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from django.forms import formset_factory
 
 from personas.models import Area
+
+from .services import obtener_bloques_dia_para_usuario
+from .wizard import obtener_limites_reserva
 
 # T4. En sala entran como máximo 5 personas: el solicitante y hasta 4 invitados.
 # Los datos del solicitante vienen precargados de su cuenta (US-14 AC5); de cada
@@ -9,6 +13,101 @@ from personas.models import Area
 # menos que el tope.
 MAXIMO_PERSONAS = 5
 MAXIMO_ACOMPANANTES = MAXIMO_PERSONAS - 1
+
+
+def primer_error(form):
+    """El primer mensaje de error del formulario: las pantallas del asistente
+    muestran uno solo, arriba."""
+    for errores in form.errors.values():
+        return errores[0]
+    return None
+
+
+class IdsField(forms.Field):
+    """Una lista de ids enteros que llega repetida en el formulario (bloques=1&bloques=2)."""
+
+    widget = forms.MultipleHiddenInput
+
+    def to_python(self, value):
+        if not value:
+            return []
+        try:
+            return list(dict.fromkeys(int(v) for v in value))
+        except (TypeError, ValueError):
+            raise ValidationError("Los bloques seleccionados no son válidos.", code="invalid")
+
+
+class FechaReservaForm(forms.Form):
+    """Un día pedible: con formato ISO y dentro de los límites de reserva.
+
+    Es la única validación de fecha del calendario y del asistente; antes
+    estaba copiada en cada vista.
+    """
+
+    fecha = forms.DateField(
+        input_formats=["%Y-%m-%d"],
+        error_messages={
+            "required": "Por favor, selecciona un día disponible en el calendario.",
+            "invalid": "Por favor, selecciona un día disponible en el calendario.",
+        },
+    )
+
+    def clean_fecha(self):
+        fecha = self.cleaned_data["fecha"]
+        fecha_minima, fecha_maxima = obtener_limites_reserva()
+        if not fecha_minima <= fecha <= fecha_maxima:
+            raise ValidationError(
+                "La fecha seleccionada no está dentro del período permitido.", code="fuera_de_periodo"
+            )
+        return fecha
+
+    @classmethod
+    def fecha_de(cls, texto):
+        """La fecha si el texto es un día pedible, o None."""
+        form = cls({"fecha": texto})
+        return form.cleaned_data["fecha"] if form.is_valid() else None
+
+
+class SeleccionHorarioForm(FechaReservaForm):
+    """Paso 1: el día y los bloques, que tienen que estar libres para el usuario.
+
+    Con exigir_todos (el asistente) basta un bloque tomado para rechazar la
+    selección; sin él (el calendario público) se acepta lo que siga libre.
+    Si es válido, cleaned_data["bloques"] son los bloques del día elegidos.
+    """
+
+    bloques = IdsField(
+        error_messages={"required": "Por favor, selecciona al menos un bloque de horario para continuar."},
+    )
+
+    def __init__(self, *args, usuario=None, exigir_todos=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.usuario = usuario
+        self.exigir_todos = exigir_todos
+
+    @property
+    def ids_enviados(self):
+        """Los ids tal como llegaron, para volver a marcarlos si hay un error."""
+        return [int(v) for v in self.data.getlist("bloques") if v.isdigit()] if self.data else []
+
+    def clean(self):
+        datos = super().clean()
+        fecha, ids = datos.get("fecha"), datos.get("bloques")
+        if fecha and ids:
+            # disponible_para_reserva deja fuera también los que el usuario
+            # ya tiene pendientes, igual que la pantalla.
+            libres = [
+                b for b in obtener_bloques_dia_para_usuario(fecha=fecha, usuario=self.usuario)
+                if b.id in ids and b.disponible_para_reserva
+            ]
+            if self.exigir_todos and len(libres) != len(ids):
+                raise ValidationError(
+                    "Uno o más de los bloques seleccionados ya no están disponibles. Por favor, selecciona otros."
+                )
+            if not libres:
+                raise ValidationError("Ninguno de los bloques seleccionados está disponible.")
+            datos["bloques"] = libres
+        return datos
 
 
 class SeleccionAreaForm(forms.Form):

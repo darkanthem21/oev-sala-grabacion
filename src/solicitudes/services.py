@@ -1,11 +1,13 @@
 import calendar
-from datetime import date, datetime
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from datetime import date, datetime, time
+from typing import Any, Dict, List, Tuple
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
-from agenda.models import Bloque, disponibilidad, primera_fecha_pedible
+from agenda.models import Bloque, disponibilidad
 from agenda.signals import Reserva
 from personas.models import Area
 from .models import Acompanante, Solicitud, SolicitudBloque
@@ -38,6 +40,29 @@ def revisar_acompanantes(formset, esperados: int, correo_solicitante: str) -> Tu
     return llenos, errores
 
 
+@dataclass
+class BloqueVista:
+    """Un bloque de la jornada de un día, como lo ve un usuario al elegir horario.
+
+    Los aceptados no llegan hasta acá: obtener_bloques_dia_para_usuario los
+    deja fuera. Los que el usuario ya tiene pendientes se muestran, marcados y
+    sin poder elegirse otra vez.
+    """
+
+    id: int
+    inicio: time
+    termino: time
+    es_propio: bool = False
+
+    @property
+    def disponible_para_reserva(self) -> bool:
+        return not self.es_propio
+
+    @property
+    def texto(self) -> str:
+        return f"{self.inicio:%H:%M} – {self.termino:%H:%M}"
+
+
 def obtener_dias_con_disponibilidad(year: int, month: int) -> set:
     """Retorna un conjunto de números de día del mes que tienen al menos un bloque disponible."""
     _, ultimo_dia = calendar.monthrange(year, month)
@@ -51,15 +76,15 @@ def obtener_dias_con_disponibilidad(year: int, month: int) -> set:
     # Obtener todas las reservas aceptadas en el rango de fechas
     bloques_ocupados = set(
         SolicitudBloque.objects.filter(
-            fecha__gte=desde,
-            fecha__lte=hasta,
+            solicitud__fecha__gte=desde,
+            solicitud__fecha__lte=hasta,
             solicitud__estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
             solicitud__estado_confirmacion__in=[
                 Solicitud.EstadoConfirmacion.NO_HABILITADA,
                 Solicitud.EstadoConfirmacion.PENDIENTE,
                 Solicitud.EstadoConfirmacion.CONFIRMADA,
             ],
-        ).values_list("fecha", "bloque_id")
+        ).values_list("solicitud__fecha", "bloque_id")
     )
 
     dias_disponibles = set()
@@ -72,7 +97,7 @@ def obtener_dias_con_disponibilidad(year: int, month: int) -> set:
     return dias_disponibles
 
 
-def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List[Any]:
+def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List["BloqueVista"]:
     """Retorna los bloques de la jornada configurada para una fecha visibles para el usuario:
     - Bloques disponibles (sin reservas aceptadas).
     - Bloques con solicitud activa propia del usuario (marcado con es_propio=True).
@@ -88,7 +113,7 @@ def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List[Any]:
     # Obtener relaciones para esa fecha
     relaciones = (
         SolicitudBloque.objects.filter(
-            fecha=fecha,
+            solicitud__fecha=fecha,
             bloque_id__in=bloques_ids,
             solicitud__estado_validacion__in=[
                 Solicitud.EstadoValidacion.PENDIENTE,
@@ -113,27 +138,12 @@ def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List[Any]:
         if any(s.estado_validacion == Solicitud.EstadoValidacion.ACEPTADA for s in sols):
             continue
 
-        item = type("BloqueVista", (), {
-            "id": b.id,
-            "inicio": b.inicio,
-            "termino": b.termino,
-            "hora_inicio": b.inicio,
-            "hora_final": b.termino,
-            "texto": f"{b.inicio.strftime('%H:%M')} – {b.termino.strftime('%H:%M')}",
-            "disponible": True,
-            "es_propio": False,
-            "disponible_para_reserva": True,
-        })()
-
         # Si el usuario actual tiene una solicitud PENDIENTE para este bloque:
-        if usuario_id and any(
+        es_propio = bool(usuario_id) and any(
             s.solicitante_id == usuario_id and s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE
             for s in sols
-        ):
-            item.es_propio = True
-            item.disponible_para_reserva = False
-
-        resultado.append(item)
+        )
+        resultado.append(BloqueVista(id=b.id, inicio=b.inicio, termino=b.termino, es_propio=es_propio))
 
     return resultado
 
@@ -152,6 +162,7 @@ def guardar_solicitud_completa(
         solicitud = Solicitud(
             solicitante=usuario,
             area=area,
+            fecha=fecha_obj,
             motivo=datos_reserva.get("motivo", "").strip(),
             observaciones=datos_reserva.get("observaciones", "").strip(),
             personas=datos_reserva.get("personas", 1),
@@ -167,11 +178,7 @@ def guardar_solicitud_completa(
             raise ValidationError("Uno o más bloques seleccionados no son válidos o ya no están activos.")
 
         for b in bloques_db:
-            sol_bloque = SolicitudBloque(
-                solicitud=solicitud,
-                bloque=b,
-                fecha=fecha_obj,
-            )
+            sol_bloque = SolicitudBloque(solicitud=solicitud, bloque=b)
             sol_bloque.full_clean()
             sol_bloque.save()
 
@@ -186,11 +193,32 @@ def guardar_solicitud_completa(
         return solicitud
 
 
+def retirar_solicitud(usuario, solicitud_id: int) -> bool:
+    """Retira una solicitud propia que el validador todavía no revisa.
+
+    Pasa a RETIRADA y no se borra: sigue en el historial. La disponibilidad y
+    la regla de bloque ya pedido solo cuentan las pendientes y aceptadas, así
+    que el bloque queda libre para pedirlo de nuevo.
+
+    Es un solo UPDATE condicionado al estado: si el validador la acepta o
+    rechaza en el mismo instante, no se pisa su decisión. Devuelve si se retiró.
+    """
+    return Solicitud.objects.filter(
+        pk=solicitud_id,
+        solicitante=usuario,
+        estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
+    ).update(
+        estado_validacion=Solicitud.EstadoValidacion.RETIRADA,
+        # update() se salta auto_now.
+        actualizado_en=timezone.now(),
+    ) == 1
+
+
 def reservas_aprobadas(sender, desde, hasta, **kwargs):
     """US-17 AC4: las reservas aceptadas y no canceladas de esas fechas, para que
     agenda sepa a quién le quita la sala un bloqueo. Se conecta en `apps.py`."""
     filas = SolicitudBloque.objects.filter(
-        fecha__range=(desde, hasta),
+        solicitud__fecha__range=(desde, hasta),
         solicitud__estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
     ).exclude(
         solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA,

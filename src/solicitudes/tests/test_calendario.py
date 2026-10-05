@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import date
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.test import TestCase
@@ -49,6 +49,7 @@ class CalendarioSolicitudesTestCase(TestCase):
         solicitud_aceptada = Solicitud.objects.create(
             solicitante=self.user,
             area=area,
+            fecha=self.fecha_prueba,
             motivo="Motivo test",
             personas=1,
             estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
@@ -57,7 +58,6 @@ class CalendarioSolicitudesTestCase(TestCase):
         SolicitudBloque.objects.create(
             solicitud=solicitud_aceptada,
             bloque=self.bloque_disponible,
-            fecha=self.fecha_prueba,
         )
 
         url = reverse("bloques_dia")

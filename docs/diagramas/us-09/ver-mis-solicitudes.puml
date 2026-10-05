@@ -1,0 +1,92 @@
+@startuml ver-mis-solicitudes
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Ver mis solicitudes (US-09)
+
+actor "Solicitante" as S
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.models</b>\n<size:11>solicitudes/models.py</size>\n<size:11>SolicitudQuerySet</size>" as M <<dominio>>
+participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+S -> N ++ : GET /solicitar/mis-solicitudes/?vista=…&pagina=… → mis_solicitudes(request)
+N -> N ++ : _contexto_historial(request.user, request.GET.get("vista"), request.GET.get("pagina"))
+opt la vista falta o no es proximas ni anteriores
+  N -> N : vista = "proximas"
+end
+N -> N : hoy = timezone.localdate()
+N -> M ++ : Solicitud.objects.de(usuario)
+return propias
+N -> M ++ : propias.proximas(hoy)
+M -> M : $comentario("de hoy en adelante, la más cercana primero; el id desempata")\nself.filter(fecha~__gte=hoy).order_by("fecha", "id")
+note right of M
+  Se separa por día calendario: una solicitud
+  de hoy sigue en Próximas aunque su hora
+  ya haya pasado.
+end note
+return proximas
+N -> M ++ : propias.anteriores(hoy)
+M -> M : $comentario("días que ya pasaron, la más reciente primero")\nself.filter(fecha~__lt=hoy).order_by("-fecha", "-id")
+return anteriores
+N -> M ++ : $comentario("con el área y los bloques de la tabla")\n(proximas if vista == "proximas" else anteriores).con_detalle()
+return solicitudes
+
+N -> N ++ : $comentario("una página inválida o fuera de rango cae en la primera o la última")\nPaginator(solicitudes, SOLICITUDES_POR_PAGINA).get_page(numero_pagina)
+N -> M ++ : solicitudes.count()
+M -> D ++ : SELECT COUNT solicitudes_solicitud
+return filas
+return total
+return pagina
+N -> M ++ : proximas.count()
+M -> D ++ : SELECT COUNT solicitudes_solicitud
+return filas
+return total_proximas
+N -> M ++ : anteriores.count()
+M -> D ++ : SELECT COUNT solicitudes_solicitud
+return filas
+return total_anteriores
+opt vista == "proximas"
+  N -> C ++ : $comentario("el plazo que cita la nota de confirmación")\nParametros.cargar().plazo_confirmacion_dias
+  C -> D ++ : SELECT configuracion_parametros
+  return fila
+  return plazo_confirmacion
+end
+return contexto
+
+alt HX-Request y no HX-History-Restore-Request
+  N -> N ++ : $comentario("solo la tabla, para que htmx la reemplace")\nrender(request, "solicitudes/_tabla_historial.html", contexto)
+  N -> M ++ : $comentario("la plantilla recorre la página")\npagina.object_list
+  M -> D ++ : $comentario("las 20 de la página, con su área")\nSELECT solicitudes_solicitud, personas_area
+  return filas
+  M -> D ++ : $comentario("los bloques de esas 20, con su hora (prefetch)")\nSELECT solicitudes_solicitudbloque, agenda_bloque
+  return filas
+  return solicitudes
+  return respuesta
+  note right of N
+    Siempre dos consultas para la tabla,
+    haya 20 o 10.000 solicitudes.
+  end note
+else sin htmx, o htmx restaurando el historial
+  N -> N ++ : $comentario("la página entera, que incluye la misma tabla")\nrender(request, "solicitudes/mis_solicitudes.html", contexto)
+  N -> M ++ : pagina.object_list
+  M -> D ++ : SELECT solicitudes_solicitud, personas_area
+  return filas
+  M -> D ++ : SELECT solicitudes_solicitudbloque, agenda_bloque
+  return filas
+  return solicitudes
+  return respuesta
+end
+N -> N : $comentario("la misma dirección entrega tabla o página entera")\npatch_vary_headers(respuesta, ["HX-Request"])
+
+alt con htmx (pestaña o página)
+  N --> S : 200 · solicitudes/_tabla_historial.html
+  note right of S
+    htmx reemplaza solo #historial y actualiza
+    la dirección (hx-push-url) sin recargar.
+  end note
+else sin htmx
+  N --> S : 200 · solicitudes/mis_solicitudes.html
+end
+deactivate N
+@enduml

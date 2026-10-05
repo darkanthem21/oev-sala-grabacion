@@ -22,8 +22,16 @@ entity "<b>personas_usuario</b>" as Usuario {
 entity "<b>personas_area</b>" as Area {
     * <b>id</b> : bigint <<PK>>
     --
-    * nombre : varchar(120)
+    * nombre : varchar(120) <<unique>>
+    * prioridad : smallint
     * activa : boolean
+}
+
+entity "<b>personas_usuario_areas</b>" as UsuarioArea {
+    * <b>id</b> : bigint <<PK>>
+    --
+    * <b>usuario_id</b> : bigint <<FK -> personas_usuario.id>>
+    * <b>area_id</b> : bigint <<FK -> personas_area.id>>
 }
 
 entity "<b>solicitudes_solicitud</b>" as Solicitud {
@@ -31,11 +39,12 @@ entity "<b>solicitudes_solicitud</b>" as Solicitud {
     --
     * <b>solicitante_id</b> : bigint <<FK -> personas_usuario.id>>
     * <b>area_id</b> : bigint <<FK -> personas_area.id>>
+    * fecha : date
     * motivo : varchar(300)
     observaciones : text
     * personas : smallint
-    * estado_validacion : varchar(20)
-    * estado_confirmacion : varchar(20)
+    * estado_validacion : varchar(20)  /* PENDIENTE | ACEPTADA | RECHAZADA | RETIRADA */
+    * estado_confirmacion : varchar(20)  /* NO_HABILITADA | PENDIENTE | CONFIRMADA | CANCELADA */
     * creado_en : timestamptz
     * actualizado_en : timestamptz
 }
@@ -54,9 +63,8 @@ entity "<b>solicitudes_solicitudbloque</b>" as SolicitudBloque {
     --
     * <b>solicitud_id</b> : bigint <<FK -> solicitudes_solicitud.id>>
     * <b>bloque_id</b> : bigint <<FK -> agenda_bloque.id>>
-    * fecha : date
     --
-    <<unique(solicitud_id, bloque_id, fecha)>>
+    <<unique(solicitud_id, bloque_id)>>
 }
 
 entity "<b>solicitudes_acompanante</b>" as Acompanante {
@@ -68,16 +76,18 @@ entity "<b>solicitudes_acompanante</b>" as Acompanante {
 }
 
 ' Relaciones y claves foráneas referenciales
+Usuario ||--o{ UsuarioArea : "puede pedir para"
+Area ||--o{ UsuarioArea
 Usuario ||..o{ Solicitud : "solicita (1:N)"
 Area ||..o{ Solicitud : "pertenece a (1:N)"
 Solicitud ||--|{ SolicitudBloque : "contiene (1:N, on_delete=CASCADE)"
-Bloque ||--o{ SolicitudBloque : "instancia fecha (1:N, on_delete=PROTECT)"
+Bloque ||--o{ SolicitudBloque : "se pide en (1:N, on_delete=PROTECT)"
 Solicitud ||--o{ Acompanante : "declara acompañantes (1:N, on_delete=CASCADE)"
 
 note bottom of SolicitudBloque
   <b>agenda_bloque</b> representa la plantilla semanal recurrente (día y horas).
-  <b>solicitudes_solicitudbloque</b> materializa la reserva para una <b>fecha</b> específica,
-  asociándola a la solicitud mediante sus claves foráneas.
+  <b>solicitudes_solicitud</b> lleva la <b>fecha</b> de la reserva: una solicitud es de un solo día.
+  <b>solicitudes_solicitudbloque</b> dice qué bloques de la plantilla se usan ese día.
 end note
 
 @enduml

@@ -2,75 +2,138 @@
 !include ../estilo.iuml
 hide footbox
 autonumber
-title Enviar una solicitud de reserva (US-02)
+title Enviar una solicitud de reserva (US-02, paso 3)
 
-actor "Docente / Solicitante" as S
+actor "Solicitante" as S
 participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
 participant "<b>solicitudes.wizard</b>\n<size:11>solicitudes/wizard.py</size>" as W <<presentación>>
-participant "<b>solicitudes</b>\n<size:11>solicitudes/services.py</size>\n<size:11>solicitudes/models.py</size>" as V <<dominio>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>solicitudes.models</b>\n<size:11>solicitudes/models.py</size>" as M <<dominio>>
+participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as A <<dominio>>
+participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
-S -> N ++ : POST /solicitar/ (paso=confirmacion) → solicitar(request)
+S -> N ++ : POST /solicitar/ (paso=confirmacion, acepta_terminos) → solicitar(request)
+N -> D ++ : $comentario("las áreas activas del usuario")\nSELECT personas_area, personas_usuario_areas
+return filas
+break no tiene áreas activas
+  N --> S : 200 · solicitudes/sin_area.html
+end
 N -> W ++ : SolicitudWizard(request.session)
 return wizard
-N -> N : $comentario("valida estado de la sesión y flujo")\npaso_actual = paso_solicitado.validar_acceso(wizard.datos)
+N -> W ++ : wizard.ajustar_area(areas)
+return falta_area
+break falta_area es "elegir" o "cambiar"
+  N --> S : 302 · /solicitar/area/
+end
+N -> W ++ : $comentario("el paso pedido, o el primero que la sesión aún no completó")\nPasoSolicitud.resolver(paso_param).validar_acceso(wizard.datos)
+return paso_actual
+note right of N
+  Si la sesión no completó los pasos anteriores,
+  validar_acceso devuelve el primero que falta
+  y se atiende ese en lugar del paso 3.
+end note
+N -> N : manejar = {…, CONFIRMACION: _manejar_paso_confirmacion}[paso_actual]
 
-N -> N ++ : _manejar_paso_confirmacion(request, wizard)
+N -> N ++ : _manejar_paso_confirmacion(request, wizard, puede_cambiar_area)
 N -> W ++ : wizard.obtener_resumen()
 return resumen
-N -> N : $comentario("revisa si se aceptaron los términos y condiciones (AC10)")\nacepta_terminos = bool(request.POST.get("acepta_terminos"))
+N -> C ++ : $comentario("el texto que se muestra si hay que volver a pedirlos")\nParametros.cargar().terminos
+C -> D ++ : SELECT configuracion_parametros
+return fila
+return terminos_texto
+N -> N : acepta_terminos = bool(request.POST.get("acepta_terminos"))
 
 alt no aceptó los términos
-  N --> S : 200 · solicitudes/solicitar.html con mensaje de error
-  note right of N
-    La solicitud no puede enviarse ni
-    registrarse sin aceptar los términos y
-    condiciones del servicio (AC10).
-  end note
+  N -> N : $comentario("AC10: sin aceptar no se registra nada")\nerror_terminos = "Tienes que aceptar los términos…"
 else aceptó los términos
-  N -> V ++ : guardar_solicitud_completa(request.user, wizard.datos)
-  group @transaction.atomic
+  N -> V ++ : guardar_solicitud_completa(usuario=request.user, datos_reserva=wizard.datos)
+  V -> V ++ : $comentario("lo de adentro se guarda junto o no se guarda")\nwith transaction.atomic():
     V -> D ++ : SELECT personas_area
     return fila
-    V -> V : $comentario("instancia la solicitud con estado de validación pendiente (AC5)")\nsolicitud = Solicitud(solicitante, area, motivo, personas, ...)
-    V -> V ++ : solicitud.full_clean()
-    deactivate V
-    V -> V ++ : solicitud.save()
-    V -> D ++ : INSERT solicitudes_solicitud
+    V -> V : $comentario("con la fecha elegida y validación pendiente (AC5)")\nsolicitud = Solicitud(solicitante, area, fecha, motivo, observaciones, personas, …)
+    V -> M ++ : solicitud.full_clean()
+    M -> M ++ : clean()
+    M -> A ++ : $comentario("la fecha no puede ser anterior a la primera pedible")\nprimera_fecha_pedible()
+    A -> C ++ : Parametros.cargar()
+    C -> D ++ : SELECT configuracion_parametros
+    return fila
+    return parametros
+    return fecha_minima
+    return
+    return
+    V -> M ++ : solicitud.save()
+    M -> D ++ : INSERT solicitudes_solicitud
     deactivate D
-    deactivate V
-    V -> D ++ : SELECT agenda_bloque
+    deactivate M
+    V -> D ++ : $comentario("Bloque.objects.filter(id__in=bloques_ids, activo=True)")\nSELECT agenda_bloque
     return filas
-    alt algún bloque no es válido o está inactivo
-      V --> N : ValidationError
-      N --> S : 200 · solicitudes/solicitar.html con mensaje de error
-    else bloques vigentes
-      loop cada bloque horario seleccionado
-        V -> V : sol_bloque = SolicitudBloque(solicitud, bloque, fecha)
-        V -> V ++ : sol_bloque.full_clean()
-        deactivate V
-        V -> V ++ : sol_bloque.save()
-        V -> D ++ : INSERT solicitudes_solicitudbloque
-        deactivate D
-        deactivate V
-      end
-      loop cada acompañante con nombre y correo (AC6)
-        V -> D ++ : INSERT solicitudes_acompanante
-        deactivate D
-      end
+    loop cada bloque elegido
+      V -> V : sol_bloque = SolicitudBloque(solicitud=solicitud, bloque=b)
+      V -> M ++ : sol_bloque.full_clean()
+      M -> M ++ : $comentario("activo, mismo día de la semana que la fecha, libre y no pedido ya")\nclean()
+      M -> D ++ : $comentario("¿otro lo tiene aceptado ese día?")\nSELECT solicitudes_solicitudbloque, solicitudes_solicitud
+      return filas
+      M -> D ++ : $comentario("¿el usuario ya lo tiene pendiente ese día?")\nSELECT solicitudes_solicitudbloque, solicitudes_solicitud
+      return filas
+      return
+      return
+      V -> M ++ : sol_bloque.save()
+      M -> M : $comentario("save() vuelve a llamar a clean(): las mismas dos consultas")\nself.clean()
+      M -> D ++ : INSERT solicitudes_solicitudbloque
+      deactivate D
+      deactivate M
     end
+    loop cada acompañante con nombre y correo (AC6)
+      V -> D ++ : $comentario("Acompanante.objects.create(…)")\nINSERT solicitudes_acompanante
+      deactivate D
+    end
+  deactivate V
+
+  alt se guardó todo
+    V --> N : solicitud
+    N -> W ++ : wizard.limpiar()
+    W -> W : $comentario("borra los datos temporales del asistente")\nself._session.pop(self.CLAVE_SESION, None)
+    return
+    N --> S : 302 · /solicitar/enviada/<id>/
+    note right of N
+      Redirección y no la página directa:
+      recargar no reenvía el formulario.
+    end note
+  else un bloque inactivo, ocupado o ya pedido
+    V --> N -- : ValidationError
+    note right of V
+      La lanza clean() del modelo, o el servicio si un
+      bloque ya no está activo. La transacción se deshace
+      entera: no queda la solicitud sin sus bloques.
+    end note
+    N -> N : error_terminos = "; ".join(e.messages)
   end
-  note right of V
-    La transacción atómica garantiza que la solicitud,
-    sus bloques instanciados y los acompañantes se guarden
-    juntos. Si algo falla, nada persiste en la base.
-  end note
-  return solicitud
-  N -> W ++ : wizard.limpiar()
-  W -> W : $comentario("elimina los datos temporales del asistente")\ndel request.session[SESSION_KEY]
-  return
-  N --> S : 200 · solicitudes/enviada.html con resumen de la reserva
+end
+
+opt no aceptó los términos o hubo ValidationError
+  N --> S : 200 · solicitudes/solicitar.html con el error
 end
 deactivate N
+deactivate N
+
+S -> N ++ : $comentario("el navegador sigue la redirección")\nGET /solicitar/enviada/<id>/ → enviada(request, solicitud_id)
+N -> M ++ : $comentario("SolicitudQuerySet: solo las del usuario, con área y bloques")\nget_object_or_404(Solicitud.objects.de(request.user).con_detalle().prefetch_related("acompanantes"), pk=solicitud_id)
+M -> D ++ : SELECT solicitudes_solicitud, personas_area
+return fila
+break no existe o es de otra persona
+  M --> N : Http404
+  N --> S : 404
+end
+M -> D ++ : $comentario("los bloques, con su hora")\nSELECT solicitudes_solicitudbloque, agenda_bloque
+return filas
+M -> D ++ : SELECT solicitudes_acompanante
+return filas
+return solicitud
+N --> S : 200 · solicitudes/enviada.html
+note right of N
+  Se lee de la base: si se vuelve a esta
+  dirección más tarde, muestra el estado actual.
+end note
 deactivate N
 @enduml
