@@ -48,6 +48,12 @@ sumar un intento, porque la clave era correcta (AC4).
 distinguir mayúsculas (`get_by_natural_key`), igual que la vista que cuenta los
 intentos: así un correo escrito con otras mayúsculas no suma fallos.
 
+Si el ingreso lo pidió otra página, como el enlace de confirmación del correo de
+aceptación (US-03), la puerta vuelve a ella (`next`) y no al panel del rol.
+Solo si la dirección es de este sitio: `url_has_allowed_host_and_scheme`
+descarta cualquier otra, así el formulario no sirve para mandar a alguien recién
+autenticado a una página ajena.
+
 Con la cuenta bloqueada la clave se revisa igual y la respuesta es el mismo
 aviso que una clave mala: ni el texto ni la demora dicen que la cuenta existe.
 
