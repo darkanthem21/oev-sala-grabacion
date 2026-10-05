@@ -28,16 +28,9 @@
   {% if vista == "proximas" %}
     <p class="nota-confirmacion">
       <strong>Confirma tu asistencia.</strong>
-      {% comment %}Con plazo de un día, el aviso y el límite caen el mismo día.{% endcomment %}
-      {% if plazo_confirmacion == 1 %}
-        Para cada reserva aceptada por la Oficina recibirás una notificación el
-        día anterior, para confirmarla. Si no la confirmas ese mismo día, la
-        reserva se cancelará.
-      {% else %}
-        Para cada reserva aceptada por la Oficina recibirás una notificación
-        {{ plazo_confirmacion }} días antes, para confirmarla. Si no la confirmas
-        a más tardar el día anterior, la reserva se cancelará.
-      {% endif %}
+      Cuando la Oficina acepte tu reserva te llegará un correo con el enlace para
+      confirmarla; también puedes hacerlo aquí, con «Confirmar asistencia», a más
+      tardar el día anterior.
     </p>
   {% endif %}
 
@@ -71,6 +64,9 @@
               <span class="estado estado-{{ solicitud.estado_clave }}">{{ solicitud.estado_general }}</span>
               {% if solicitud.estado_clave == "rechazada" and solicitud.motivo_resolucion %}
                 <p class="motivo-rechazo">{{ solicitud.motivo_resolucion }}</p>
+              {% endif %}
+              {% if solicitud.puede_confirmarse %}
+                <a class="btn-confirmar" href="{% url 'confirmar_solicitud' solicitud.id %}">Confirmar asistencia</a>
               {% endif %}
               {% if solicitud.puede_retirarse %}
                 {% url 'retirar_solicitud' solicitud.id as url_retirar %}

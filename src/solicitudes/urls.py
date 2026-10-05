@@ -10,5 +10,6 @@ urlpatterns = [
     path("bloques/", views.bloques_dia, name="bloques_dia"),
     path("mis-solicitudes/", views.mis_solicitudes, name="mis_solicitudes"),
     path("mis-solicitudes/<int:solicitud_id>/retirar/", views.retirar, name="retirar_solicitud"),
+    path("mis-solicitudes/<int:solicitud_id>/confirmar/", views.confirmar, name="confirmar_solicitud"),
     path("validacion/", views.panel_validador, name="panel_validador"),
 ]
