@@ -200,12 +200,10 @@ se ve quién lo registró y cuándo.
 
 ![Check-out completado](uso/us-14/checkout-completado.png)
 
-> **Estado actual.** La lista muestra los bloques de las solicitudes aceptadas.
-> Mientras el panel del validador use datos de prueba (US-07), una solicitud se
-> acepta desde `/admin/`, en **Solicitudes de reserva**, con el estado de
-> validación **Aceptada**. El formulario de check-out con el checklist de la sala
-> llega con US-15; hasta entonces el registro es simulado y solo lo ve quien lo
-> envió.
+> **Estado actual.** La lista muestra los bloques de las solicitudes aceptadas
+> en el panel del validador (sección 5). El formulario de check-out con el
+> checklist de la sala llega con US-15; hasta entonces el registro es simulado y
+> solo lo ve quien lo envió.
 
 ---
 
@@ -320,14 +318,15 @@ solicitud se registra recién al pulsar **Confirmar y enviar solicitud**.
 ## 5. Panel del validador
 
 Aquí el validador revisa las solicitudes pendientes y aprueba o rechaza cada
-bloque pedido. Se entra por `/validacion/entrar/` y el panel está en
-`/validador/`.
+solicitud entera. Se entra por `/validacion/entrar/` y el panel está en
+`/validador/`. El administrador tiene el mismo panel en la pestaña
+**Validación** de `/configuracion/`.
 
-> **Estado actual.** El panel funciona con datos de prueba: los lee de
-> `src/solicitudes/datos_prueba/panel_validador.json`, no de la base de datos.
-> Aprobar y rechazar solo cambian lo que se ve en pantalla: no se guarda nada, y
-> al recargar todo vuelve a pendiente. Un recuadro naranja arriba del panel lo
-> recuerda.
+| Al resolver | Qué pasa |
+|---|---|
+| Aprobar | La solicitud queda **Aceptada** y su bloque deja de ofrecerse en el calendario |
+| Rechazar | La solicitud queda **Rechazada** con el motivo |
+| En ambos casos | Queda guardado quién resolvió, a qué hora y con qué motivo. El solicitante recibe un correo y ve el resultado en **Mis solicitudes** |
 
 ### Dar el rol a alguien
 
@@ -372,13 +371,13 @@ Para resolver un tope:
 
 1. Escribe el **Motivo de la resolución** (mínimo 10 caracteres). Es el motivo
    que recibe quien no obtiene el bloque.
-2. Pulsa **Aprobar esta** en la solicitud elegida. Las demás quedan rechazadas
-   solo en ese bloque; sus otros bloques siguen pendientes.
+2. Pulsa **Aprobar esta solicitud** en la elegida. Las demás que chocan con
+   ella quedan rechazadas enteras, con ese motivo.
 3. También puedes **Rechazar** una solicitud en particular, con el mismo
    motivo. Si en el bloque queda una sola, pasa a **Sin tope**.
 
-Si pulsas **Aprobar esta** o **Rechazar** sin motivo, la tarjeta lo avisa y
-deja el cursor en el campo.
+Si pulsas **Aprobar esta solicitud** o **Rechazar** sin motivo, la tarjeta lo
+avisa y deja el cursor en el campo.
 
 ![Aviso de motivo faltante](uso/us-07/tope-falta-motivo.png)
 
@@ -397,21 +396,27 @@ calendario.
 
 ![Solicitudes sin tope](uso/us-07/panel-sin-tope.png)
 
-Cada bloque se resuelve por separado:
+La solicitud se resuelve entera:
 
-- **Aprobar**: se aprueba de inmediato.
-- **Rechazar**: pide escribir el motivo (mínimo 10 caracteres) y luego
+- **Aprobar solicitud**: se aprueba de inmediato.
+- **Rechazar solicitud**: pide escribir el motivo (mínimo 10 caracteres) y luego
   **Confirmar**.
 
-Si la solicitud también tiene un bloque con tope, ese bloque aparece como
-**Tope con #…** junto a **Ir al tope**, y no se resuelve aquí. Según cómo se
-resuelvan sus bloques, la solicitud queda **Aprobada**, **Rechazada** o
-**Aprobada en parte**.
+Una solicitud que choca con otra en algún bloque no aparece aquí: se resuelve
+en **Con tope**.
 
 ### Resueltas
 
-Un registro de cada resolución: bloque, solicitud, resultado, motivo, validador
-y hora.
+Un registro de lo resuelto en la sesión: bloque, solicitud, resultado, motivo,
+validador y hora. Al recargar la página ya no aparecen, porque el panel muestra
+solo lo pendiente; lo resuelto queda guardado.
+
+| Aviso | Cuándo |
+|---|---|
+| Esta solicitud ya fue resuelta o retirada. | Otro validador la resolvió, o el solicitante la retiró, mientras tenías la página abierta |
+| Uno de sus bloques ya está aprobado para otra solicitud ese día. | El bloque se aprobó para otra solicitud |
+| La sala está bloqueada a las …: no se puede aprobar. | Hay un bloqueo en ese horario; se rechaza con ese motivo |
+| No se pudo guardar. Recarga la página e inténtalo de nuevo. | La sesión venció o se perdió la conexión |
 
 ![Registro de resoluciones](uso/us-07/resueltas.png)
 

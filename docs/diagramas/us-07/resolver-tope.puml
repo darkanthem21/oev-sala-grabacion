@@ -2,54 +2,56 @@
 !include ../estilo.iuml
 hide footbox
 autonumber
-title Resolver un bloque con tope (US-07)
+title Resolver una solicitud con tope (US-07)
 
 actor "Validador" as A
-participant "<b>panelValidador</b>\n<size:11>solicitudes/validador.html</size>" as P <<presentación>>
+participant "<b>panelValidador</b>\n<size:11>solicitudes/_validacion.html</size>" as P <<presentación>>
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as G <<dominio>>
+participant "<b>notificaciones</b>\n<size:11>notificaciones/services.py</size>" as M <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
-== Aprobar una de las solicitudes ==
-A -> P ++ : clic «Aprobar esta» → aprobar(p)
-P -> P : limpiarAviso()
-P -> P ++ : rivales(p)
+A -> P ++ : clic «Aprobar esta solicitud» → aprobar(p)
+P -> P ++ : rivalesSol(p.sol)
 return rivales
 P -> P : $comentario("el motivo es el de la tarjeta del tope")\nmotivo = (motivos[p.clave] || "").trim()
 break hay rivales y el motivo tiene menos de 10 caracteres
-  P -> P ++ : avisar("Ese bloque lo piden … solicitudes: escribe el motivo …", p.clave)
-  P -> P : $comentario("deja el cursor en el campo que falta")\ndocument.querySelector("#c-… .motivo input").focus()
-  deactivate P
+  P -> P : avisar("Sus bloques los piden … solicitudes: escribe el motivo …", p.clave)
   P --> A : aviso en la tarjeta del tope
 end
-P -> P ++ : registrar(p, "aprobado", motivo, "")
-P -> P : $comentario("AC5: con validador, hora y motivo")\nresoluciones[p.ticket] = {estado, motivo, validador, hora}
-deactivate P
-loop cada rival
-  P -> P ++ : registrar(r, "rechazado", motivo, "El bloque se asignó a la solicitud #" + p.sol.id)
-  deactivate P
+P -> N ++ : $comentario("enviar(s, 'aprobar', motivo)")\nfetch POST /validador/resolver/ → resolver_solicitud(request)
+N -> V ++ : resolver(solicitud_id, True, motivo, request.user)
+V -> D ++ : $comentario("_rivales(solicitud): las pendientes del mismo día con algún bloque en común")\nSELECT solicitudes_solicitud, solicitudes_solicitudbloque
+return filas
+V -> D ++ : $comentario("la solicitud y sus rivales, en orden de id (AC3)")\nSELECT … FROM solicitudes_solicitud FOR UPDATE
+return filas
+loop cada bloque pedido
+  V -> G ++ : bloqueo_de(solicitud.fecha, pedido.bloque.inicio)
+  G -> D ++ : SELECT agenda_bloqueo
+  return filas
+  return bloqueo
 end
-note right of P
-  Pierden solo este bloque, no el resto de
-  su solicitud: sus otros bloques siguen
-  pendientes. El motivo es el que les llega.
-end note
-P --> A : la casilla queda verde con el número de la solicitud y las dos van a «Resueltas»
-deactivate P
-
-== Rechazar una de las solicitudes ==
-A -> P ++ : clic «Rechazar» → rechazar(p, c.clave)
-P -> P : motivo = (motivos[c.clave] || "").trim()
-break el motivo tiene menos de 10 caracteres
-  P -> P ++ : avisar("Para rechazar escribe el motivo …", c.clave)
-  deactivate P
+V -> D ++ : $comentario("AC3: otra aceptada ese día en alguno de sus bloques")\nSELECT solicitudes_solicitud, solicitudes_solicitudbloque
+return filas
+alt bloqueado, ya aprobado o motivo corto
+  V --> N -- : ValidationError
+  N --> P -- : 400 · {"error": "…"}
+  P -> P : avisar(error, p.clave)
   P --> A : aviso en la tarjeta del tope
+else
+  loop la aprobada y cada rival
+    V -> D ++ : $comentario("ACEPTADA o RECHAZADA, con motivo, resuelta_por y resuelta_en (AC5)")\nUPDATE solicitudes_solicitud
+    return fila
+    V -> V : $comentario("el correo sale solo si la resolución quedó guardada (AC4)")\ntransaction.on_commit(partial(avisar, correo, …), robust=True)
+  end
+  V --> N : [solicitud, *rivales]
+  V -> M ++ : avisar(correo, asunto, "notificaciones/resolucion.txt", contexto)
+  deactivate M
+  N --> P : 200 · {"ok": true}
+  P -> P : registrarSol(s, "aprobado", motivo, "")
+  P -> P : $comentario("pierden la solicitud entera")\nrivales.forEach(r => registrarSol(r, "rechazado", motivo, "Se asignó a la solicitud #…"))
+  P --> A : la casilla queda verde con el número de la solicitud y todas van a «Resueltas»
 end
-P -> P ++ : registrar(p, "rechazado", motivo, "")
-deactivate P
-P -> P : limpiarAviso()
-P --> A : la solicitud sale del tope
-note right of P
-  Si en el bloque queda una sola solicitud ya no hay
-  tope: get competencias() la saca de la sección y
-  el bloque pasa a «Sin tope».
-end note
 deactivate P
 @enduml
