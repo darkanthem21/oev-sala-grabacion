@@ -284,6 +284,23 @@ mismo sea ajena, inexistente o ya revisada. Con htmx vuelve la tabla en la misma
 pestaña y página, con el mensaje dentro. Sin htmx, la vuelta es por redirección
 al historial.
 
+### Confirmar la asistencia (US-03)
+
+El correo de una solicitud aceptada trae un enlace a
+`/solicitar/mis-solicitudes/<id>/confirmar/`, el mismo de **Confirmar
+asistencia** en Mis solicitudes. Abrirlo solo muestra la reserva; confirma el
+botón, con un `POST`, para que un lector de correo que abre los enlaces no
+confirme por su cuenta. Sin sesión, la puerta del solicitante vuelve al enlace
+después de entrar (`next`, ver Clave correcta).
+
+![Confirmar la asistencia](diagramas/us-03/confirmar-asistencia.png)
+
+Se confirma hasta el día anterior, y solo una aceptada que no esté confirmada ni
+cancelada. La regla está dos veces: `Solicitud.puede_confirmarse` decide si la
+página muestra el botón, y el `UPDATE` condicionado de `confirmar_solicitud` es
+el que vale, como al retirar. Si entre abrir la página y el clic la reserva
+cambió o llegó el día, no se confirma y vuelve a Mis solicitudes con el aviso.
+
 ### Ver los bloques del día (US-14)
 
 Cada ticket es un bloque de una solicitud aceptada en una fecha
