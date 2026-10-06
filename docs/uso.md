@@ -11,6 +11,7 @@ Este manual cubre lo que hoy está disponible en el sistema:
 | US-03 Confirmar la asistencia | Solicitante | [Confirmar la asistencia](#confirmar-la-asistencia) |
 | US-04 Panel de administrador | Administrador | [Configurar la sala](#2-configurar-la-sala) |
 | US-07 Panel del validador | Validador | [Panel del validador](#5-panel-del-validador) |
+| US-09 Historial de solicitudes | Solicitante | [Mis solicitudes](#mis-solicitudes) |
 | US-14 Bloques del personal de apoyo | Personal de apoyo | [Bloques del día](#3-bloques-del-día) |
 | US-17 Bloquear fechas de la sala | Administrador | [Bloquear fechas de la sala](#6-bloquear-fechas-de-la-sala) |
 
@@ -318,6 +319,54 @@ de nuevo.
 Lo que eliges en cada paso queda guardado mientras completas el formulario. La
 solicitud se registra recién al pulsar **Confirmar y enviar solicitud**.
 
+### Mis solicitudes
+
+La pestaña **Mis solicitudes**, arriba junto a **Solicitar reserva**, muestra
+todas tus solicitudes, de cualquiera de tus áreas, con su estado actual. Está en
+`/solicitar/mis-solicitudes/`.
+
+Se separan en dos pestañas, cada una con cuántas tiene:
+
+- **Próximas**: las de hoy en adelante, la más cercana primero. Una de hoy sigue
+  aquí aunque su hora ya haya pasado.
+- **Anteriores**: las de días que ya pasaron, la más reciente primero.
+
+Cada fila dice el número de la solicitud, el área, la fecha, los bloques y el
+estado. Se muestran de a 20; si hay más, abajo aparecen **Anterior** y
+**Siguiente**.
+
+![Mis solicitudes: próximas](uso/us-09/mis-solicitudes-proximas.png)
+
+![Mis solicitudes: anteriores](uso/us-09/mis-solicitudes-anteriores.png)
+
+| Estado | Qué significa |
+|---|---|
+| **En revisión por la Oficina** | La Oficina todavía no la revisa. Se puede **Retirar** |
+| **Aceptada** | La Oficina la aceptó. Falta confirmar la asistencia: aparece **Confirmar asistencia** |
+| **Pendiente de confirmación** | Aceptada y esperando que confirmes. También aparece **Confirmar asistencia** |
+| **Confirmada** | Confirmaste que vas a usar la sala |
+| **Rechazada** | La Oficina la rechazó. Debajo va el motivo que escribió |
+| **Cancelada** | Se canceló después de aceptada |
+| **Retirada** | La retiraste antes de que la Oficina la revisara |
+
+**Retirar una solicitud**
+
+Solo se puede retirar una solicitud **En revisión por la Oficina**. Una vez
+aceptada o rechazada, el botón ya no aparece.
+
+1. Pulsa **Retirar** en la fila de la solicitud.
+2. Se abre un recuadro que pide confirmarlo. **Retirar solicitud** la retira;
+   **Cancelar**, Esc o un clic fuera del recuadro lo cierran sin cambiar nada.
+
+![Confirmar el retiro](uso/us-09/retirar-confirmar.png)
+
+La solicitud queda **Retirada** en la misma pestaña, con el aviso **Retiraste la
+solicitud #… Su horario queda libre.** No se borra: sigue en el historial. Si la
+Oficina la revisó justo antes, el aviso dice que ya no está en revisión y no
+cambia nada.
+
+![Solicitud retirada](uso/us-09/solicitud-retirada.png)
+
 ### Confirmar la asistencia
 
 Cuando la Oficina acepta una reserva llega un correo con un enlace para
@@ -330,8 +379,20 @@ asistencia** bajo el estado de cada reserva aceptada.
 | Ver la reserva | Muestra la fecha, el horario, el área y el motivo. Abrirla no confirma nada |
 | **Confirmar asistencia** | La reserva queda **Confirmada** y vuelve a Mis solicitudes con el aviso |
 
+![Confirmar asistencia](uso/us-03/confirmar-asistencia.png)
+
+Al confirmar, vuelves a **Mis solicitudes** con el aviso **Confirmaste tu
+asistencia a la reserva #…** y la fila queda **Confirmada**.
+
+![Asistencia confirmada](uso/us-03/asistencia-confirmada.png)
+
 Se puede confirmar hasta el día anterior a la reserva. Si ya está confirmada,
 cancelada o es el mismo día, la página lo dice y no muestra el botón.
+
+![Reserva que ya no se puede confirmar](uso/us-03/confirmacion-no-disponible.png)
+
+---
+
 ## 5. Panel del validador
 
 Aquí el validador revisa las solicitudes pendientes y aprueba o rechaza cada
