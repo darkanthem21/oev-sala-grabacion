@@ -1,0 +1,12 @@
+{% comment %}
+  Los mensajes de Django como avisos flotantes. base.html los dibuja al cargar
+  la página; una respuesta de htmx los manda fuera de banda:
+  <div id="avisos" hx-swap-oob="beforeend">{% include "_avisos.html" %}</div>
+{% endcomment %}
+{% for mensaje in messages %}
+  <div class="aviso-flotante {% if mensaje.level_tag == 'error' %}error{% endif %}"
+       {% if mensaje.level_tag == "error" %}role="alert"{% endif %}>
+    <span class="texto">{{ mensaje }}</span>
+    <button type="button" class="cerrar" aria-label="Cerrar aviso">×</button>
+  </div>
+{% endfor %}

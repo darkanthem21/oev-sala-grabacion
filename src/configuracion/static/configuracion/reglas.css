@@ -46,13 +46,6 @@
 .ancha .regla { padding-bottom: 0; }
 .ancha .error { margin-top: .4rem; color: var(--alerta); font-size: .8rem; }
 
-.aviso {
-  margin: 0 0 1rem; padding: .5rem .75rem; font-size: .85rem;
-  border: 1px solid var(--borde); background: var(--superficie);
-}
-.aviso.ok  { border-left: 3px solid var(--exito); }
-.aviso.mal { border-left: 3px solid var(--alerta); }
-
 /* A la vista mientras se recorre la pestaña, para no salir a buscar guardar. */
 .barra {
   position: sticky; bottom: 0; z-index: 2;
@@ -60,17 +53,11 @@
   margin-top: 1rem; padding: .7rem 0;
   background: var(--fondo); border-top: 1px solid var(--borde);
 }
-.barra .pista { margin: 0; font-size: .8rem; color: var(--tinta-suave); }
-.barra .btn { margin-left: auto; }
+.barra .btn.activa { margin-left: auto; }
 
-/* Se abre sola después de guardar, para ver lo que quedó anotado. */
-.historial { margin-top: 1.5rem; }
-.historial summary {
-  cursor: pointer; font-family: var(--fuente-titulo); font-weight: 700;
-  font-size: .8rem; color: var(--tinta-suave);
-}
-.historial summary:hover { color: var(--tinta); }
-.historial table { width: 100%; border-collapse: collapse; font-size: .85rem; margin-top: .6rem; }
+/* Últimos cambios, en un diálogo desde la barra. */
+.historial { max-height: 60vh; overflow: auto; margin-bottom: 1rem; }
+.historial table { width: 100%; border-collapse: collapse; font-size: .85rem; }
 .historial th {
   text-align: left; font-weight: 500; font-size: .8rem; color: var(--tinta-suave);
   padding: .3rem .6rem .3rem 0; border-bottom: 1px solid var(--borde);
@@ -83,5 +70,4 @@
 @media (max-width: 40rem) {
   .reglas { grid-template-columns: 1fr; }
   .regla .detalle { max-width: none; }
-  .historial { overflow-x: auto; }
 }

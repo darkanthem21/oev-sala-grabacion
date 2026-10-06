@@ -302,13 +302,20 @@ def resolver(solicitud_id, aprobar, motivo, quien, url_base=""):
     filas = {s.pk: s for s in Solicitud.objects.select_for_update().filter(pk__in=ids).order_by("pk")}
     solicitud = filas.pop(solicitud.pk)
     if solicitud.estado_validacion != Solicitud.EstadoValidacion.PENDIENTE:
-        raise ValidationError("Esta solicitud ya fue resuelta o retirada.")
+        raise ValidationError("Esta solicitud ya fue resuelta o retirada. Recarga la página para ver lo último.")
     rivales = [s for s in filas.values() if s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE]
     motivo = (motivo or "").strip()
 
     if aprobar:
         pedidos = list(solicitud.solicitudes_bloques.select_related("bloque"))
         for pedido in pedidos:
+            # Lo que el administrador quitó de la jornada ya no se da. Rige
+            # mientras la jornada sea una plantilla para todas las semanas.
+            if not pedido.bloque.activo:
+                raise ValidationError(
+                    f"El bloque de las {pedido.bloque.inicio:%H:%M} ya no está en la jornada: "
+                    "no se puede aprobar. Recházala."
+                )
             # US-17 AC3: lo bloqueado no se aprueba; se rechaza con ese motivo.
             bloqueo = bloqueo_de(solicitud.fecha, pedido.bloque.inicio)
             if bloqueo is not None:
@@ -325,13 +332,11 @@ def resolver(solicitud_id, aprobar, motivo, quien, url_base=""):
             raise ValidationError("Uno de sus bloques ya está aprobado para otra solicitud ese día.")
         if rivales and len(motivo) < MINIMO_MOTIVO:
             raise ValidationError(
-                f"Sus bloques los piden {len(rivales) + 1} solicitudes: escribe el motivo "
-                f"(mínimo {MINIMO_MOTIVO} caracteres). Le llega a quien no los obtiene."
+                f"Escribe el motivo del rechazo de las otras solicitudes (mínimo {MINIMO_MOTIVO} caracteres). "
+                "Si no las ves, recarga la página."
             )
     elif len(motivo) < MINIMO_MOTIVO:
-        raise ValidationError(
-            f"Para rechazar escribe el motivo (mínimo {MINIMO_MOTIVO} caracteres): le llega al encargado."
-        )
+        raise ValidationError(f"Escribe el motivo del rechazo (mínimo {MINIMO_MOTIVO} caracteres).")
 
     estado = Solicitud.EstadoValidacion.ACEPTADA if aprobar else Solicitud.EstadoValidacion.RECHAZADA
     cambios = [(solicitud, estado)]
@@ -339,12 +344,17 @@ def resolver(solicitud_id, aprobar, motivo, quien, url_base=""):
         cambios += [(r, Solicitud.EstadoValidacion.RECHAZADA) for r in rivales]
     ahora = timezone.now()
     for s, e in cambios:
-        s.estado_validacion, s.motivo_resolucion = e, motivo
+        # El motivo es de quien queda rechazado: la aprobada no lo lleva, ni en
+        # la base ni en su correo.
+        s.estado_validacion = e
+        s.motivo_resolucion = motivo if e == Solicitud.EstadoValidacion.RECHAZADA else ""
         s.resuelta_por, s.resuelta_en = quien, ahora
+        s.asignada_a = None if s is solicitud else solicitud
         s.save(update_fields=[
-            "estado_validacion", "motivo_resolucion", "resuelta_por", "resuelta_en", "actualizado_en",
+            "estado_validacion", "motivo_resolucion", "resuelta_por", "resuelta_en", "asignada_a",
+            "actualizado_en",
         ])
-        _avisar_resolucion(s, asignada=None if s is solicitud else solicitud, url_base=url_base)
+        _avisar_resolucion(s, asignada=s.asignada_a, url_base=url_base)
     return [s for s, _ in cambios]
 
 
