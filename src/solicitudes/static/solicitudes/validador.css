@@ -4,15 +4,13 @@
 
 /* --- Bloques de la agenda --- */
 /* Un bloque dice la hora y quién lo pide; nada más. El tope lleva el filete de
- * choque de Configuración, lo reservado el fondo de la página y un bloque que
- * el administrador quitó, pero que todavía tiene pedidos, va punteado. */
+ * choque de Configuración y lo reservado el fondo de la página. */
 /* La hora arriba y debajo un nombre por línea; calendario.css los deja en una. */
 .validacion .bloque { display: flex; flex-direction: column; justify-content: flex-start; }
 .bloque .quien-b { font-size: .76rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bloque.tope { border-color: var(--alerta); }
 .bloque.reservada { background: var(--fondo); }
 .bloque.reservada .quien-b { font-weight: 400; color: var(--tinta-suave); }
-.bloque.quitado { border-style: dashed; }
 .bloque.elegido .quien-b { color: var(--superficie); }
 /* Sin pendientes no hay nada que elegir: no reacciona, pero se lee igual. */
 .bloque:disabled { cursor: default; }
@@ -21,7 +19,9 @@
 
 .tope-m { background: var(--superficie); box-shadow: inset 3px 0 0 var(--alerta), inset 0 0 0 1px var(--alerta); }
 .reservada-m { background: var(--fondo); box-shadow: inset 3px 0 0 var(--info), inset 0 0 0 1px var(--info); }
-.quitado-m { background: var(--superficie); outline: 1px dashed var(--info); outline-offset: -1px; }
+
+/* Un día bloqueado entero no tiene bloques: la cabecera dice por qué. */
+.cabecera .razon-dia { flex-basis: 100%; font-size: .7rem; font-weight: 400; color: var(--tinta-suave); }
 
 /* --- Agenda y panel lado a lado --- */
 .con-panel { display: grid; grid-template-columns: minmax(0, 1fr) 22rem; gap: 1.25rem; align-items: start; }
