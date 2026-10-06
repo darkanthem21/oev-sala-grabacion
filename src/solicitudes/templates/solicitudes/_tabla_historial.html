@@ -19,11 +19,12 @@
     </a>
   </nav>
 
-  {% comment %}El resultado de retirar llega acá, con la tabla ya redibujada.{% endcomment %}
-  {% for mensaje in messages %}
-    <div class="{% if mensaje.level_tag == 'error' %}error{% else %}aviso{% endif %}"
-         role="{% if mensaje.level_tag == 'error' %}alert{% else %}status{% endif %}">{{ mensaje }}</div>
-  {% endfor %}
+  {% comment %}El resultado de retirar llega con la tabla ya redibujada, como aviso
+  flotante. En la página entera (también la que htmx pide al volver con Atrás)
+  lo dibuja base.html.{% endcomment %}
+  {% if request.headers.hx_request and not request.headers.hx_history_restore_request %}
+    <div id="avisos" hx-swap-oob="beforeend">{% include "_avisos.html" %}</div>
+  {% endif %}
 
   {% if vista == "proximas" %}
     <p class="nota-confirmacion">
