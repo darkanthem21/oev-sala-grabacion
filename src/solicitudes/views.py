@@ -58,7 +58,7 @@ def puede_validar(usuario):
 
 
 def _datos_validacion():
-    return {"datos": validacion.marcar_bloqueos(validacion.cargar())}
+    return {"datos": validacion.cargar()}
 
 
 @user_passes_test(es_validador, login_url="login_validacion")

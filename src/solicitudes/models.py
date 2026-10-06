@@ -109,6 +109,15 @@ class Solicitud(models.Model):
         verbose_name="resuelta por",
     )
     resuelta_en = models.DateTimeField(null=True, blank=True, verbose_name="resuelta el")
+    # Cuando perdió un tope: la solicitud que se quedó con el bloque.
+    asignada_a = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+        verbose_name="asignada a",
+    )
 
     bloques = models.ManyToManyField(
         "agenda.Bloque",

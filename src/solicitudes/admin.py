@@ -31,7 +31,7 @@ class SolicitudAdmin(admin.ModelAdmin):
     inlines = [SolicitudBloqueInline, AcompananteInline]
     # US-07: aprobar desde acá saltaría la regla de un aprobado por bloque y
     # fecha (AC3). Se resuelve en el panel del validador.
-    readonly_fields = ["estado_validacion", "motivo_resolucion", "resuelta_por", "resuelta_en"]
+    readonly_fields = ["estado_validacion", "motivo_resolucion", "resuelta_por", "resuelta_en", "asignada_a"]
 
     @admin.display(description="Total personas")
     def get_total_personas(self, obj):
