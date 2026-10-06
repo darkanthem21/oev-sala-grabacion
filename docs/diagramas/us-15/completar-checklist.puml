@@ -1,0 +1,83 @@
+@startuml completar-checklist
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Completar el checklist de cierre de la sala (US-15)
+
+actor "Personal de apoyo" as A
+participant "<b>uso.views</b>\n<size:11>uso/views.py</size>" as N <<presentación>>
+participant "<b>checklist</b>\n<size:11>static/js/checklist.js</size>" as P <<presentación>>
+database "<b>localStorage</b>\n<size:11>navegador</size>" as L <<persistencia>>
+
+== Abrir el checklist ==
+A -> N ++ : GET /checklist/ → checklist(request)
+N --> A -- : 200 · uso/checklist.html
+note right of N
+  Sin sesión ni consulta a la base: la reserva
+  («Sala Virtual», 09:00 - 12:00) está escrita
+  en la plantilla.
+end note
+A -> P ++ : el navegador carga static/js/checklist.js
+P -> P ++ : render()
+P -> P : $comentario("«Paso 1 de 4» y la barra de avance")\nupdateProgress(step)
+P -> P : $comentario("las preguntas del paso, cada una con Sí y No")\n$("#stepContent").innerHTML = stepContentHtml(step)
+P -> P : bindStepEvents()
+deactivate P
+P --> A : Sección 1: Integridad de la sala
+deactivate P
+
+== Responder un paso ==
+loop cada pregunta del paso
+  A -> P ++ : marca Sí o No → handleAnswerChange(event, i)
+  P -> P : answers[answerKey(i)] = event.target.value
+  opt marcó Sí
+    P -> P : $comentario("borra la observación y la foto de un No anterior")\ndelete answers[observationKey(i)]; clearIntegrityPhoto(i)
+  end
+  P -> P : render()
+  opt marcó No
+    P --> A : los campos de observación y foto de integridad
+    A -> P : escribe la observación → answers[observationKey(i)] = element.value
+    A -> P : $comentario("la foto queda como URL local del navegador")\nadjunta la foto → integrityPhotos[key] = URL.createObjectURL(archivo)
+  end
+  deactivate P
+end
+A -> P ++ : clic «Siguiente» → nextStep()
+P -> P ++ : validateStep()
+return error
+break falta una respuesta, o un No sin observación de 10 caracteres o sin foto
+  P -> P : showError(error)
+  P --> A : el aviso bajo el paso
+end
+P -> P : currentStep += 1
+P -> P : render()
+P --> A : el paso siguiente
+deactivate P
+note right of P
+  «Anterior» es previousStep(): baja currentStep y
+  vuelve a dibujar con lo que ya estaba respondido.
+end note
+
+== Finalizar (paso 4) ==
+A -> P ++ : $comentario("answers.arrive, answers.closeobs y finalPhotoUrl")\nhora efectiva de salida, observaciones finales y foto de entrega
+deactivate P
+A -> P ++ : clic «Finalizar y enviar reporte» → finishReport()
+P -> P ++ : validateStep()
+return error
+break lo mismo que en «Siguiente», o falta la hora de salida
+  P -> P : showError(error)
+  P --> A : el aviso bajo el paso
+end
+P -> P ++ : reportData()
+return {reserva: "Sala Virtual", horario: "09:00-12:00", horaSalida, respuestas, fotografiasIntegridad, …}
+P -> L ++ : localStorage.setItem("reporteCierreSala", JSON.stringify(report))
+deactivate L
+P -> P : $comentario("oculta el formulario y muestra el resumen")\n$("#doneView").classList.remove("hidden")
+P --> A : «Revisión finalizada»: el reporte quedó en este navegador
+deactivate P
+note right of P
+  Ningún paso llama al servidor: el reporte no llega
+  a la base ni al check-out de US-14, y de las fotos
+  solo se guarda cuáles había. La plantilla lo avisa:
+  es un prototipo visual.
+end note
+@enduml
