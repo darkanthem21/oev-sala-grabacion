@@ -20,8 +20,9 @@ break hay rivales y el motivo tiene menos de 10 caracteres
   P -> P : avisar("Sus bloques los piden … solicitudes: escribe el motivo …", p.clave)
   P --> A : aviso en la tarjeta del tope
 end
+P -> P : $comentario("apaga los botones mientras va el pedido: un doble clic mandaría dos")\nenviando = true
 P -> N ++ : $comentario("enviar(s, 'aprobar', motivo)")\nfetch POST /validador/resolver/ → resolver_solicitud(request)
-N -> V ++ : resolver(solicitud_id, True, motivo, request.user)
+N -> V ++ : $comentario("url_base: esquema y dominio del sitio, para el enlace del correo")\nresolver(solicitud_id, True, motivo, request.user, url_base=request.build_absolute_uri("/").rstrip("/"))
 V -> D ++ : $comentario("_rivales(solicitud): las pendientes del mismo día con algún bloque en común")\nSELECT solicitudes_solicitud, solicitudes_solicitudbloque
 return filas
 V -> D ++ : $comentario("la solicitud y sus rivales, en orden de id (AC3)")\nSELECT … FROM solicitudes_solicitud FOR UPDATE
@@ -43,6 +44,9 @@ else
   loop la aprobada y cada rival
     V -> D ++ : $comentario("ACEPTADA o RECHAZADA, con motivo, resuelta_por y resuelta_en (AC5)")\nUPDATE solicitudes_solicitud
     return fila
+    opt quedó ACEPTADA
+      V -> V : $comentario("el enlace para confirmar la asistencia (US-03)")\nurl_confirmar = url_base + reverse("confirmar_solicitud", args=[solicitud.pk])
+    end
     V -> V : $comentario("el correo sale solo si la resolución quedó guardada (AC4)")\ntransaction.on_commit(partial(avisar, correo, …), robust=True)
   end
   V --> N : [solicitud, *rivales]
