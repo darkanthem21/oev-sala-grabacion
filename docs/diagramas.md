@@ -258,6 +258,22 @@ y queda en la sesión.
 
 Si registra, la vuelta es por redirección, a la lista del día del bloque.
 
+### Completar el checklist de cierre de la sala (US-15)
+
+Este diagrama es la excepción a la regla de arriba: dibuja el prototipo de la
+rama `feat/us-15-checkout-de-constancia`, que todavía no está en `main`. Ahí,
+`/checklist/` solo entrega la plantilla y todo lo demás corre en
+`static/js/checklist.js`: cuatro pasos de preguntas Sí o No, y un No exige una
+observación de al menos 10 caracteres y una foto de integridad. El último paso
+pide además la hora efectiva de salida.
+
+![Completar el checklist de cierre de la sala](diagramas/us-15/completar-checklist.png)
+
+Ningún paso llama al servidor. La reserva está escrita en la plantilla, el
+reporte queda en el `localStorage` del navegador y de las fotos solo se guarda
+cuáles había. Todavía no reemplaza el check-out simulado de US-14: cuando se
+integre con él, este diagrama se tiene que rehacer.
+
 ### Bloquear la sala en unas fechas (US-17)
 
 `BloqueoForm` decide qué campos valen según el modo (todo el día, un bloque o
