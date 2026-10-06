@@ -13,6 +13,7 @@ Este manual cubre lo que hoy está disponible en el sistema:
 | US-07 Panel del validador | Validador | [Panel del validador](#5-panel-del-validador) |
 | US-09 Historial de solicitudes | Solicitante | [Mis solicitudes](#mis-solicitudes) |
 | US-14 Bloques del personal de apoyo | Personal de apoyo | [Bloques del día](#3-bloques-del-día) |
+| US-15 Checkout de constancia | Personal de apoyo | [Checklist de cierre de la sala](#7-checklist-de-cierre-de-la-sala) |
 | US-17 Bloquear fechas de la sala | Administrador | [Bloquear fechas de la sala](#6-bloquear-fechas-de-la-sala) |
 
 ## Puertas de acceso
@@ -583,3 +584,67 @@ bloqueos, solo para su fecha.
 > **Estado actual.** Las reservas que un bloqueo afecta son las solicitudes
 > aceptadas y no canceladas de esas fechas. En desarrollo, los correos de aviso
 > se escriben en el log del contenedor en vez de enviarse.
+
+---
+
+## 7. Checklist de cierre de la sala
+
+> **Estado actual.** Esta pantalla es el prototipo de US-15 y todavía no está
+> en `main`: vive en la rama `feat/us-15-checkout-de-constancia`. Se abre en
+> `/checklist/`, sin iniciar sesión, y muestra siempre la misma reserva de
+> ejemplo (*Sala Virtual, 09:00 - 12:00*). El reporte queda guardado solo en el
+> navegador: todavía no llega al sistema ni reemplaza el check-out de la
+> sección 3.
+
+Al terminar el uso de la sala, el personal de apoyo la revisa y deja constancia
+de su estado. Son cuatro pasos; la barra de arriba dice en cuál vas y cuánto
+falta.
+
+| Paso | Qué se revisa |
+|---|---|
+| 1. Estado e integridad | Paredes y paneles acústicos sin daños; puerta y sellos acústicos funcionando |
+| 2. Orden y limpieza | Sala sin basura ni objetos personales; mobiliario en su posición original |
+| 3. Equipamiento técnico | Micrófonos y cables enrollados; consola y periféricos apagados; si algún equipo o cable presenta daños |
+| 4. Cumplimiento y cierre | Si el ingreso y la desocupación fueron a la hora prevista, y la hora efectiva de salida |
+
+![Paso 1 del checklist](uso/us-15/checklist-paso1.png)
+
+### Responder un paso
+
+1. Marca **Sí** o **No** en cada pregunta.
+2. Si marcas **No**, aparecen dos campos obligatorios: una **Observación** de al
+   menos 10 caracteres que explique el problema y una **Foto de integridad** de
+   respaldo. **Quitar foto** la saca para adjuntar otra.
+3. Pulsa **Siguiente**. **Anterior** vuelve al paso previo sin perder lo
+   respondido.
+
+![Una respuesta No con su observación y su foto](uso/us-15/checklist-respuesta-no.png)
+
+Si falta algo, el paso no avanza y el aviso aparece bajo los botones.
+
+![Aviso por preguntas sin responder](uso/us-15/checklist-falta-respuesta.png)
+
+| Situación | Aviso |
+|---|---|
+| Una pregunta sin responder | Responde todas las preguntas antes de continuar. |
+| Un No con una observación corta | Agrega una observación de al menos 10 caracteres para cada respuesta No. |
+| Un No sin foto | Adjunta una foto de integridad para cada respuesta marcada como No. |
+| El paso 4 sin hora de salida | Indica la hora efectiva de salida. |
+
+### Cerrar la revisión
+
+En el paso 4, además de las dos preguntas:
+
+1. Escribe la **Hora efectiva de salida** (obligatoria).
+2. Agrega **Observaciones finales** si hace falta (opcional).
+3. Adjunta la **Foto de fidelidad / entrega**, con el estado general de la sala
+   al terminar (opcional).
+4. Pulsa **Finalizar y enviar reporte**.
+
+![Paso 4: cumplimiento y cierre](uso/us-15/checklist-cierre.png)
+
+Aparece **Revisión finalizada** con el resumen: la sala, la hora de salida,
+cuántas fotos de integridad se adjuntaron, si hay foto final y la fecha y hora
+del registro. **Volver al inicio** empieza un checklist nuevo.
+
+![Revisión finalizada](uso/us-15/checklist-finalizado.png)
