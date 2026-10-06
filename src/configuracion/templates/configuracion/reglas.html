@@ -7,17 +7,8 @@
 {% block estilos_seccion %}<link rel="stylesheet" href="{% static 'configuracion/reglas.css' %}">{% endblock %}
 
 {% block seccion %}
-{% if guardados %}
-  <p class="aviso ok" role="status">{{ guardados }} cambio{{ guardados|pluralize }} guardado{{ guardados|pluralize }}.</p>
-{% elif guardados == 0 %}
-  <p class="aviso" role="status">No había nada que cambiar.</p>
-{% endif %}
-
 <form method="post" novalidate>
   {% csrf_token %}
-  {% if form.errors %}
-    <p class="aviso mal" role="alert">Corrige lo marcado en rojo. No se guardó nada.</p>
-  {% endif %}
 
   <div class="reglas">
     {% for titulo, filas in form.secciones %}
@@ -49,14 +40,15 @@
   </div>
 
   <div class="barra">
-    <p class="pista">Los cambios rigen para las solicitudes nuevas. Las ya enviadas no cambian.</p>
+    <button class="btn" type="button" data-abre="ultimos-cambios">Últimos cambios{% if historial %} ({{ historial|length }}){% endif %}</button>
     <button class="btn activa" type="submit">Guardar cambios</button>
   </div>
 </form>
 
-<details class="historial"{% if guardados %} open{% endif %}>
-  <summary>Últimos cambios{% if historial %} ({{ historial|length }}){% endif %}</summary>
+<dialog id="ultimos-cambios" class="dialogo ancho" aria-labelledby="ultimos-cambios-titulo">
+  <h2 id="ultimos-cambios-titulo" class="dialogo-titulo">Últimos cambios</h2>
   {% if historial %}
+    <div class="historial">
     <table>
       <thead><tr><th>Cuándo</th><th>Parámetro</th><th>Cambio</th><th>Quién</th></tr></thead>
       <tbody>
@@ -70,8 +62,10 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   {% else %}
     <p class="vacio">Nadie ha cambiado un parámetro todavía: rigen los valores por defecto.</p>
   {% endif %}
-</details>
+  <form method="dialog" class="dialogo-acciones"><button class="btn">Cerrar</button></form>
+</dialog>
 {% endblock %}

@@ -19,6 +19,12 @@ class Dia(models.IntegerChoices):
     VIERNES = 4, "viernes"
 
 
+# Piso de la rejilla semanal: sin esto un día con un solo bloque se dibujaría
+# ocupando toda la jornada y los días dejarían de ser comparables. Lo usan la
+# Jornada semanal de Configuración y la agenda del validador.
+JORNADA_MINIMA = (8 * 60, 19 * 60)
+
+
 def minutos(hora):
     return hora.hour * 60 + hora.minute
 

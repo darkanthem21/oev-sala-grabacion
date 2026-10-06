@@ -2,6 +2,7 @@ import calendar
 from collections import Counter
 from datetime import date, time, timedelta
 
+from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ValidationError
 from django.db.models.functions import Coalesce
@@ -14,11 +15,7 @@ from django.views.decorators.http import require_POST
 
 from . import services
 from .forms import MODOS, BloqueForm, BloqueoForm, LevantarForm
-from .models import Bloque, Bloqueo, Dia, Motivo, bloqueos_por_fecha, minutos, plantilla_semanal
-
-# Piso de la rejilla: sin esto un día con un solo bloque se dibujaría ocupando
-# toda la jornada y los días dejarían de ser comparables.
-JORNADA_MINIMA = (8 * 60, 19 * 60)
+from .models import JORNADA_MINIMA, Bloque, Bloqueo, Dia, Motivo, bloqueos_por_fecha, minutos, plantilla_semanal
 
 # Cuántas acciones muestra el registro de bloqueos. El historial completo está
 # en la administración de Django, igual que el de los parámetros.
@@ -279,7 +276,7 @@ def _elegido(bloque):
 
 
 def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
-              bloqueo=None, afectadas=(), levantando=None, aviso_mes=None, hecho=None):
+              bloqueo=None, afectadas=(), levantando=None, error_levantar=None):
     """Todo lo que necesita el calendario. Lo comparten la vista que lo muestra
     y las que guardan un bloque o un bloqueo, porque todas dibujan la misma
     rejilla."""
@@ -342,8 +339,8 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
         "afectadas": afectadas,
         "confirmadas": ",".join(r.codigo for r in afectadas),
         "levantando": levantando,
-        "aviso_mes": aviso_mes,
-        "hecho": hecho,
+        # Lo que no dejó levantar un bloqueo: va dentro de su pop-up.
+        "error_levantar": error_levantar,
         "registro": _registro() if vista == "mes" else [],
         "proximas": _proximas(hoy, fechas) if vista == "semana" else [],
     }
@@ -353,22 +350,26 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
 def bloques(request):
     contexto = _contexto(request.GET)
     # htmx pide solo la rejilla. El navegador sin htmx pide la página entera y
-    # recibe lo mismo dentro de ella.
-    if request.headers.get("HX-Request"):
+    # recibe lo mismo dentro de ella, igual que htmx al volver con Atrás sin la
+    # página en su caché (HX-History-Restore-Request).
+    if request.headers.get("HX-Request") and not request.headers.get("HX-History-Restore-Request"):
         return render(request, "agenda/_calendario.html", contexto)
     return render(request, "agenda/bloques.html", contexto)
 
 
 def _mensaje(formulario):
-    """Los errores en una línea, porque el aviso vive en la barra."""
+    """Los errores en una línea, que es lo que cabe en el pop-up."""
     return " ".join(m for grupo in formulario.errors.values() for m in grupo)
 
 
 def _responder(request, **extra):
     """htmx recibe la rejilla ya redibujada. El navegador sin htmx recibe una
-    redirección, para que recargar no reenvíe el formulario."""
+    redirección, para que recargar no reenvíe el formulario, y el error va como
+    aviso porque no hay pop-up que lo muestre."""
     if request.headers.get("HX-Request"):
         return render(request, "agenda/_calendario.html", _contexto(request.POST, **extra))
+    if extra.get("error"):
+        messages.error(request, extra["error"])
     destino = f"{reverse('panel_bloques')}?vista=semana&desde={request.POST.get('desde', '')}"
     return redirect(destino)
 
@@ -388,6 +389,10 @@ def editar_bloque(request):
         if accion == "quitar":
             bloque.activo = False
             bloque.save(update_fields=["activo"])
+            # Con htmx, el aviso con «Reponerlo» lo dibuja la rejilla, porque lleva
+            # un formulario. Sin htmx queda solo el mensaje.
+            if not request.headers.get("HX-Request"):
+                messages.success(request, f"Quitaste el bloque de los {_nombre(bloque)}.")
             return _responder(request, quitado=bloque)
         # Reponer puede chocar, porque mientras estuvo fuera alguien pudo
         # ocupar la hora.
@@ -395,11 +400,11 @@ def editar_bloque(request):
         try:
             bloque.full_clean(exclude=["dia"])
         except ValidationError as error:
-            return _responder(
-                request, error=" ".join(error.messages), quitado=bloque, choca=bloque.cruce()
-            )
+            messages.error(request, " ".join(error.messages))
+            return _responder(request, quitado=bloque, choca=bloque.cruce())
         bloque.save(update_fields=["activo"])
-        return _responder(request, elegido=bloque)
+        messages.success(request, f"Repusiste el bloque de los {_nombre(bloque)}.")
+        return _responder(request)
 
     # Guardar y agregar usan el mismo formulario; lo que cambia es la instancia.
     pk = request.POST.get("bloque")
@@ -414,7 +419,8 @@ def editar_bloque(request):
     formulario = BloqueForm(request.POST, instance=bloque)
     if formulario.is_valid():
         formulario.save()
-        return _responder(request, elegido=bloque)
+        messages.success(request, f"Guardaste el bloque de los {_nombre(bloque)}. Vale para todas las semanas.")
+        return _responder(request)
     # `cruce()` de nuevo solo en el camino del error, para señalar el otro.
     return _responder(request, error=_mensaje(formulario), elegido=bloque, choca=bloque.cruce())
 
@@ -444,6 +450,10 @@ def _responder_mes(request, listo=False, **extra):
     return render(request, "agenda/bloques.html", contexto)
 
 
+def _nombre(bloque):
+    return f"{bloque.get_dia_display()}, {bloque.inicio:%H:%M}–{bloque.termino:%H:%M}"
+
+
 def _personas(reservas):
     cuantas = len({r.correo for r in reservas})
     return "1 persona" if cuantas == 1 else f"{cuantas} personas"
@@ -463,16 +473,18 @@ def editar_bloqueo(request):
         bloqueo = get_object_or_404(Bloqueo, pk=request.POST.get("bloqueo"))
         formulario = LevantarForm(request.POST)
         if not formulario.is_valid():
-            return _responder_mes(request, levantando=bloqueo.pk, aviso_mes=_mensaje(formulario))
+            return _responder_mes(request, levantando=bloqueo.pk, error_levantar=_mensaje(formulario))
         try:
             services.levantar(bloqueo, request.user, formulario.cleaned_data["motivo"])
         except ValidationError as error:
-            return _responder_mes(request, aviso_mes=" ".join(error.messages))
-        return _responder_mes(
-            request, listo=True,
-            hecho=f"Levantaste el bloqueo por {bloqueo.get_motivo_display()}. La sala vuelve a "
-                  f"estar disponible {bloqueo.periodo}, {bloqueo.alcance}.",
+            messages.error(request, " ".join(error.messages))
+            return _responder_mes(request)
+        messages.success(
+            request,
+            f"Levantaste el bloqueo por {bloqueo.get_motivo_display()}. La sala vuelve a "
+            f"estar disponible {bloqueo.periodo}, {bloqueo.alcance}.",
         )
+        return _responder_mes(request, listo=True)
 
     formulario = BloqueoForm(request.POST)
     if not formulario.is_valid():
@@ -488,4 +500,5 @@ def editar_bloqueo(request):
     hecho = f"Bloqueaste la sala {bloqueo.periodo}, {bloqueo.alcance} ({bloqueo.razon})."
     if afectadas:
         hecho += f" Se le avisó por correo a {_personas(afectadas)}."
-    return _responder_mes(request, listo=True, hecho=hecho)
+    messages.success(request, hecho)
+    return _responder_mes(request, listo=True)
