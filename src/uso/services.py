@@ -33,6 +33,7 @@ def _tickets(**filtro):
     return [
         {
             "ticket": f.ticket,
+            "bloque_id": f.bloque_id,
             "fecha": f.fecha,
             "inicio": f.inicio,
             "termino": f.termino,
@@ -73,7 +74,7 @@ def bloques_del_dia(fecha, enviados=(), ahora=None):
     bloqueos = bloqueos_por_fecha(fecha, fecha).get(fecha, [])
     bloques = [_armar(t, enviados, ahora) for t in _tickets(solicitud__fecha=fecha)]
     for bloque in bloques:
-        bloque["bloqueo"] = next((b for b in bloqueos if b.cubre(fecha, bloque["inicio"])), None)
+        bloque["bloqueo"] = next((b for b in bloqueos if b.cubre(fecha, bloque["inicio"], bloque["bloque_id"])), None)
     # AC1: en el orden en que van a llegar.
     return sorted(bloques, key=lambda b: b["inicio"])
 

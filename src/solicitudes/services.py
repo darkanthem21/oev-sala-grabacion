@@ -1,4 +1,5 @@
 import calendar
+from collections import defaultdict
 from dataclasses import dataclass
 from functools import partial
 from datetime import date, datetime, time
@@ -8,8 +9,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from agenda.models import Bloque, bloqueo_de, disponibilidad
-from agenda.signals import Reserva
+from agenda.models import Bloque, disponibilidad, impedimento
+from agenda.signals import Pedido
 from notificaciones.services import avisar
 from personas.models import Area
 from django.urls import reverse
@@ -177,7 +178,9 @@ def guardar_solicitud_completa(
         solicitud.save()
 
         bloques_ids = datos_reserva.get("bloques_ids", [])
-        bloques_db = Bloque.objects.filter(id__in=bloques_ids, activo=True)
+        # Si un bloque ya no se puede pedir esa fecha, lo dice el full_clean de
+        # cada SolicitudBloque (`impedimento`).
+        bloques_db = Bloque.objects.filter(id__in=bloques_ids)
         if len(bloques_db) != len(bloques_ids):
             raise ValidationError("Uno o más bloques seleccionados no son válidos o ya no están activos.")
 
@@ -218,26 +221,77 @@ def retirar_solicitud(usuario, solicitud_id: int) -> bool:
     ) == 1
 
 
-def reservas_aprobadas(sender, desde, hasta, **kwargs):
-    """US-17 AC4: las reservas aceptadas y no canceladas de esas fechas, para que
-    agenda sepa a quién le quita la sala un bloqueo. Se conecta en `apps.py`."""
+def pedidos_vivos(sender, desde, hasta=None, bloque=None, **kwargs):
+    """Los bloques que piden las solicitudes pendientes y las aprobadas sin
+    cancelar desde `desde`, para que agenda sepa a quién le quita la sala cuando
+    saca horario. Se conecta en `apps.py`."""
     filas = SolicitudBloque.objects.filter(
-        solicitud__fecha__range=(desde, hasta),
-        solicitud__estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
+        solicitud__fecha__gte=desde,
+        solicitud__estado_validacion__in=[
+            Solicitud.EstadoValidacion.PENDIENTE, Solicitud.EstadoValidacion.ACEPTADA,
+        ],
     ).exclude(
         solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA,
     ).select_related("bloque", "solicitud__solicitante")
+    if hasta is not None:
+        filas = filas.filter(solicitud__fecha__lte=hasta)
+    if bloque is not None:
+        filas = filas.filter(bloque_id=bloque)
     return [
-        Reserva(
+        Pedido(
+            solicitud=f.solicitud_id,
             codigo=f.ticket,
             fecha=f.fecha,
+            bloque=f.bloque_id,
             inicio=f.inicio,
             termino=f.termino,
+            pendiente=f.solicitud.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE,
             solicitante=f.solicitud.solicitante.get_full_name() or f.solicitud.solicitante.email,
             correo=f.solicitud.solicitante.email,
         )
         for f in filas
     ]
+
+
+def liberar(sender, afectadas, razon, quien, **kwargs):
+    """Lo que les pasa a las solicitudes que pierden su horario: la pendiente
+    se rechaza con la razón y la aprobada se cancela, cada una con su correo.
+    Se afecta la solicitud entera, como al validar.
+
+    Corre dentro de la transacción que guarda el corte. Las filas se bloquean en
+    orden de id, igual que en `resolver`, y lo que alguien resolvió entremedio
+    se salta.
+    """
+    ids = sorted({p.solicitud for p in afectadas})
+    filas = Solicitud.objects.select_for_update(of=("self",)).filter(pk__in=ids).order_by("pk")
+    ahora = timezone.now()
+    canceladas = defaultdict(list)
+    for s in filas.select_related("solicitante"):
+        if s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE:
+            s.estado_validacion = Solicitud.EstadoValidacion.RECHAZADA
+            s.motivo_resolucion = razon
+            s.resuelta_por, s.resuelta_en = quien, ahora
+            s.save(update_fields=[
+                "estado_validacion", "motivo_resolucion", "resuelta_por", "resuelta_en", "actualizado_en",
+            ])
+            _avisar_resolucion(s)
+        elif (s.estado_validacion == Solicitud.EstadoValidacion.ACEPTADA
+              and s.estado_confirmacion != Solicitud.EstadoConfirmacion.CANCELADA):
+            s.estado_confirmacion = Solicitud.EstadoConfirmacion.CANCELADA
+            s.save(update_fields=["estado_confirmacion", "actualizado_en"])
+            canceladas[s.solicitante].append(s)
+    # Uno por persona, con todas sus reservas; si uno falla, los demás igual salen.
+    for persona, solicitudes in canceladas.items():
+        transaction.on_commit(
+            partial(
+                avisar,
+                persona.email,
+                "Tu reserva de la sala de grabación se canceló",
+                "notificaciones/bloqueo.txt",
+                {"nombre": persona.get_full_name() or persona.email, "razon": razon, "solicitudes": solicitudes},
+            ),
+            robust=True,
+        )
 
 
 # US-07 AC4: el motivo le llega al solicitante, así que tiene que decir algo.
@@ -309,20 +363,10 @@ def resolver(solicitud_id, aprobar, motivo, quien, url_base=""):
     if aprobar:
         pedidos = list(solicitud.solicitudes_bloques.select_related("bloque"))
         for pedido in pedidos:
-            # Lo que el administrador quitó de la jornada ya no se da. Rige
-            # mientras la jornada sea una plantilla para todas las semanas.
-            if not pedido.bloque.activo:
-                raise ValidationError(
-                    f"El bloque de las {pedido.bloque.inicio:%H:%M} ya no está en la jornada: "
-                    "no se puede aprobar. Recházala."
-                )
-            # US-17 AC3: lo bloqueado no se aprueba; se rechaza con ese motivo.
-            bloqueo = bloqueo_de(solicitud.fecha, pedido.bloque.inicio)
-            if bloqueo is not None:
-                raise ValidationError(
-                    f"La sala está bloqueada a las {pedido.bloque.inicio:%H:%M} ({bloqueo.razon}): "
-                    "no se puede aprobar. Recházala con ese motivo."
-                )
+            # Quitado, bloqueado (US-17 AC3) o ajeno a la fecha: no se aprueba.
+            razon = impedimento(pedido.bloque, solicitud.fecha)
+            if razon is not None:
+                raise ValidationError(f"{razon} No se puede aprobar: recházala.")
         ocupada = Solicitud.objects.filter(
             fecha=solicitud.fecha,
             estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,

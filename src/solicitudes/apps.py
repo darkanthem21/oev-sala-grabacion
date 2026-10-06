@@ -5,10 +5,13 @@ class SolicitudesConfig(AppConfig):
     name = "solicitudes"
 
     def ready(self):
-        # US-17 AC4. Agenda pregunta por señal quién pierde la sala con un
-        # bloqueo, porque importar este módulo desde allá sería al revés.
-        from agenda.signals import reservas_aprobadas
+        # Agenda pregunta por señal quién pierde la sala cuando saca horario, y
+        # avisa por otra lo que se confirmó, porque importar este módulo desde
+        # allá sería al revés.
+        from agenda.signals import horario_quitado, pedidos_vivos
 
-        from .services import reservas_aprobadas as receptor
+        from .services import liberar
+        from .services import pedidos_vivos as receptor
 
-        reservas_aprobadas.connect(receptor, dispatch_uid="solicitudes.reservas_aprobadas")
+        pedidos_vivos.connect(receptor, dispatch_uid="solicitudes.pedidos_vivos")
+        horario_quitado.connect(liberar, dispatch_uid="solicitudes.liberar")
