@@ -45,6 +45,9 @@ entity "<b>solicitudes_solicitud</b>" as Solicitud {
     * personas : smallint
     * estado_validacion : varchar(20)  /* PENDIENTE | ACEPTADA | RECHAZADA | RETIRADA */
     * estado_confirmacion : varchar(20)  /* NO_HABILITADA | PENDIENTE | CONFIRMADA | CANCELADA */
+    motivo_resolucion : text
+    <b>resuelta_por_id</b> : bigint <<FK -> personas_usuario.id>>
+    resuelta_en : timestamptz
     * creado_en : timestamptz
     * actualizado_en : timestamptz
 }
@@ -79,6 +82,7 @@ entity "<b>solicitudes_acompanante</b>" as Acompanante {
 Usuario ||--o{ UsuarioArea : "puede pedir para"
 Area ||--o{ UsuarioArea
 Usuario ||..o{ Solicitud : "solicita (1:N)"
+Usuario |o..o{ Solicitud : "resuelve (resuelta_por, on_delete=PROTECT)"
 Area ||..o{ Solicitud : "pertenece a (1:N)"
 Solicitud ||--|{ SolicitudBloque : "contiene (1:N, on_delete=CASCADE)"
 Bloque ||--o{ SolicitudBloque : "se pide en (1:N, on_delete=PROTECT)"

@@ -68,7 +68,16 @@ else es solicitante
   deactivate D
   deactivate V
   deactivate A
-  N --> P : 204 · HX-Redirect: reverse(destino) → /solicitar/
+  N -> N : $comentario("la página que pidió el ingreso, como el enlace del correo de US-03")\nsiguiente = request.POST.get("next", "")
+  opt not url_has_allowed_host_and_scheme(siguiente, {request.get_host()}, request.is_secure())
+    N -> N : siguiente = reverse(destino)
+  end
+  note right of N
+    Solo vuelve a una dirección de este sitio:
+    un next ajeno llevaría a quien recién entró
+    a otra página.
+  end note
+  N --> P : 204 · HX-Redirect: siguiente → la página pedida o /solicitar/
 end
 deactivate N
 @enduml

@@ -176,20 +176,20 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
 }
 .sin-bloques span { font-size: .65rem; }
 
-/* --- editor del bloque elegido --- */
-/* Pegado abajo porque la rejilla es alta y el bloque que se está editando queda
- * fuera de pantalla si el editor vive arriba. */
-.editor {
-  position: sticky; bottom: 0; z-index: 2; margin-top: .75rem; padding: .75rem .9rem;
-  background: var(--superficie); border: 1px solid var(--accion);
-}
-.editor .que { margin: 0 0 .6rem; font-size: .82rem; color: var(--tinta-suave); }
-.editor .que strong { color: var(--tinta); font-weight: 500; }
+/* --- editores: pop-ups anclados (css/flotantes.css) --- */
+.flotante .que { margin: 0 0 .8rem; font-size: .8rem; line-height: 1.45; color: var(--tinta-suave); }
+.flotante .que strong { color: var(--tinta); font-weight: 500; }
+.titulo-f { display: block; margin-bottom: .15rem; font-family: var(--fuente-titulo); font-weight: 700; font-size: .95rem; color: var(--tinta); }
+.flotante .acciones { flex-wrap: wrap; justify-content: flex-end; margin: .9rem 0 0; }
+.flotante .acciones .separa { flex: 1; }
+.flotante .campos + .campos, .flotante .campos + .opciones, .flotante .opciones + .campos { margin-top: .7rem; }
+.flotante .campos .ancho { flex-basis: 100%; }
 
-/* El naranja de marca da 3.5:1 sobre el fondo, por debajo del 4.5:1 que exige
- * el texto, así que va como filete y el mensaje queda en tinta (marca.css:28). */
+/* El error de lo que se intentó, dentro de su pop-up. El naranja de marca da
+ * 3.5:1 sobre el fondo, por debajo del 4.5:1 que exige el texto, así que va
+ * como filete y el mensaje queda en tinta (marca.css:28). */
 .aviso {
-  margin: 0 0 .6rem; padding: .5rem .7rem; font-size: .82rem;
+  margin: 0 0 .7rem; padding: .5rem .7rem; font-size: .82rem;
   background: var(--fondo); border-left: 3px solid var(--alerta);
 }
 
@@ -208,14 +208,7 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
 .unidad { font-family: var(--fuente-texto); font-weight: 400; font-size: .78rem; }
 .acciones { display: flex; gap: .4rem; margin-left: auto; }
 
-.pista { margin: .6rem 0 0; font-size: .8rem; color: var(--tinta-suave); }
-
-/* Quitar es reversible, así que no pregunta antes y ofrece deshacer después. */
-.deshacer {
-  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  margin-top: .6rem; padding: .5rem .7rem; font-size: .82rem;
-  background: var(--fondo); border-left: 3px solid var(--info);
-}
+.pista { margin: .6rem 0 0; font-size: .78rem; color: var(--tinta-suave); }
 
 /* --- editor de bloqueos (US-17) --- */
 .opciones { display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin: 0 0 .7rem; padding: 0; border: 0; }
@@ -225,8 +218,6 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
   line-height: 1.6;
 }
 .opciones label { display: flex; align-items: center; gap: .3rem; font-size: .82rem; cursor: pointer; }
-.editor .campos + .opciones, .editor .opciones + .campos { margin-top: .1rem; }
-.editor .campos + .campos { margin-top: .7rem; }
 .campos select {
   padding: .3rem .45rem; border: 1px solid var(--borde); background: var(--superficie); color: var(--tinta);
   font-family: var(--fuente-texto); font-size: .85rem; font-variant-numeric: tabular-nums;
@@ -245,19 +236,9 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
 .afectadas ul { margin: 0; padding-left: 1.1rem; }
 .afectadas .folio { font-variant-numeric: tabular-nums; font-weight: 500; }
 
-.hecho {
-  margin: .75rem 0 0; padding: .5rem .7rem; font-size: .82rem;
-  background: var(--superficie); border-left: 3px solid var(--exito);
-}
-
-/* AC6. Igual que «Últimos cambios» en Reglas: se abre sola después de actuar. */
-.historial { margin-top: 1.5rem; }
-.historial summary {
-  cursor: pointer; font-family: var(--fuente-titulo); font-weight: 700;
-  font-size: .8rem; color: var(--tinta-suave);
-}
-.historial summary:hover { color: var(--tinta); }
-.historial table { width: 100%; border-collapse: collapse; font-size: .85rem; margin-top: .6rem; }
+/* AC6. El registro se abre en un diálogo desde la barra. */
+.historial { max-height: 60vh; overflow: auto; margin-bottom: 1rem; }
+.historial table { width: 100%; border-collapse: collapse; font-size: .85rem; }
 .historial th {
   text-align: left; font-weight: 500; font-size: .8rem; color: var(--tinta-suave);
   padding: .3rem .6rem .3rem 0; border-bottom: 1px solid var(--borde);
@@ -265,20 +246,12 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
 .historial td { padding: .35rem .6rem .35rem 0; border-bottom: 1px solid var(--borde); vertical-align: top; }
 .historial tr:last-child td { border-bottom: 0; }
 .historial .cifra { font-variant-numeric: tabular-nums; white-space: nowrap; }
-@media (max-width: 40rem) { .historial { overflow-x: auto; } }
 
 /* Un botón rojo grita más de lo que una baja lógica merece. */
 .btn.peligro { color: var(--tinta); }
 .btn.peligro:hover { border-color: var(--alerta); background: var(--fondo); }
 
-/* --- semana con fechas (US-17): aviso, mini calendario y bloqueos --- */
-/* El aviso va siempre, no solo al editar: es lo que impide leer "5 al 9 de
- * octubre" como si la jornada fuera de esos cinco días. */
-.nota-semana {
-  margin: 0 0 .75rem; padding: .5rem .75rem;
-  border-left: 3px solid var(--acento); background: var(--superficie);
-  font-size: .82rem; color: var(--tinta);
-}
+/* --- semana con fechas (US-17): mini calendario y bloqueos --- */
 .con-mini { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr); gap: 1rem; align-items: start; }
 .con-mini > .marco { min-width: 0; }
 @media (max-width: 60rem) { .con-mini { grid-template-columns: 1fr; } }

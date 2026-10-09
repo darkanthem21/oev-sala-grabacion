@@ -1,0 +1,72 @@
+@startuml confirmar-asistencia
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Confirmar la asistencia (US-03)
+
+actor "Solicitante" as S
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>solicitudes.models</b>\n<size:11>solicitudes/models.py</size>\n<size:11>SolicitudQuerySet</size>" as M <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+== Abrir el enlace ==
+S -> N ++ : $comentario("el enlace del correo de aceptación o «Confirmar asistencia» en Mis solicitudes")\nGET /solicitar/mis-solicitudes/<id>/confirmar/ → confirmar(request, solicitud_id)
+note right of N
+  Sin sesión, user_passes_test lleva a
+  /solicitante/entrar/?next=…, y la puerta
+  vuelve acá al entrar (ver Clave correcta).
+end note
+N -> M ++ : $comentario("solo entre las del usuario, con el área y los bloques")\nget_object_or_404(Solicitud.objects.de(request.user).con_detalle(), pk=solicitud_id)
+M -> D ++ : SELECT solicitudes_solicitud ⋈ personas_area
+return fila
+break ajena o inexistente
+  M --> N : Http404
+  N --> S : 404
+end
+M -> D ++ : $comentario("los bloques con su hora (prefetch)")\nSELECT solicitudes_solicitudbloque ⋈ agenda_bloque
+return filas
+return solicitud
+N -> N ++ : render(request, "solicitudes/confirmar.html", {"solicitud": solicitud})
+N -> M ++ : solicitud.puede_confirmarse
+M -> M : $comentario("aceptada, sin confirmar ni cancelar, y a más tardar el día anterior")\nACEPTADA and estado_confirmacion in (NO_HABILITADA, PENDIENTE) and fecha > hoy
+return puede
+return respuesta
+alt puede confirmarse
+  N --> S : 200 · solicitudes/confirmar.html con la reserva y «Confirmar asistencia»
+else ya confirmada, cancelada o es el mismo día
+  N --> S : 200 · solicitudes/confirmar.html con «ya no se puede confirmar: está …» y sin botón
+end
+note right of S
+  Abrir el enlace no confirma: lo hace el
+  botón (POST). Así un lector de correo que
+  abre los enlaces no confirma por su cuenta.
+end note
+deactivate N
+
+== Confirmar ==
+S -> N ++ : clic «Confirmar asistencia»\nPOST /solicitar/mis-solicitudes/<id>/confirmar/ → confirmar(request, solicitud_id)
+N -> M ++ : get_object_or_404(Solicitud.objects.de(request.user).con_detalle(), pk=solicitud_id)
+M -> D ++ : SELECT solicitudes_solicitud ⋈ personas_area
+return fila
+M -> D ++ : SELECT solicitudes_solicitudbloque ⋈ agenda_bloque
+return filas
+return solicitud
+N -> V ++ : confirmar_solicitud(request.user, solicitud_id)
+V -> D ++ : $comentario("SET estado_confirmacion = CONFIRMADA WHERE id, solicitante, ACEPTADA, sin confirmar ni cancelar y fecha > hoy")\nUPDATE solicitudes_solicitud
+return filas
+alt se confirmó
+  V --> N -- : True
+  N -> N : messages.success(request, "Confirmaste tu asistencia a la reserva #…")
+else ya no cumple (otro estado o ya es el día)
+  V --> N : False
+  N -> N : messages.error(request, "La reserva #… ya no se puede confirmar.")
+end
+note right of V
+  Un único UPDATE condicionado, como al retirar:
+  si entre abrir la página y el clic la reserva
+  cambió o llegó el día, no confirma nada.
+end note
+N --> S : 302 · /solicitar/mis-solicitudes/?vista=proximas
+deactivate N
+@enduml

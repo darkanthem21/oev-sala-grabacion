@@ -1,0 +1,42 @@
+@startuml ver-reglas
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Ver los parámetros y los últimos cambios (US-04)
+
+actor "Administrador" as A
+participant "<b>configuracion.views</b>\n<size:11>configuracion/views.py</size>\n<size:11>configuracion/forms.py</size>" as N <<presentación>>
+participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : GET /configuracion/reglas/?guardados=… → reglas(request)
+N -> C ++ : Parametros.cargar()
+C -> C : $comentario("la única fila; si no existe, la crea con los valores del cliente (AC2)")\ncls.objects.get_or_create(pk=1)
+C -> D ++ : SELECT configuracion_parametros
+return fila
+opt primera vez: la fila no existe
+  C -> D ++ : INSERT configuracion_parametros
+  deactivate D
+end
+return parametros
+N -> N : $comentario("el formulario con los valores vigentes")\nformulario = ParametrosForm(instance=parametros)
+N -> N ++ : $comentario("llega por la barra de direcciones: lo que no sea un número no muestra aviso")\n_guardados(request.GET.get("guardados"))
+return guardados
+N -> C ++ : $comentario("los últimos cambios de la bitácora, con quién los hizo")\nCambioParametro.objects.select_related("quien")[:ULTIMOS]
+return historial
+N -> N ++ : render(request, "configuracion/reglas.html", {formulario, historial, guardados})
+N -> C ++ : $comentario("la plantilla recorre el historial")\nhistorial
+C -> D ++ : SELECT configuracion_cambioparametro ⋈ personas_usuario
+return filas
+return cambios
+return respuesta
+N --> A : 200 · configuracion/reglas.html
+note right of N
+  Es la vuelta de Guardar los parámetros: con
+  ?guardados=N avisa cuántos cambios quedaron.
+  El historial completo está en la administración
+  de Django; aquí basta con los últimos 15, que es
+  como se nota un cambio ajeno (AC4).
+end note
+deactivate N
+@enduml
