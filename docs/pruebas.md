@@ -9,13 +9,13 @@ El detalle técnico, precondiciones y el paso a paso de cada prueba se encuentra
 | Historia | Quién la usa | Documento de pruebas |
 |---|---|---|
 | US-01 Inicio de sesión | Todos | [1-us-01.md](tests/1-us-01.md) |
-| US-02 Solicitud de reserva | Solicitante | [1-us-02.md](tests/2-us-02.md) |
-| US-03 Confirmar la asistencia | Solicitante | [1-us-03.md](tests/3-us-03.md) |
-| US-04 Panel de administrador | Administrador | [1-us-04.md](tests/4-us-04.md) |
-| US-07 Panel del validador | Validador | [1-us-07.md](tests/7-us-07.md) |
-| US-09 Historial y retiro de solicitudes | Solicitante | [1-us-09.md](tests/9-us-09.md) |
-| US-14 Bloques del personal de apoyo | Personal de apoyo | [1-us-14.md](tests/14-us-14.md) |
-| US-17 Bloquear fechas de la sala | Administrador | [1-us-17.md](tests/17-us-17.md) |
+| US-02 Solicitud de reserva | Solicitante | [1-us-02.md](tests/1-us-02.md) |
+| US-03 Confirmar la asistencia | Solicitante | [1-us-03.md](tests/1-us-03.md) |
+| US-04 Panel de administrador | Administrador | [1-us-04.md](tests/1-us-04.md) |
+| US-07 Panel del validador | Validador | [1-us-07.md](tests/1-us-07.md) |
+| US-09 Historial y retiro de solicitudes | Solicitante | [1-us-09.md](tests/1-us-09.md) |
+| US-14 Bloques del personal de apoyo | Personal de apoyo | [1-us-14.md](tests/1-us-14.md) |
+| US-17 Bloquear fechas de la sala | Administrador | [1-us-17.md](tests/1-us-17.md) |
 
 ## Estructura de los documentos
 
