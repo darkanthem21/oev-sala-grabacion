@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Política de reemplazo: Cantidad máxima de filas (tests) a conservar en el historial
-MAX_RESULTADOS = 500
+MAX_RESULTADOS = 1000
 
 # Diccionario para ir consolidando los resultados por cada test a través de sus fases
 resultados_pruebas = {}
