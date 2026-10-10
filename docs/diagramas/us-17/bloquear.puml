@@ -70,8 +70,9 @@ M -> M : send_mail(asunto, render_to_string(plantilla, contexto), …)
 deactivate M
 note right of M : Uno por persona, con todas sus\nreservas. Si uno falla, los demás salen.
 return bloqueo
-N -> N ++ : _responder_mes(request, listo=True, hecho="Bloqueaste la sala …")
+N -> N : $comentario("se suma «Se le avisó por correo a N personas.» si había afectadas")\nmessages.success(request, "Bloqueaste la sala …")
+N -> N ++ : _responder_mes(request, listo=True)
 return respuesta
-N --> A : 200 · agenda/_calendario.html (mensual de esa fecha) + HX-Push-Url
+N --> A : 200 · agenda/_calendario.html (mensual de esa fecha) + HX-Push-Url, con el aviso flotante
 deactivate N
 @enduml

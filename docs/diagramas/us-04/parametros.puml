@@ -25,6 +25,7 @@ end note
 alt formulario con errores
   C --> N -- : ValidationError
   N --> N -- : False
+  N -> N : $comentario("aviso flotante al dibujar la página")\nmessages.error(request, "Corrige lo marcado en rojo. No se guardó nada.")
   N -> C ++ : $comentario("los últimos cambios de la bitácora, con quién los hizo")\nCambioParametro.objects.select_related("quien")[:ULTIMOS]
   C -> D ++ : SELECT configuracion_cambioparametro ⋈ personas_usuario
   return filas
@@ -56,10 +57,16 @@ else formulario válido
     (changed_data) y el valor anterior (initial).
   end note
   return cambios
-  N --> A : 302 · /configuracion/reglas/?guardados=len(cambios)
+  alt cambió algo
+    N -> N : messages.success(request, "N cambio(s) guardado(s). Rigen para las solicitudes nuevas; …")
+  else nada distinto de lo guardado
+    N -> N : messages.info(request, "No había nada que cambiar.")
+  end
+  N --> A : 302 · /configuracion/reglas/
   note left of N
-    Así recargar no reenvía el
-    POST ni duplica la bitácora.
+    Así recargar no reenvía el POST ni
+    duplica la bitácora. El aviso viaja en
+    la sesión y lo muestra el GET siguiente.
   end note
 end
 deactivate N

@@ -25,21 +25,21 @@ note right of N
 end note
 opt no es is_staff
   N -> V ++ : usuario.tiene_rol(Rol.ADMINISTRADOR)
-  V -> D ++ : SELECT personas_usuario_groups ⋈ auth_group
+  V -> D ++ : SELECT EXISTS personas_usuario_groups ⋈ auth_group
   return fila
-  return es_administrador
+  return True o False
 end
 opt tampoco es administrador
   N -> V ++ : usuario.tiene_rol(Rol.VALIDADOR)
-  V -> D ++ : SELECT personas_usuario_groups ⋈ auth_group
+  V -> D ++ : SELECT EXISTS personas_usuario_groups ⋈ auth_group
   return fila
-  return es_validador
+  return True o False
 end
 opt tampoco es validador
   N -> V ++ : usuario.tiene_rol(Rol.APOYO)
-  V -> D ++ : SELECT personas_usuario_groups ⋈ auth_group
+  V -> D ++ : SELECT EXISTS personas_usuario_groups ⋈ auth_group
   return fila
-  return es_apoyo
+  return True o False
 end
 note right of V
   Los roles son grupos y una persona puede
@@ -48,7 +48,7 @@ note right of V
   primero que tiene.
 end note
 return $comentario("el panel del primer rol que tiene; sin ninguno, el formulario de reserva")\nreverse("panel_bloques" | "panel_validador" | "panel_apoyo" | "solicitar")
-N -> N : redirect(destino)
+N -> N : redirect(…)
 N --> U : 302 · /configuracion/bloques/, /validador/, /apoyo/ o /solicitar/
 deactivate N
 @enduml

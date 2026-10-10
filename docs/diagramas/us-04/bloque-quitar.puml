@@ -26,10 +26,13 @@ alt quitar
     No se borra: las solicitudes que lo apuntan
     siguen resolviendo, y la rejilla ofrece deshacer.
   end note
+  opt sin htmx
+    N -> N : $comentario("con htmx, el aviso con «Reponerlo» lo dibuja la rejilla, porque lleva un formulario")\nmessages.success(request, "Quitaste el bloque de los ….")
+  end
   ref over A, N, V, D : _responder(request, quitado=bloque): la rejilla con el aviso para deshacer
 else reponer
   N -> N : bloque.activo = True
-  N -> V ++ : bloque.full_clean()
+  N -> V ++ : bloque.full_clean(exclude=["dia"])
   V -> V ++ : otro = self.cruce()
   V -> D ++ : SELECT agenda_bloque
   return fila
@@ -40,22 +43,25 @@ else reponer
   end note
   alt se cruza con otro bloque
     V --> N -- : ValidationError
+    N -> N : messages.error(request, "Se cruza con el bloque de … a ….")
     N -> V ++ : bloque.cruce()
     V -> D ++ : SELECT agenda_bloque
     return fila
     return choca
-    ref over A, N, V, D : _responder(request, error, quitado=bloque, choca): el aviso y el otro bloque marcado
+    ref over A, N, V, D : _responder(request, quitado=bloque, choca=choca): el otro bloque marcado
   else no se cruza
     N -> V ++ : bloque.save()
     V -> D ++ : UPDATE agenda_bloque
     deactivate D
     deactivate V
-    ref over A, N, V, D : _responder(request, elegido=bloque): la rejilla con el bloque repuesto
+    N -> N : messages.success(request, "Repusiste el bloque de los ….")
+    ref over A, N, V, D : _responder(request): la rejilla con el bloque repuesto
   end
 end
 note over A, D
-  _responder contesta igual que en "Agregar o cambiar un bloque": con htmx,
-  200 y la rejilla (agenda/_calendario.html); sin htmx, 302 a la vista semanal.
+  _responder contesta igual que en "Agregar o cambiar un bloque": con htmx, 200 y la
+  rejilla (agenda/_calendario.html) con los mensajes como avisos flotantes; sin htmx,
+  302 a la vista semanal, donde base.html los dibuja.
 end note
 deactivate N
 @enduml

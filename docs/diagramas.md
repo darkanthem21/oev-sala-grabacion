@@ -171,19 +171,21 @@ así que las consultas de validación de cada bloque se hacen dos veces.
 
 ### Abrir el panel del validador (US-07)
 
-`validacion.cargar()` lee las solicitudes pendientes desde hoy que tienen
-bloques, con un número fijo de consultas: las solicitudes con su área y
-solicitante, y después sus bloques y acompañantes en dos consultas para todas.
-Devuelve la forma que espera la plantilla, que no sabe de modelos. La pestaña
-Validación del administrador es la misma vista con otro envoltorio:
-`panel_validacion_admin` incluye `_validacion.html` dentro de `panel.html`.
+El panel es la Jornada semanal de Configuración con quién pide cada bloque
+adentro. `validacion.cargar()` lee, con un número fijo de consultas, lo que esa
+agenda dibuja: las pendientes desde hoy que tienen bloques, las ya aceptadas de
+esas semanas, lo resuelto hoy por cualquier validador (AC5), la jornada con los
+bloques quitados y los bloqueos (US-17). Devuelve la forma que espera la
+plantilla, que no sabe de modelos. La pestaña Validación del administrador es la
+misma vista con otro envoltorio: `panel_validacion_admin` incluye
+`_validacion.html` dentro de `panel.html`.
 
 ![Abrir el panel del validador](diagramas/us-07/ver-panel.png)
 
 El resto ocurre en el navegador. `panelValidador`, el componente de Alpine de
-`_validacion.html`, parte cada solicitud en pedidos (un bloque en una fecha) y
-de ahí arma los topes, ordenados por prioridad del área, y las tarjetas sin
-tope.
+`_validacion.html`, arma cada día de la semana con sus bloques y, en cada uno,
+las solicitudes que lo piden, ordenadas por prioridad del área (AC2). Un bloque
+quitado de la jornada se dibuja solo si esa fecha todavía tiene algo.
 
 ### Resolver una solicitud con tope (US-07)
 
@@ -210,8 +212,10 @@ para armar el enlace completo; sin ellos, el correo sale sin enlace.
 ### Resolver una solicitud sin tope (US-07)
 
 Sin rivales, aprobar no pide motivo. Rechazar sí, y se confirma en la misma
-tarjeta, donde sale también el aviso si falta. Si otro validador ya la resolvió o el solicitante la retiró, el
-servidor lo dice y el panel lo muestra.
+ficha, donde sale también el aviso si falta. Si otro validador ya la resolvió o
+el solicitante la retiró, el servidor lo dice y el panel lo muestra. Lo que la
+pantalla revisa antes de enviar (motivo, bloqueo, bloque quitado) es para avisar
+rápido: el servidor lo vuelve a revisar.
 
 ![Resolver una solicitud sin tope](diagramas/us-07/resolver-sin-tope.png)
 
@@ -238,9 +242,8 @@ crea con los valores del cliente si todavía no existe (AC2).
 
 ![Ver los parámetros y los últimos cambios](diagramas/us-04/ver-reglas.png)
 
-`?guardados=` llega por la barra de direcciones, así que `_guardados` acepta
-solo un número: con él la página dice cuántos cambios quedaron, y con 0, que no
-había nada que cambiar.
+Cuántos cambios quedaron, o que no había nada que cambiar, llega como mensaje
+de Django en la sesión, y `base.html` lo dibuja como aviso flotante.
 
 ### Editar la plantilla semanal de bloques (US-04)
 
@@ -256,8 +259,9 @@ día fuera de lunes a viernes no llega al formulario: la vista contesta 400.
 Cada respuesta es la rejilla completa: htmx reemplaza `#calendario` entero y
 Alpine arranca de nuevo sobre el fragmento. Sin htmx el formulario se envía
 normal y `_responder` contesta con una redirección a
-`/configuracion/bloques/?vista=semana&desde=…`. Ese camino no lleva el aviso ni
-el bloque elegido.
+`/configuracion/bloques/?vista=semana&desde=…`. Ese camino no lleva el bloque
+elegido, y el error, que con htmx va dentro del pop-up, llega como aviso
+flotante.
 
 ![Quitar y reponer un bloque](diagramas/us-04/bloque-quitar.png)
 
@@ -315,8 +319,8 @@ la petición sale solo si se confirma. El retiro es un único `UPDATE`
 condicionado a que la solicitud siga pendiente y sea del usuario, para no pisar
 al validador si decide en el mismo instante. Si no aplica, el mensaje es el
 mismo sea ajena, inexistente o ya revisada. Con htmx vuelve la tabla en la misma
-pestaña y página, con el mensaje dentro. Sin htmx, la vuelta es por redirección
-al historial.
+pestaña y página, y el mensaje llega fuera de banda como aviso flotante. Sin
+htmx, la vuelta es por redirección al historial.
 
 ### Confirmar la asistencia (US-03)
 
@@ -407,8 +411,8 @@ registro del primero.
 ### Ver una semana con sus bloqueos (US-17)
 
 La vista semanal tiene fechas porque desde ahí se bloquea un bloque en una
-fecha, pero lo que se edita sigue siendo la jornada que se repite: un aviso fijo
-lo dice. Cada columna raya los bloques que algún bloqueo deja fuera en su fecha,
+fecha, pero lo que se edita sigue siendo la jornada que se repite: lo dice el
+pop-up de cada bloque. Cada columna raya los bloques que algún bloqueo deja fuera en su fecha,
 con la misma regla `cubre()` que usa el resto del sistema.
 
 ![Ver una semana con sus bloqueos](diagramas/us-17/ver-semana.png)
@@ -416,81 +420,23 @@ con la misma regla `cubre()` que usa el resto del sistema.
 Un sábado o domingo, sin fecha en la dirección, la vista abre la semana que
 viene, porque la rejilla es de lunes a viernes.
 
-## Estructura y Modelo de Datos
+## Estructura
 
-### Solicitud de reserva y bloques horarios (US-02)
+### Arquitectura
 
-El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_bloque`, administrada en US-04) de la **reserva concreta**: la solicitud lleva la fecha, porque es de un solo día, y `solicitudes_solicitudbloque` dice qué bloques de la plantilla se usan ese día. Hasta la migración `0003_fecha_en_solicitud` la fecha vivía en cada bloque, y nada impedía que dos bloques de una misma solicitud tuvieran fechas distintas.
+La aplicación es un monolito Django, modular y en tres capas: presentación,
+dominio y persistencia. Cada app tiene su vista en presentación y sus modelos y
+servicios en dominio, y cada vista queda sobre su app. MTV cruza dos capas: la
+View y la Template están en presentación, y el Model en dominio. Cada flecha continua es un import
+entre apps que está en el código, y su rótulo dice qué se usa del otro lado. Lo
+punteado está planificado; la flecha punteada de dominio a persistencia es el
+ORM.
 
-![Modelo de datos: Solicitud y Bloques](diagramas/us-02/modelo-datos.png)
+![Arquitectura](diagramas/estructura/arquitectura.png)
 
-- **Archivo fuente PlantUML**: [`diagramas/us-02/modelo-datos.puml`](diagramas/us-02/modelo-datos.puml).
-- **Integridad referencial y claves foráneas**:
-  - `solicitudes_solicitud.solicitante_id` → `personas_usuario.id` (`on_delete=PROTECT`): protege el historial de solicitudes y auditoría.
-  - `solicitudes_solicitud.area_id` → `personas_area.id` (`on_delete=PROTECT`): garantiza la trazabilidad del área académica requirente.
-  - `solicitudes_solicitud.resuelta_por_id` → `personas_usuario.id` (`on_delete=PROTECT`, vacío mientras está pendiente): quién la resolvió en el panel del validador, con `resuelta_en` y `motivo_resolucion` (US-07 AC5, migración `0004_solicitud_resolucion`).
-  - `solicitudes_solicitudbloque.solicitud_id` → `solicitudes_solicitud.id` (`on_delete=CASCADE`): mantiene la consistencia de bloques asignados a la solicitud.
-  - `solicitudes_solicitudbloque.bloque_id` → `agenda_bloque.id` (`on_delete=PROTECT`): permite desactivar bloques de la plantilla sin alterar las solicitudes históricas ya existentes.
-  - `personas_usuario_areas` (`Usuario.areas`): las áreas para las que una persona puede solicitar. El asistente lee de aquí las activas para fijar el área o pedir que la elija.
-  - **Restricción de unicidad**: `UniqueConstraint(fields=["solicitud", "bloque"])` impide pedir dos veces el mismo bloque en una solicitud. La fecha ya no entra: es la de la solicitud.
-- **Estados**: cada solicitud tiene dos, uno por quien decide.
-  - `estado_validacion` lo decide la Oficina: `PENDIENTE`, `ACEPTADA` o `RECHAZADA`. `RETIRADA` es la excepción: la pone el propio solicitante cuando la retira antes de que se revise (US-09).
-  - `estado_confirmacion` es del solicitante una vez aceptada: `NO_HABILITADA` hasta que se acepta, y después `PENDIENTE`, `CONFIRMADA` o `CANCELADA`. `Solicitud.clean()` exige que solo una solicitud aceptada pueda estar pendiente de confirmar, confirmada o cancelada.
-  - Lo que ve el solicitante combina los dos (`Solicitud.estado_general`): "En revisión por la Oficina", "Aceptada", "Pendiente de confirmación", "Confirmada", "Rechazada", "Cancelada" o "Retirada".
-
-### Apps de Django y sus dependencias
-
-Una caja por app y una flecha por dependencia que está en el código: los imports
-entre apps, sin contar tests ni migraciones; las FK escritas como texto
-(`settings.AUTH_USER_MODEL`, `"agenda.Bloque"`), que unen tablas sin importar el
-modelo; y la señal `reservas_aprobadas`. Cada flecha dice qué se usa del otro
-lado.
-
-![Apps de Django y sus dependencias](diagramas/estructura/paquetes.png)
-
-`configuracion` y `notificaciones` no importan ninguna otra app: las demás leen
-los parámetros y mandan correos a través de ellas, y `configuracion` solo apunta
-a `personas` por la FK de su bitácora. `agenda` no importa a `solicitudes`, que
-depende de ella: para saber qué reservas pierde un bloqueo le pregunta por la
-señal (ver Bloquear la sala en unas fechas). `oev` importa las vistas de cada app
-para armar las direcciones.
-
-En los modelos de datos que siguen, las columnas marcadas `NULL` admiten vacío y
-las demás son `NOT NULL`. Las tablas en gris son de otro diagrama y aparecen solo
-por la FK que llega a ellas.
-
-### Modelo de datos de agenda (US-04 y US-17)
-
-La jornada y los bloqueos son dos tablas porque son dos cosas: un bloque es un
-tramo de la semana que se repite, y un bloqueo, unas fechas concretas sin sala.
-Ninguna de las dos borra filas: un bloque quitado queda con `activo` en falso, y
-un bloqueo levantado queda con quién, cuándo y por qué, así la tabla es también
-el registro (US-17 AC6).
-
-![Modelo de datos de agenda](diagramas/estructura/modelo-agenda.png)
-
-Las reglas que la base puede declarar están en la base: el término después del
-inicio, un solo bloque activo por día y hora de inicio, y que un bloqueo de un bloque sea
-de una sola fecha. Que dos bloques no se crucen lo valida `Bloque.clean()`,
-porque declararlo necesitaría una extensión de PostgreSQL.
-
-### Modelo de datos de configuración (US-04)
-
-`configuracion_parametros` tiene una sola fila, y cada cambio deja una fila en
-`configuracion_cambioparametro` con el valor anterior, el nuevo, quién y cuándo
-(AC4). `campo` guarda el nombre de la columna y no es una FK, así un parámetro
-que se quite del modelo sigue en la bitácora.
-
-![Modelo de datos de configuración](diagramas/estructura/modelo-configuracion.png)
-
-### Modelo de datos de personas (US-01, US-05 y US-08)
-
-`personas_usuario` reemplaza al usuario de Django: se entra con el correo y no
-hay `username`. Los roles no son una columna sino grupos de Django, porque una
-persona puede tener varios (US-08 AC6): una cuenta que valida y además pide la
-sala está en dos filas de `personas_usuario_groups`. Los permisos de Django
-(`personas_usuario_user_permissions`) no se dibujan: el sistema no los usa, solo
-aparecen en la administración.
-
-![Modelo de datos de personas](diagramas/estructura/modelo-personas.png)
-
+Las dependencias van en una sola dirección: `uso` usa a `solicitudes`, que usa a
+`agenda`, que usa a `configuracion`. `agenda` no importa a `solicitudes`: para
+saber qué reservas pierde un bloqueo le pregunta por la señal
+`reservas_aprobadas` (ver Bloquear la sala en unas fechas). Las FK a
+`personas_usuario` desde `agenda` y `configuracion` no se dibujan, porque se
+escriben como texto (`settings.AUTH_USER_MODEL`) y no importan el modelo.

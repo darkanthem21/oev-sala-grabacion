@@ -12,7 +12,7 @@ database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
 A -> N ++ : GET /apoyo/?fecha=AAAA-MM-DD → bloques(request)
 N -> N : hoy = timezone.localdate()
-N -> N : $comentario("la fecha que viene en la dirección")\nfecha = date.fromisoformat(request.GET.get("fecha", ""))
+N -> N : $comentario("la fecha que viene en la dirección")\nfecha = date.fromisoformat(request.GET.get("fecha", ~"~"))
 opt falta la fecha o no se puede leer
   N -> N : fecha = hoy
   note right of N : AC3. Una fecha mal escrita\nno es un error.

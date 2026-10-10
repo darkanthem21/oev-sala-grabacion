@@ -59,16 +59,17 @@ else Retirar solicitud
   return total_anteriores
   return contexto
   N -> N ++ : render(request, "solicitudes/_tabla_historial.html", contexto)
-  N -> M ++ : $comentario("la plantilla recorre la página; trae los mensajes de messages")\npagina.object_list
+  N -> M ++ : $comentario("la plantilla recorre la página")\npagina.object_list
   M -> D ++ : SELECT solicitudes_solicitud, personas_area
   return filas
   M -> D ++ : SELECT solicitudes_solicitudbloque, agenda_bloque
   return filas
   return solicitudes
+  N -> N : $comentario("el mensaje va fuera de banda, a la pila de avisos flotantes")\n<div id="avisos" hx-swap-oob="beforeend">{% include "_avisos.html" %}</div>
   return respuesta
   N --> P -- : 200 · solicitudes/_tabla_historial.html
-  P -> P : $comentario("htmx reemplaza la tabla; el mensaje viene dentro")\nhx-swap="outerHTML" sobre #historial
-  P --> S : la fila como Retirada y el mensaje
+  P -> P : $comentario("htmx reemplaza la tabla y suma el aviso a #avisos")\nhx-swap="outerHTML" sobre #historial
+  P --> S : la fila como Retirada y el aviso flotante
 end
 deactivate P
 
