@@ -45,3 +45,35 @@ Para ejecutar toda la batería de pruebas del proyecto, sitúate en la raíz del
 ```sh
 pytest
 ```
+
+## Visualización y Auditoría de Métricas (`view_tests.py`)
+
+Para complementar la ejecución automatizada con `pytest` y `pytest-django`, el proyecto incluye una herramienta interactiva en consola para auditar el rendimiento y la salud del código a lo largo del tiempo.
+
+### Almacenamiento Local de Datos
+
+Cada vez que ejecutas la batería de pruebas desde la raíz del repositorio, un interceptor oculto captura métricas de rendimiento (tiempos de ejecución por fases, volumen SQL, consultas duplicadas y consumo de memoria RAM) y las anota en el archivo `src/pruebas.csv`.
+
+Este archivo tiene un carácter estrictamente **local e individual para cada desarrollador**. No se sube al repositorio (Git). Esto se decide por tres razones fundamentales:
+
+* **Contexto de hardware:** Los tiempos de ejecución varían drásticamente entre el equipo de un desarrollador y otro, por lo que cruzar estas métricas invalidaría la base de comparación.
+* **Estado del entorno:** El volumen de datos locales y la concurrencia de la máquina afectan la latencia de las consultas SQL, haciendo que la métrica de rendimiento de la base de datos sea relativa al entorno.
+* **Aislamiento de experimentación:** El objetivo principal es que el desarrollador compare su propio código base histórico contra el código en el que está trabajando actualmente (antes de hacer un *commit*). Si un desarrollador introduce accidentalmente un problema N+1, su métrica individual lo alertará de inmediato.
+
+### Uso de la Herramienta
+
+Para abrir la interfaz de auditoría, sitúate en la raíz del proyecto y ejecuta:
+
+```sh
+python src/view_tests.py
+
+```
+
+El script procesará el histórico del archivo `.csv` y presentará un menú interactivo. Al seleccionar una métrica, la consola desplegará una línea de tiempo para cada caso de prueba.
+
+La herramienta está diseñada para no requerir esfuerzo cognitivo al auditar:
+
+* **Ordenamiento estructurado:** Los datos se agrupan por nombre del caso de prueba y se ordenan cronológicamente en bloques delimitados.
+* **Destacado automático:** La ejecución más reciente de cada prueba se identifica con una flecha (`->`) y texto cyan. Tu mirada siempre sabrá cuál es el estado actual frente a los registros anteriores en gris.
+* **Precisión y visualización combinadas:** Cada línea muestra los valores numéricos exactos seguidos de una barra de proporción ASCII.
+* **Semántica de colores:** Las barras apiladas utilizan colores para segmentar datos (ej. amarillo para *Setup*, verde para *Call*, magenta para *Teardown*) y alertan en rojo cuando existen problemas graves (como consultas duplicadas o alta retención de memoria que indique fugas).
