@@ -419,3 +419,24 @@ con la misma regla `cubre()` que usa el resto del sistema.
 
 Un sábado o domingo, sin fecha en la dirección, la vista abre la semana que
 viene, porque la rejilla es de lunes a viernes.
+
+## Estructura
+
+### Arquitectura
+
+La aplicación es un monolito Django, modular y en tres capas: presentación,
+dominio y persistencia. Cada app tiene su vista en presentación y sus modelos y
+servicios en dominio, y cada vista queda sobre su app. MTV cruza dos capas: la
+View y la Template están en presentación, y el Model en dominio. Cada flecha continua es un import
+entre apps que está en el código, y su rótulo dice qué se usa del otro lado. Lo
+punteado está planificado; la flecha punteada de dominio a persistencia es el
+ORM.
+
+![Arquitectura](diagramas/estructura/arquitectura.png)
+
+Las dependencias van en una sola dirección: `uso` usa a `solicitudes`, que usa a
+`agenda`, que usa a `configuracion`. `agenda` no importa a `solicitudes`: para
+saber qué reservas pierde un bloqueo le pregunta por la señal
+`reservas_aprobadas` (ver Bloquear la sala en unas fechas). Las FK a
+`personas_usuario` desde `agenda` y `configuracion` no se dibujan, porque se
+escriben como texto (`settings.AUTH_USER_MODEL`) y no importan el modelo.
