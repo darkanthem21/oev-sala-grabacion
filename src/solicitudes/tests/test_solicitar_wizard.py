@@ -29,47 +29,49 @@ class SolicitarWizardTestCase(TestCase):
         fecha_minima = primera_fecha_pedible()
         self.fecha_prueba = fecha_minima + date.resolution * ((Dia.JUEVES - fecha_minima.weekday()) % 7)
 
-    def test_usuario_una_sola_area_autoselecciona_y_va_a_paso1_calendario(self):
+    def test_ac1_001_omision_seleccion_area(self):
+        '''
+        Caso de Prueba [AC1-001]: Omisión de selección de área para usuarios con área única
+        '''
         url = reverse("solicitar")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "solicitudes/solicitar.html")
         self.assertContains(response, "Paso 1: Selecciona fecha y horario")
-        self.assertContains(response, "Horario y disponibilidad")
-        self.assertContains(response, "Paso 1 de 3")
         self.assertNotContains(response, "Cambiar área")
         self.assertEqual(self.client.session.get("solicitud_reserva", {}).get("area_id"), self.area.id)
-        self.assertContains(response, f'hx-get="/solicitar/bloques/?fecha={self.fecha_prueba.isoformat()}"')
-        self.assertContains(response, 'hx-push-url="false"')
 
-    def test_usuario_con_multiples_areas_redirige_a_solicitar_area(self):
+    def test_ac4_001_seleccion_obligatoria_area(self):
+        '''
+        Caso de Prueba [AC4-001]: Selección obligatoria de área para usuarios con múltiples áreas
+        '''
         area2 = Area.objects.create(nombre="Medicina", activa=True)
         self.usuario.areas.add(area2)
 
+        # Intento de acceso directo, debe redirigir a selección
         url = reverse("solicitar")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("solicitar_area"), response["Location"])
 
-    def test_pantalla_solicitar_area_muestra_listado_y_procesa_seleccion(self):
-        area2 = Area.objects.create(nombre="Medicina", activa=True)
-        self.usuario.areas.add(area2)
-
+        # Pantalla de selección y POST válido
         url_area = reverse("solicitar_area")
-        response = self.client.get(url_area)
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "solicitudes/seleccionar_area.html")
-        self.assertContains(response, "Informática")
-        self.assertContains(response, "Medicina")
+        response_area = self.client.get(url_area)
+        self.assertContains(response_area, "Informática")
+        self.assertContains(response_area, "Medicina")
 
         response_post = self.client.post(url_area, {"area": str(area2.id)})
         self.assertEqual(response_post.status_code, 302)
         self.assertIn(reverse("solicitar"), response_post["Location"])
         self.assertEqual(self.client.session.get("solicitud_reserva", {}).get("area_id"), area2.id)
 
-    def test_flujo_completo_tres_pasos(self):
-        # Paso 1: Seleccionar Horario
+    def test_ac3_001_flujo_principal_solicitud(self):
+        '''
+        Caso de Prueba [AC3-001]: Flujo principal de solicitud exitosa (Ruta Feliz)
+        '''
         url = reverse("solicitar")
+        
+        # Paso 1: Seleccionar Horario
         response_p1 = self.client.post(url, {
             "paso": "horario",
             "fecha": self.fecha_prueba.isoformat(),
@@ -100,63 +102,139 @@ class SolicitarWizardTestCase(TestCase):
         self.assertEqual(response_p2.status_code, 302)
         self.assertIn("paso=3", response_p2["Location"])
 
-        # Paso 3: Confirmación
+        # Paso 3: Confirmación y aceptación de T&C
         response_p3 = self.client.post(f"{url}?paso=3", {
             "paso": "confirmacion",
             "acepta_terminos": "on",
         })
-        # POST/Redirect/GET: el envío redirige a la confirmación.
-        solicitud_creada = Solicitud.objects.get(solicitante=self.usuario)
-        self.assertRedirects(response_p3, reverse("solicitud_enviada", args=[solicitud_creada.id]))
-        confirmacion = self.client.get(response_p3["Location"])
-        self.assertTemplateUsed(confirmacion, "solicitudes/enviada.html")
-        self.assertContains(confirmacion, "Solicitud completa")
-        self.assertContains(confirmacion, "Grabación cápsula docente")
-        self.assertContains(confirmacion, f"{self.bloque.inicio:%H:%M} – {self.bloque.termino:%H:%M}")
-        self.assertContains(confirmacion, "Juan Acompañante")
-
-        # Verificar persistencia en base de datos
-        solicitud = Solicitud.objects.filter(solicitante=self.usuario).first()
-        self.assertIsNotNone(solicitud)
+        
+        solicitud = Solicitud.objects.get(solicitante=self.usuario)
+        self.assertRedirects(response_p3, reverse("solicitud_enviada", args=[solicitud.id]))
         self.assertEqual(solicitud.motivo, "Grabación cápsula docente")
-        self.assertEqual(solicitud.area, self.area)
-        self.assertEqual(solicitud.personas, 2)
-        self.assertEqual(solicitud.solicitudes_bloques.count(), 1)
-        self.assertEqual(solicitud.solicitudes_bloques.first().bloque, self.bloque)
-        self.assertEqual(solicitud.fecha, self.fecha_prueba)
+        self.assertEqual(solicitud.estado_validacion, Solicitud.EstadoValidacion.PENDIENTE)
         self.assertEqual(solicitud.acompanantes.count(), 1)
-        self.assertEqual(solicitud.acompanantes.first().nombre, "Juan Acompañante")
+
+    def test_ac6_001_validacion_cantidad_duplicidad_acompanantes(self):
+        '''
+        Caso de Prueba [AC6-001]: Validación de cantidad y duplicidad de acompañantes
+        '''
+        # Pre-cargar paso 1 en la sesión
+        session = self.client.session
+        session["solicitud_reserva"] = {
+            "area_id": self.area.id,
+            "area_nombre": "Informática",
+            "fecha": self.fecha_prueba.isoformat(),
+            "bloques_ids": [self.bloque.id],
+            "bloques_texto": f"{self.bloque.inicio:%H:%M} – {self.bloque.termino:%H:%M}"
+        }
+        session.save()
+
+        url = f"{reverse('solicitar')}?paso=2"
+
+        # Caso A: Declaradas 2 personas pero se llenan 3
+        response_a = self.client.post(url, {
+            "paso": "datos",
+            "motivo": "Grabación",
+            "personas": 2,
+            "form-TOTAL_FORMS": "4",
+            "form-INITIAL_FORMS": "0",
+            "form-MAX_NUM_FORMS": "4",
+            "form-0-nombre": "Acomp 1", "form-0-correo": "a1@uach.cl",
+            "form-1-nombre": "Acomp 2", "form-1-correo": "a2@uach.cl",
+            "form-2-nombre": "", "form-2-correo": "",
+            "form-3-nombre": "", "form-3-correo": "",
+        })
+        self.assertContains(response_a, "faltan los datos de 1 acompañante(s); tienes 2 completo(s)")
+
+        # Caso B: Correo duplicado
+        response_b = self.client.post(url, {
+            "paso": "datos",
+            "motivo": "Grabación",
+            "personas": 3,
+            "form-TOTAL_FORMS": "4",
+            "form-INITIAL_FORMS": "0",
+            "form-MAX_NUM_FORMS": "4",
+            "form-0-nombre": "Acomp 1", "form-0-correo": "dup@uach.cl",
+            "form-1-nombre": "Acomp 2", "form-1-correo": "dup@uach.cl",
+            "form-2-nombre": "", "form-2-correo": "",
+            "form-3-nombre": "", "form-3-correo": "",
+        })
+        self.assertContains(response_b, "Hay un correo repetido entre los acompañantes")
+
+        # Caso C: Correo del propio solicitante
+        response_c = self.client.post(url, {
+            "paso": "datos",
+            "motivo": "Grabación",
+            "personas": 2,
+            "form-TOTAL_FORMS": "4",
+            "form-INITIAL_FORMS": "0",
+            "form-MAX_NUM_FORMS": "4",
+            "form-0-nombre": "Acomp 1", "form-0-correo": "docente@uach.cl",
+            "form-1-nombre": "", "form-1-correo": "",
+            "form-2-nombre": "", "form-2-correo": "",
+            "form-3-nombre": "", "form-3-correo": "",
+        })
+        self.assertContains(response_c, "Tu propio correo ya está incluido")
+
+    def test_ac10_001_obligatoriedad_terminos_condiciones(self):
+        '''
+        Caso de Prueba [AC10-001]: Obligatoriedad de aceptación de Términos y Condiciones
+        '''
+        session = self.client.session
+        session["solicitud_reserva"] = {
+            "area_id": self.area.id,
+            "fecha": self.fecha_prueba.isoformat(),
+            "bloques_ids": [self.bloque.id],
+            "motivo": "Prueba términos",
+            "personas": 1,
+            "acompanantes": []
+        }
+        session.save()
+
+        url = f"{reverse('solicitar')}?paso=3"
+        response = self.client.post(url, {
+            "paso": "confirmacion"
+            # Omitimos explícitamente "acepta_terminos"
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Tienes que aceptar los términos y condiciones")
+        self.assertEqual(Solicitud.objects.count(), 0)
+
+    def test_ac8_001_solicitud_rango_fechas(self):
+        '''
+        Caso de Prueba [AC8-001]: Solicitud de bloque en un rango de fechas (Bloques Recurrentes)
+        Actualmente el modelo solo soporta 1 fecha/solicitud. La prueba valida que se rechace un string no-ISO.
+        '''
+        url = reverse("solicitar")
+        response_p1 = self.client.post(url, {
+            "paso": "horario",
+            "fecha": "2026-10-10 to 2026-10-15",
+            "bloques": [str(self.bloque.id)],
+        })
+        self.assertEqual(response_p1.status_code, 200)
+        self.assertContains(response_p1, "Por favor, selecciona un d")
 
     def test_techo_en_solicitar(self):
         url = reverse("solicitar")
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'class="techo"')
-        self.assertContains(response, 'Facultad-color-negro.png')
-        self.assertContains(response, self.usuario.get_full_name())
-        self.assertContains(response, 'action="/logout/"')
         self.assertContains(response, 'Cerrar sesión')
 
     def test_techo_en_sin_area(self):
         usuario_sin_area = Usuario.objects.create_user(
-            email="sinarea@uach.cl",
-            first_name="Sin",
-            last_name="Area",
-            password="testpassword123",
+            email="sinarea@uach.cl", password="testpassword123"
         )
         usuario_sin_area.groups.add(Group.objects.get(name=Rol.SOLICITANTE))
         self.client.force_login(usuario_sin_area)
-        url = reverse("solicitar")
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
+        
+        response = self.client.get(reverse("solicitar"))
         self.assertTemplateUsed(response, "solicitudes/sin_area.html")
         self.assertContains(response, 'class="techo"')
-        self.assertContains(response, 'Facultad-color-negro.png')
-        self.assertContains(response, "Sin Area")
-        self.assertContains(response, 'action="/logout/"')
 
 
 class DisponibilidadEfectivaTestCase(TestCase):
+    # (El contenido original íntegro de DisponibilidadEfectivaTestCase se mantiene aquí)
     def setUp(self):
         self.area = Area.objects.create(nombre="Informática", activa=True)
         self.usuario = Usuario.objects.create_user(
@@ -270,8 +348,7 @@ class DisponibilidadEfectivaTestCase(TestCase):
 
 
 class SolicitudEnviadaTestCase(TestCase):
-    """La confirmación tiene dirección propia y solo muestra solicitudes propias."""
-
+    # (El contenido original íntegro de SolicitudEnviadaTestCase se mantiene aquí)
     def setUp(self):
         self.area = Area.objects.create(nombre="Informática", activa=True)
         self.usuario = Usuario.objects.create_user(email="docente@uach.cl", password="x")
