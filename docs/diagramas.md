@@ -440,3 +440,7 @@ saber qué reservas pierde un bloqueo le pregunta por la señal
 `reservas_aprobadas` (ver Bloquear la sala en unas fechas). Las FK a
 `personas_usuario` desde `agenda` y `configuracion` no se dibujan, porque se
 escriben como texto (`settings.AUTH_USER_MODEL`) y no importan el modelo.
+
+### Modelo de datos
+
+![Modelo de datos](diagramas/estructura/modelo-de-datos.png)
