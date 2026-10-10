@@ -1,0 +1,41 @@
+{% extends "solicitudes/_base.html" %}
+{% block titulo %}Confirmar asistencia{% endblock %}
+
+{% block hoja %}
+<main class="hoja">
+  {% comment %}
+  US-03. Es la página del enlace del correo de aceptación y de Mis solicitudes.
+  Mostrarla no confirma: confirma el botón (POST).
+  {% endcomment %}
+  <h1>Confirmar asistencia</h1>
+
+  {% if solicitud.puede_confirmarse %}
+    <p class="sub">Confirma que vas a usar la sala en esta reserva. Puedes hacerlo hasta el día anterior.</p>
+  {% else %}
+    <div class="aviso" role="status">
+      La reserva <strong>#{{ solicitud.id }}</strong> ya no se puede confirmar: está
+      {{ solicitud.estado_general|lower }}.
+    </div>
+  {% endif %}
+
+  <dl class="ficha">
+    <dt>Reserva</dt><dd>#{{ solicitud.id }}</dd>
+    <dt>Fecha</dt><dd><strong>{{ solicitud.fecha|date:"l d/m/Y"|capfirst }}</strong></dd>
+    <dt>Horario</dt>
+    <dd><strong>{% for sb in solicitud.solicitudes_bloques.all %}{{ sb.inicio|time:"H:i" }} – {{ sb.termino|time:"H:i" }}{% if not forloop.last %}, {% endif %}{% endfor %}</strong></dd>
+    <dt>Área académica</dt><dd>{{ solicitud.area }}</dd>
+    <dt>Motivo</dt><dd>{{ solicitud.motivo }}</dd>
+    <dt>Estado</dt><dd>{{ solicitud.estado_general }}</dd>
+  </dl>
+
+  <div class="acciones-paso">
+    <a href="{% url 'mis_solicitudes' %}?vista=proximas" class="btn-secundario"><span>Volver a mis solicitudes</span></a>
+    {% if solicitud.puede_confirmarse %}
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit">Confirmar asistencia</button>
+      </form>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% extends "panel.html" %}
+{% load static %}
+{% block titulo %}Validación{% endblock %}
+{% block estilos_seccion %}
+  <link rel="stylesheet" href="{% static 'agenda/calendario.css' %}">
+  <link rel="stylesheet" href="{% static 'solicitudes/validador.css' %}">
+{% endblock %}
+{% block seccion %}{% include "solicitudes/_validacion.html" %}{% endblock %}

@@ -1,16 +1,11 @@
-{% extends "base.html" %}
+{% extends "solicitudes/_base.html" %}
 {% load static %}
 {% block titulo %}Solicitar reserva · Paso {{ paso }} de 3{% endblock %}
-{% block estilos %}
+{% block estilos_hoja %}
 <link rel="stylesheet" href="{% static 'solicitudes/calendario.css' %}">
-<link rel="stylesheet" href="{% static 'solicitudes/solicitud.css' %}">
 {% endblock %}
 
-{% block barra_superior %}
-{% include "solicitudes/componentes/barra_superior.html" %}
-{% endblock %}
-
-{% block contenido %}
+{% block hoja %}
 <main class="hoja {% if paso == 1 %}hoja-calendario{% endif %}"
       {% if paso == 2 %}x-data="{ personas: {{ personas_inicial }} }"{% elif paso == 3 %}x-data="{ acepta: {{ acepta_inicial|yesno:'true,false' }} }"{% endif %}>
 
@@ -35,6 +30,21 @@
   {% if paso == 1 %}
     <h1>Paso 1: Selecciona fecha y horario</h1>
     <p class="sub">Elige un día habilitado en el calendario y selecciona los bloques de tiempo requeridos para tu actividad.</p>
+
+    {% comment %}
+    US-17 AC7: el calendario ya no ofrece los horarios bloqueados; esta lista
+    dice por qué faltan, para que nadie crea que es un error.
+    {% endcomment %}
+    {% if bloqueos %}
+      <aside class="bloqueos" aria-labelledby="h-bloqueos">
+        <h2 id="h-bloqueos">La sala no estará disponible</h2>
+        <ul>
+          {% for b in bloqueos %}
+            <li><strong>{{ b.periodo|capfirst }}</strong>, {{ b.alcance }}. {{ b.razon }}.</li>
+          {% endfor %}
+        </ul>
+      </aside>
+    {% endif %}
 
     {% if error_paso %}
       <div class="error" role="alert">

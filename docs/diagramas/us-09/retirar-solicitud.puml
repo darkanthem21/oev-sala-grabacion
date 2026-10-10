@@ -1,0 +1,75 @@
+@startuml retirar-solicitud
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Retirar una solicitud propia (US-09)
+
+actor "Solicitante" as S
+participant "<b>diálogo de confirmación</b>\n<size:11>solicitudes/mis_solicitudes.html</size>" as P <<presentación>>
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>solicitudes.models</b>\n<size:11>solicitudes/models.py</size>\n<size:11>SolicitudQuerySet</size>" as M <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+S -> P ++ : clic en Retirar de una solicitud en revisión
+P -> P : $comentario("htmx pregunta antes de enviar un hx-confirm; se responde con el diálogo propio")\nhtmx:confirm → evento.preventDefault()
+P -> P : pendiente = evento.detail
+P -> P : dialogo.showModal()
+
+alt Cancelar, Esc o clic fuera del recuadro
+  S -> P : cierra el diálogo
+  P -> P : $comentario("la petición no sale")\npendiente = null
+else Retirar solicitud
+  S -> P : clic en Retirar solicitud
+  P -> P : dialogo.close()
+  P -> N ++ : $comentario("detalle.issueRequest(true)")\nPOST /solicitar/mis-solicitudes/<id>/retirar/ (HX-Request) → retirar(request, solicitud_id)
+  N -> V ++ : retirar_solicitud(request.user, solicitud_id)
+  V -> D ++ : $comentario("SET estado_validacion = RETIRADA WHERE id, solicitante y estado_validacion = PENDIENTE")\nUPDATE solicitudes_solicitud
+  return filas
+  return filas == 1
+
+  alt se retiró
+    N -> N : messages.success(request, "Retiraste la solicitud #…")
+  else ajena, inexistente o ya revisada
+    N -> N : messages.error(request, "No se pudo retirar la solicitud #…")
+  end
+
+  N -> N : $comentario("la pestaña y la página donde estaba")\nvista, pagina = request.POST.get("vista"), request.POST.get("pagina")
+  N -> N ++ : $comentario("la tabla otra vez, ya con la solicitud como Retirada")\n_contexto_historial(request.user, vista, pagina)
+  N -> N : hoy = timezone.localdate()
+  N -> M ++ : Solicitud.objects.de(request.user)
+  return propias
+  N -> M ++ : propias.proximas(hoy)
+  return proximas
+  N -> M ++ : propias.anteriores(hoy)
+  return anteriores
+  N -> M ++ : (proximas if vista == "proximas" else anteriores).con_detalle()
+  return solicitudes
+  N -> M ++ : $comentario("Paginator(…).get_page(pagina)")\nsolicitudes.count()
+  M -> D ++ : SELECT COUNT solicitudes_solicitud
+  return filas
+  return total
+  N -> M ++ : proximas.count()
+  M -> D ++ : SELECT COUNT solicitudes_solicitud
+  return filas
+  return total_proximas
+  N -> M ++ : anteriores.count()
+  M -> D ++ : SELECT COUNT solicitudes_solicitud
+  return filas
+  return total_anteriores
+  return contexto
+  N -> N ++ : render(request, "solicitudes/_tabla_historial.html", contexto)
+  N -> M ++ : $comentario("la plantilla recorre la página; trae los mensajes de messages")\npagina.object_list
+  M -> D ++ : SELECT solicitudes_solicitud, personas_area
+  return filas
+  M -> D ++ : SELECT solicitudes_solicitudbloque, agenda_bloque
+  return filas
+  return solicitudes
+  return respuesta
+  N --> P -- : 200 · solicitudes/_tabla_historial.html
+  P -> P : $comentario("htmx reemplaza la tabla; el mensaje viene dentro")\nhx-swap="outerHTML" sobre #historial
+  P --> S : la fila como Retirada y el mensaje
+end
+deactivate P
+
+@enduml

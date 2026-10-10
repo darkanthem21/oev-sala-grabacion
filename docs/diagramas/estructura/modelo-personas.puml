@@ -1,0 +1,93 @@
+@startuml modelo-personas
+!include ../estilo.iuml
+hide circle
+hide empty members
+<style>
+classDiagram {
+  FontSize 12
+  class { BackGroundColor #E8F2EB; LineColor #2F5E3C; RoundCorner 4 }
+  arrow { FontName "JetBrainsMono NF"; FontSize 11; LineColor #123F6D }
+  note { FontSize 11; BackGroundColor #FDF8E7; LineColor #CDBB7A }
+  .ajena { BackGroundColor #FFFFFF; LineColor #9AA5B1; FontColor #616E7C }
+}
+</style>
+title Modelo de datos de personas (US-01, US-05 y US-08)
+
+entity "<b>personas_usuario</b>" as Usuario {
+  <b>id</b> : bigint «PK»
+  --
+  email : varchar(254) «unique»
+  password : varchar(128)
+  first_name : varchar(150)
+  last_name : varchar(150)
+  is_active : boolean
+  is_staff : boolean
+  is_superuser : boolean
+  last_login : timestamptz NULL
+  date_joined : timestamptz
+  intentos_fallidos : smallint
+  bloqueado_hasta : timestamptz NULL
+}
+
+entity "<b>personas_area</b>" as Area {
+  <b>id</b> : bigint «PK»
+  --
+  nombre : varchar(120) «unique»
+  prioridad : smallint
+  activa : boolean
+}
+
+entity "<b>personas_usuario_areas</b>" as UsuarioArea {
+  <b>id</b> : bigint «PK»
+  --
+  <b>usuario_id</b> : bigint «FK → personas_usuario.id»
+  <b>area_id</b> : bigint «FK → personas_area.id»
+  --
+  «unique» (usuario_id, area_id)
+}
+
+entity "<b>personas_usuario_groups</b>" as UsuarioGrupo {
+  <b>id</b> : bigint «PK»
+  --
+  <b>usuario_id</b> : bigint «FK → personas_usuario.id»
+  <b>group_id</b> : integer «FK → auth_group.id»
+  --
+  «unique» (usuario_id, group_id)
+}
+
+entity "<b>auth_group</b>" as Grupo <<ajena>> {
+  <b>id</b> : integer «PK»
+  --
+  name : varchar(150) «unique»
+}
+
+Usuario ||--o{ UsuarioArea : "areas (on_delete=CASCADE)"
+Area ||--o{ UsuarioArea : "(on_delete=CASCADE)"
+Usuario ||--o{ UsuarioGrupo : "groups (on_delete=CASCADE)"
+Grupo ||--o{ UsuarioGrupo : "(on_delete=CASCADE)"
+
+note left of Usuario
+  Se entra con el correo, no con un nombre
+  de usuario (US-01 AC1): no hay columna
+  username, y el correo se guarda en
+  minúsculas. intentos_fallidos y
+  bloqueado_hasta son el bloqueo temporal
+  por intentos (US-01 AC5).
+end note
+
+note bottom of Grupo
+  Los roles son grupos de Django (US-08 AC6):
+  Administrador, Validador, Personal de apoyo y
+  Solicitante, creados por la migración
+  personas/0002_roles. Una persona puede tener
+  varios. is_staff también cuenta como
+  administrador en su puerta.
+end note
+
+note bottom of Area
+  Las áreas para las que una persona puede
+  pedir (US-05). Desactivarla la saca del
+  formulario sin borrar su historial; prioridad
+  ordena los topes del validador.
+end note
+@enduml

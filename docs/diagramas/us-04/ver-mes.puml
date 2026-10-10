@@ -1,0 +1,78 @@
+@startuml ver-mes
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Ver la jornada en la vista mensual (US-04)
+
+actor "Administrador" as A
+participant "<b>agenda.views</b>\n<size:11>agenda/views.py</size>" as N <<presentación>>
+participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : GET /configuracion/bloques/?vista=mes&desde=AAAA-MM-DD → bloques(request)
+N -> N ++ : _contexto(request.GET)
+N -> N : $comentario("la mensual es la de por defecto: sin vista, o con una inválida, se abre esta")\nvista = datos.get("vista")
+N -> N : hoy = timezone.localdate()
+N -> N : foco = _fecha(datos.get("desde"), hoy)
+N -> V ++ : plantilla_semanal()
+V -> D ++ : SELECT agenda_bloque
+return filas
+return plantilla
+N -> N : $comentario("las semanas del mes, recortadas a lunes-viernes")\nmes = _mes(foco)
+N -> V ++ : bloqueos_por_fecha(mes[0][0], mes[-1][-1])
+V -> D ++ : SELECT agenda_bloqueo ⋈ agenda_bloque
+return filas
+return bloqueos
+loop cada día hábil de cada semana del mes
+  N -> N ++ : _dia(fecha, plantilla, foco, bloqueos, hoy)
+  N -> N : $comentario("sus bloqueos, si la cubren entera, si es de otro mes y si ya pasó")\n{"bloqueos": del_dia, "entero": …, "fuera": …, "pasado": …}
+  return dia
+end
+N -> N : $comentario("«Octubre 2026»")\ntitulo = _titulo("mes", foco)
+N -> N ++ : $comentario("cuántos bloques y horas tiene cada día de la semana, y cuál se sale del molde")\n_cabeceras(plantilla)
+return cabeceras
+N -> N : $comentario("los bloqueos del mes sin repetir, para el panel de cada uno")\nbloqueos_mes = list({b.pk: b for bs in bloqueos.values() for b in bs}.values())
+N -> N ++ : _registro()
+N -> V ++ : $comentario("los últimos bloqueos, con quién los puso y quién los levantó")\nBloqueo.objects.select_related("bloque", "bloqueado_por", "levantado_por").order_by(…)[:ULTIMOS]
+V -> D ++ : SELECT agenda_bloqueo ⋈ agenda_bloque ⋈ personas_usuario
+return filas
+return recientes
+N -> N : $comentario("una fila por bloqueo y otra por levantamiento, la más reciente primero")\nsorted(acciones, key=lambda a: a["cuando"], reverse=True)[:ULTIMOS]
+return registro
+N -> N : anterior, siguiente = _correr(foco, "mes", ∓1)
+return contexto
+alt htmx («←», «Hoy» o «→»)
+  N -> N ++ : $comentario("solo la rejilla, para que htmx la reemplace")\nrender(request, "agenda/_calendario.html", contexto)
+  loop cada bloqueo del mes
+    N -> V ++ : $comentario("«Lo bloqueó …» en el panel del bloqueo")\nb.bloqueado_por.email
+    V -> D ++ : SELECT personas_usuario
+    return fila
+    return usuario
+  end
+  return respuesta
+  N --> A : 200 · agenda/_calendario.html
+else navegador sin htmx
+  N -> N ++ : $comentario("la página entera, que incluye la misma rejilla")\nrender(request, "agenda/bloques.html", contexto)
+  loop cada bloqueo del mes
+    N -> V ++ : b.bloqueado_por.email
+    V -> D ++ : SELECT personas_usuario
+    return fila
+    return usuario
+  end
+  return respuesta
+  N --> A : 200 · agenda/bloques.html
+end
+note right of V
+  bloqueos_por_fecha trae el bloque pero no
+  quién bloqueó: es una consulta por bloqueo.
+end note
+note right of N
+  La celda muestra solo lo que cambia por fecha:
+  los bloqueos (US-17). La jornada, que se repite
+  todas las semanas, va resumida en la cabecera
+  de cada columna. Los bloques se editan en la
+  vista semanal; aquí un clic en una celda abre
+  el bloqueo de esa fecha.
+end note
+deactivate N
+@enduml

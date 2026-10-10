@@ -1,0 +1,141 @@
+{% comment %}
+  Tabla paginada de Mis solicitudes (US-09). htmx reemplaza solo este bloque al
+  cambiar de pestaña o de página; sin htmx, los mismos enlaces cargan la página
+  entera. Las pestañas viven acá dentro para que su estado activo se redibuje.
+{% endcomment %}
+{% url 'mis_solicitudes' as url_historial %}
+<div id="historial" class="historial-contenedor">
+  <nav class="pestanas-historial" aria-label="Solicitudes por fecha"
+       hx-target="#historial" hx-swap="outerHTML" hx-push-url="true" hx-indicator="#historial">
+    <a class="pestana-historial {% if vista == 'proximas' %}activa{% endif %}"
+       href="{{ url_historial }}?vista=proximas" hx-get="{{ url_historial }}?vista=proximas"
+       {% if vista == "proximas" %}aria-current="page"{% endif %}>
+      Próximas <span class="pestana-cuenta">{{ total_proximas }}</span>
+    </a>
+    <a class="pestana-historial {% if vista == 'anteriores' %}activa{% endif %}"
+       href="{{ url_historial }}?vista=anteriores" hx-get="{{ url_historial }}?vista=anteriores"
+       {% if vista == "anteriores" %}aria-current="page"{% endif %}>
+      Anteriores <span class="pestana-cuenta">{{ total_anteriores }}</span>
+    </a>
+  </nav>
+
+  {% comment %}El resultado de retirar llega con la tabla ya redibujada, como aviso
+  flotante. En la página entera (también la que htmx pide al volver con Atrás)
+  lo dibuja base.html.{% endcomment %}
+  {% if request.headers.hx_request and not request.headers.hx_history_restore_request %}
+    <div id="avisos" hx-swap-oob="beforeend">{% include "_avisos.html" %}</div>
+  {% endif %}
+
+  {% if vista == "proximas" %}
+    <p class="nota-confirmacion">
+      <strong>Confirma tu asistencia.</strong>
+      Cuando la Oficina acepte tu reserva te llegará un correo con el enlace para
+      confirmarla; también puedes hacerlo aquí, con «Confirmar asistencia», a más
+      tardar el día anterior.
+    </p>
+  {% endif %}
+
+  {% if pagina.object_list %}
+    <table class="historial">
+      <thead>
+        <tr>
+          <th scope="col">N.º</th>
+          <th scope="col">Área</th>
+          <th scope="col">Fecha</th>
+          <th scope="col">Bloque</th>
+          <th scope="col">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for solicitud in pagina.object_list %}
+          <tr>
+            <td data-titulo="N.º">#{{ solicitud.id }}</td>
+            <td data-titulo="Área">{{ solicitud.area.nombre }}</td>
+            <td data-titulo="Fecha">
+              <time datetime="{{ solicitud.fecha|date:'Y-m-d' }}">{{ solicitud.fecha|date:"l d/m/Y"|capfirst }}</time>
+            </td>
+            <td data-titulo="Bloque">
+              <ul class="bloques-solicitados">
+                {% for sb in solicitud.solicitudes_bloques.all %}
+                  <li>{{ sb.inicio|time:"H:i" }} – {{ sb.termino|time:"H:i" }}</li>
+                {% empty %}<li>—</li>{% endfor %}
+              </ul>
+            </td>
+            <td data-titulo="Estado">
+              <span class="estado estado-{{ solicitud.estado_clave }}">{{ solicitud.estado_general }}</span>
+              {% if solicitud.estado_clave == "rechazada" and solicitud.motivo_resolucion %}
+                <p class="motivo-rechazo">{{ solicitud.motivo_resolucion }}</p>
+              {% endif %}
+              {% if solicitud.puede_confirmarse %}
+                <a class="btn-confirmar" href="{% url 'confirmar_solicitud' solicitud.id %}">Confirmar asistencia</a>
+              {% endif %}
+              {% if solicitud.puede_retirarse %}
+                {% url 'retirar_solicitud' solicitud.id as url_retirar %}
+                <form class="form-retirar" method="post" action="{{ url_retirar }}"
+                      hx-post="{{ url_retirar }}" hx-target="#historial" hx-swap="outerHTML"
+                      hx-indicator="#historial"
+                      hx-confirm="¿Retirar la solicitud #{{ solicitud.id }}?"
+                      data-solicitud="{{ solicitud.id }}">
+                  {% csrf_token %}
+                  <input type="hidden" name="vista" value="{{ vista }}">
+                  <input type="hidden" name="pagina" value="{{ pagina.number }}">
+                  <button type="submit" class="btn-retirar"
+                          aria-label="Retirar la solicitud #{{ solicitud.id }}">Retirar</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if pagina.has_other_pages %}
+      <nav class="paginacion" aria-label="Páginas de solicitudes"
+           hx-target="#historial" hx-swap="outerHTML show:#historial:top" hx-push-url="true"
+           hx-indicator="#historial">
+        {% if pagina.has_previous %}
+          <a class="btn-secundario paginacion-anterior" rel="prev"
+             href="{{ url_historial }}?vista={{ vista }}&amp;pagina={{ pagina.previous_page_number }}"
+             hx-get="{{ url_historial }}?vista={{ vista }}&amp;pagina={{ pagina.previous_page_number }}">
+            <svg class="icono-btn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <span>Anterior</span>
+          </a>
+        {% else %}
+          <span class="btn-secundario paginacion-anterior deshabilitado" aria-disabled="true">
+            <svg class="icono-btn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <span>Anterior</span>
+          </span>
+        {% endif %}
+
+        <span class="paginacion-estado" aria-live="polite">
+          Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}
+          · {{ pagina.paginator.count }} solicitud{{ pagina.paginator.count|pluralize:"es" }}
+        </span>
+
+        {% if pagina.has_next %}
+          <a class="btn-secundario paginacion-siguiente" rel="next"
+             href="{{ url_historial }}?vista={{ vista }}&amp;pagina={{ pagina.next_page_number }}"
+             hx-get="{{ url_historial }}?vista={{ vista }}&amp;pagina={{ pagina.next_page_number }}">
+            <span>Siguiente</span>
+            <svg class="icono-btn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </a>
+        {% else %}
+          <span class="btn-secundario paginacion-siguiente deshabilitado" aria-disabled="true">
+            <span>Siguiente</span>
+            <svg class="icono-btn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </span>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="aviso" role="status">
+      {% if not total_proximas and not total_anteriores %}
+        Aún no has realizado solicitudes de reserva.
+      {% elif vista == "proximas" %}
+        No tienes solicitudes para hoy ni para los próximos días.
+      {% else %}
+        Aún no tienes solicitudes con fechas pasadas.
+      {% endif %}
+    </div>
+  {% endif %}
+</div>

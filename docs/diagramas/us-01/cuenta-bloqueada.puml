@@ -6,7 +6,9 @@ title Cuenta bloqueada (US-01)
 
 actor "Solicitante" as P
 participant "<b>personas.views</b>\n<size:11>personas/views.py</size>" as N <<presentación>>
+participant "<b>django.contrib.auth</b>\n<size:11>framework</size>" as A <<presentación>>
 participant "<b>personas</b>\n<size:11>personas/models.py</size>" as V <<dominio>>
+participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
 P -> N ++ : POST /solicitante/entrar/\n→ entrar(request, rol=Rol.SOLICITANTE, destino="solicitar")
@@ -15,14 +17,27 @@ N -> V ++ : $comentario("la cuenta con ese correo, sin distinguir mayúsculas")\
 V -> D ++ : SELECT personas_usuario
 return fila
 return usuario
+N -> A ++ : $comentario("revisa la clave aunque la cuenta esté bloqueada")\nvalido = form.is_valid()
+note right of A
+  El mismo recorrido de «Clave incorrecta»:
+  get_by_natural_key y check_password.
+end note
+return valido
 N -> V ++ : usuario.esta_bloqueado
 return True
-N -> N : $comentario("minutos que faltan para el desbloqueo, redondeados hacia arriba")\nminutos = max(1, int((usuario.bloqueado_hasta - timezone.now())\n.total_seconds() // 60) + 1)
-N --> P : 200 · personas/_formulario_ingreso.html\ncon "Cuenta bloqueada. Vuelve a intentar en {minutos} minutos."
+N -> N ++ : _con_error(request, form, ruta)
+N -> C ++ : Parametros.cargar()
+C -> D ++ : SELECT configuracion_parametros
+return fila
+return parametros
+N -> N : $comentario("el aviso genérico, con la regla del bloqueo (AC5)")\nmensaje = f"Correo o contraseña incorrectos. Tras {intentos_maximos}\nintentos seguidos la cuenta se bloquea {minutos_bloqueo} minutos."
+deactivate N
+N --> P : 200 · personas/_formulario_ingreso.html con el aviso
 note left of N
-  No revisa la clave ni suma intentos.
-  El bloqueo es temporal, para que nadie
-  pueda dejar a otro fuera a propósito.
+  Ni suma intentos ni abre sesión, aunque
+  la clave sea correcta. Mismo texto y misma
+  demora que una clave mala (AC4): la
+  respuesta no dice que la cuenta existe.
 end note
 deactivate N
 @enduml

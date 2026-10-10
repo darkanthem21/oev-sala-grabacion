@@ -1,0 +1,49 @@
+@startuml ver-semana
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Ver una semana con sus bloqueos (US-17)
+
+actor "Administrador" as A
+participant "<b>agenda.views</b>\n<size:11>agenda/views.py</size>" as N <<presentación>>
+participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : GET /configuracion/bloques/?vista=semana&desde=AAAA-MM-DD → bloques(request)
+N -> N ++ : _contexto(request.GET)
+N -> N : hoy = timezone.localdate()
+opt falta la fecha y hoy es sábado o domingo
+  N -> N : $comentario("la rejilla es de lunes a viernes")\npor_defecto = el lunes que viene
+end
+N -> N : foco = _fecha(datos.get("desde"), por_defecto)
+N -> V ++ : plantilla_semanal()
+V -> D ++ : SELECT agenda_bloque
+return filas
+return plantilla
+N -> N : fechas = _semana(foco)
+N -> V ++ : bloqueos_por_fecha(fechas[0], fechas[-1])
+V -> D ++ : SELECT agenda_bloqueo
+return filas
+return bloqueos
+loop cada día de lunes a viernes
+  N -> N ++ : _dia(fecha, plantilla, None, bloqueos, hoy)
+  N -> N : $comentario("los bloques que el bloqueo deja fuera en esa fecha")\nbloqueados = {b.pk for b in bloques if any(x.cubre(fecha, b.inicio) for x in del_dia)}
+  return dia
+end
+N -> N : $comentario("«Semana del 5 al 9 de octubre de 2026»")\ntitulo = _titulo("semana", foco)
+N -> N ++ : _mini(foco, hoy)
+return mes con la semana elegida y hoy marcados
+N -> N : anterior, siguiente = foco ∓ 7 días
+return contexto
+alt htmx (‹ Hoy › o un día del mini calendario)
+  N --> A : 200 · agenda/_calendario.html
+else navegador sin htmx
+  N --> A : 200 · agenda/bloques.html
+end
+note right of N
+  Un aviso fijo dice que los horarios valen para todas
+  las semanas y los bloqueos solo para su fecha. Los
+  bloques bloqueados se dibujan rayados.
+end note
+deactivate N
+@enduml

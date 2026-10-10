@@ -1,170 +1,103 @@
-/* US-07. Solo variables de marca.css: ningun color literal (docs/estilo.md).
- * El cascaron (techo, panel, .btn) viene de css/panel.css. */
+/* US-07. Solo variables de marca.css: ningún color literal (docs/estilo.md).
+ * El cascarón (techo, panel, .btn) viene de css/panel.css y la agenda es la
+ * vista semanal de agenda/calendario.css. Acá va solo lo del validador. */
 
-/* Los datos son de prueba y tiene que notarse: nadie deberia creer que esta
- * aprobando algo de verdad. */
-.prueba {
-  border: 1px solid var(--borde); border-left: 3px solid var(--precaucion);
-  background: var(--superficie); padding: .7rem .9rem; margin-bottom: 1.25rem; font-size: .88rem;
+/* --- Bloques de la agenda --- */
+/* Un bloque dice la hora y quién lo pide; nada más. El tope lleva el filete de
+ * choque de Configuración, lo reservado el fondo de la página y un bloque que
+ * el administrador quitó, pero que todavía tiene pedidos, va punteado. */
+/* La hora arriba y debajo un nombre por línea; calendario.css los deja en una. */
+.validacion .bloque { display: flex; flex-direction: column; justify-content: flex-start; }
+.bloque .quien-b { font-size: .76rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bloque.tope { border-color: var(--alerta); }
+.bloque.reservada { background: var(--fondo); }
+.bloque.reservada .quien-b { font-weight: 400; color: var(--tinta-suave); }
+.bloque.quitado { border-style: dashed; }
+.bloque.elegido .quien-b { color: var(--superficie); }
+/* Sin pendientes no hay nada que elegir: no reacciona, pero se lee igual. */
+.bloque:disabled { cursor: default; }
+.bloque:disabled:hover { border-color: var(--info); }
+.bloque.tope:hover { border-color: var(--alerta); }
+
+.tope-m { background: var(--superficie); box-shadow: inset 3px 0 0 var(--alerta), inset 0 0 0 1px var(--alerta); }
+.reservada-m { background: var(--fondo); box-shadow: inset 3px 0 0 var(--info), inset 0 0 0 1px var(--info); }
+.quitado-m { background: var(--superficie); outline: 1px dashed var(--info); outline-offset: -1px; }
+
+/* --- Agenda y panel lado a lado --- */
+.con-panel { display: grid; grid-template-columns: minmax(0, 1fr) 22rem; gap: 1.25rem; align-items: start; }
+.izq { min-width: 0; }
+.lado {
+  position: sticky; top: 1rem; display: flex; flex-direction: column;
+  max-height: calc(100vh - 2rem); overflow: auto;
+  background: var(--superficie); border: 1px solid var(--borde);
 }
-.prueba p { margin: .2rem 0 0; }
-.prueba code { font-size: .8rem; }
-
-.resumen { display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
-.resumen div { font-size: .8rem; color: var(--tinta-suave); }
-.resumen b { display: block; font-family: var(--fuente-titulo); font-size: 1.4rem; color: var(--tinta); }
-
-/* El naranja de marca da 3.5:1: va de filete, el texto sigue en tinta. */
-.error {
-  border-left: 3px solid var(--alerta); background: var(--superficie);
-  padding: .6rem .75rem; margin: 0 0 1.25rem; font-size: .9rem;
-}
-
-.seccion { margin-bottom: 2.5rem; }
-.seccion-cab {
-  display: flex; align-items: baseline; flex-wrap: wrap; gap: .6rem;
-  border-bottom: 1px solid var(--borde); padding-bottom: .5rem; margin-bottom: 1rem;
-}
-.seccion-cab h2 { margin: 0; font-size: 1rem; }
-.seccion-cab p { flex-basis: 100%; margin: 0; font-size: .85rem; color: var(--tinta-suave); max-width: 80ch; }
-.cuenta { font-size: .75rem; border: 1px solid var(--borde); padding: 0 .4rem; color: var(--tinta-suave); }
-
-.tarjeta { background: var(--superficie); border: 1px solid var(--borde); margin-bottom: 1rem; }
-.tarjeta-cab {
-  display: flex; align-items: center; flex-wrap: wrap; gap: .6rem;
-  padding: .6rem .9rem; border-bottom: 1px solid var(--borde); background: var(--fondo);
-}
-.bloque { font-family: var(--fuente-titulo); font-weight: 700; font-size: .9rem; }
-.porque { margin-left: auto; font-size: .8rem; color: var(--tinta-suave); max-width: 50ch; text-align: right; }
-.folio { font-size: .75rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
-.rol { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--tinta-suave); }
-.area { font-size: .85rem; display: inline-flex; align-items: center; gap: .35rem; }
-.prio { font-size: .7rem; font-weight: 700; border: 1px solid var(--accion); color: var(--accion); padding: 0 .3rem; }
-
-.postulante {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2rem 1rem; align-items: center;
-  padding: .7rem .9rem; border-bottom: 1px solid var(--borde);
-}
-.postulante > .acciones { grid-column: 2; grid-row: 1 / span 3; }
-.quien-pide { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
-.detalle, .hermanos { margin: 0; font-size: .83rem; color: var(--tinta-suave); }
-/* Lo que el mockup no mostraba: que dos filas son la misma solicitud. */
-.hermanos { border-left: 3px solid var(--info); padding-left: .5rem; color: var(--tinta); }
-
-.motivo {
-  display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; padding: .7rem .9rem; font-size: .83rem;
-  border-top: 1px solid var(--borde);
-}
-.motivo input, .rechazo input {
-  flex: 1; min-width: 14rem; padding: .4rem .55rem; font: inherit;
-  border: 1px solid var(--borde); color: var(--tinta); background: var(--superficie);
-}
-/* El aviso de un tope va dentro de su tarjeta, pegado al motivo que falta. */
-.error.en-tarjeta { margin: 0; border-top: 1px solid var(--borde); }
-.motivo input.falta { border: 2px solid var(--alerta); }
-
-.ficha { display: grid; grid-template-columns: 7rem 1fr; gap: .25rem 1rem; margin: 0; padding: .7rem .9rem; font-size: .85rem; }
+.lado-cab { padding: 1rem 1rem .85rem; }
+.lado h2 { margin: 0; font-size: 1rem; }
+.lado h2:focus { outline: none; }
+.meta { margin: .3rem 0 0; font-size: .82rem; color: var(--tinta-suave); }
+.volver { margin: 0 0 .5rem; padding: 0; border: 0; background: none; font: inherit; font-size: .78rem; color: var(--accion); cursor: pointer; }
+.trozo { margin: 0; padding: .85rem 1rem; border-top: 1px solid var(--borde); font-size: .85rem; }
+.trozo p { margin: 0; }
+.ficha { display: grid; grid-template-columns: 6.5rem 1fr; gap: .3rem 1rem; margin: 0; }
+.ficha div { display: contents; }
 .ficha dt { color: var(--tinta-suave); }
 .ficha dd { margin: 0; }
+.suave { color: var(--tinta-suave); }
+.enlace { padding: 0; border: 0; background: none; font: inherit; color: var(--accion); text-decoration: underline; cursor: pointer; }
+/* El naranja de marca da 3.5:1: va de filete, el texto sigue en tinta. */
+.lado .error { display: block; padding: .5rem .7rem; border-left: 3px solid var(--alerta); background: var(--fondo); }
+.lado p.error { margin: 0 1rem .85rem; }
 
+/* En un tope se elige a quién darle el bloque. */
+.opcion { display: grid; grid-template-columns: auto 1fr; gap: .1rem .6rem; padding: .75rem 1rem; border-top: 1px solid var(--borde); font-size: .85rem; cursor: pointer; }
+.opcion:has(input:checked) { background: var(--fondo); }
+.opcion input { grid-row: 1 / span 4; align-self: start; margin: .25rem 0 0; accent-color: var(--accion); }
+.opcion b { font-weight: 500; }
+.opcion span { grid-column: 2; }
+
+.campo { display: grid; gap: .3rem; padding: .85rem 1rem; border-top: 1px solid var(--borde); font-size: .85rem; }
+.campo label { font-weight: 500; }
+.campo textarea {
+  min-height: 3.6rem; padding: .4rem .55rem; resize: vertical;
+  font: inherit; color: var(--tinta); background: var(--superficie); border: 1px solid var(--borde);
+}
+.campo textarea.falta { border: 2px solid var(--alerta); }
+.ayuda { margin: 0; font-size: .75rem; color: var(--tinta-suave); }
+.lado .acciones { margin: 0; padding: .85rem 1rem; border-top: 1px solid var(--borde); justify-content: flex-end; flex-wrap: wrap; }
+
+/* --- Por resolver --- */
+.cola { margin: 0; padding: 0 0 .4rem; list-style: none; }
+.cola h3 { margin: 0; padding: .7rem 1rem .25rem; border-top: 1px solid var(--borde); font-size: .78rem; color: var(--tinta-suave); }
+.cola button {
+  display: grid; grid-template-columns: .6rem 1fr; gap: 0 .55rem; align-items: center; width: 100%;
+  padding: .4rem 1rem; border: 0; background: none; text-align: left; font: inherit; color: var(--tinta); cursor: pointer;
+}
+.cola button:hover { background: var(--fondo); }
+.marca-tope { width: .6rem; height: .6rem; background: var(--alerta); }
+.cola .cuando { font-size: .76rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+.cola .quienes { grid-column: 2; font-size: .85rem; }
+
+/* --- Resueltas (diálogo) --- */
 .tabla { width: 100%; border-collapse: collapse; font-size: .85rem; }
 .tabla th {
   text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em;
   color: var(--tinta-suave); padding: .4rem .9rem; border-bottom: 1px solid var(--borde);
 }
-.tarjeta .tabla th { border-top: 1px solid var(--borde); }
-.tabla td { padding: .45rem .9rem; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+.tabla td { padding: .45rem .9rem; border-bottom: 1px solid var(--borde); vertical-align: top; }
 .tabla tr:last-child td { border-bottom: 0; }
-.der, .tabla th.der { text-align: right; }
-
-/* Los estados son RELLENOS o filetes: el texto encima siempre en tinta. */
 .estado {
   font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
-  padding: .05rem .4rem; border: 1px solid var(--borde); color: var(--tinta-suave); white-space: nowrap;
+  padding: .05rem .4rem; border: 1px solid var(--borde); white-space: nowrap;
 }
-.estado[data-estado="aprobado"], .estado[data-estado="aprobada"] { background: var(--exito-suave); border-color: var(--exito-suave); color: var(--tinta); }
-.estado[data-estado="rechazado"], .estado[data-estado="rechazada"] { border-color: var(--alerta); color: var(--tinta); }
-.estado[data-estado="parcial"], .estado[data-estado="en_revision"] { border-color: var(--precaucion); color: var(--tinta); }
-.compite { font-size: .8rem; color: var(--tinta); border-left: 3px solid var(--alerta); padding-left: .4rem; }
+.estado.aprobada { border-color: var(--accion); }
+.estado.rechazada { border-color: var(--alerta); }
 
-.acciones, .rechazo { display: inline-flex; gap: .4rem; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
-.btn.peligro { color: var(--tinta); border-color: var(--alerta); }
-.btn.peligro:hover { background: var(--fondo); }
-a.btn { text-decoration: none; }
-.suave { color: var(--tinta-suave); }
-
-/* --- Tablero: la semana a un lado, el trabajo al otro --- */
-.tablero { display: grid; grid-template-columns: minmax(16rem, 19rem) minmax(0, 1fr); gap: 2rem; align-items: start; }
-.semana-col { position: sticky; top: 1rem; }
-@media (max-width: 62rem) {
-  .tablero { grid-template-columns: minmax(0, 1fr); }
-  .semana-col { position: static; }
-}
-
-.semana { background: var(--superficie); border: 1px solid var(--borde); }
-.semana-cab { padding: .6rem .8rem; border-bottom: 1px solid var(--borde); background: var(--fondo); }
-.semana-cab h2 { margin: 0; font-size: .9rem; }
-.semana-cab p { margin: .1rem 0 0; font-size: .78rem; color: var(--tinta-suave); }
-
-.cuadricula { display: grid; grid-template-columns: 2.6rem repeat(5, minmax(0, 1fr)); gap: 3px; padding: .7rem; }
-/* Alpine necesita un solo elemento por vuelta del x-for: la fila existe para
- * eso, y display: contents la saca de la grilla. */
-.fila-hora { display: contents; }
-.dia { text-align: center; font-size: .7rem; line-height: 1.25; color: var(--tinta-suave); padding-bottom: .15rem; }
-.dia b { display: block; text-transform: uppercase; letter-spacing: .05em; font-family: var(--fuente-titulo); color: var(--tinta); }
-.hora {
-  display: flex; align-items: center; justify-content: flex-end; padding-right: .3rem;
-  font-size: .68rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums;
-}
-.celda {
-  box-sizing: border-box; min-height: 2.1rem; padding: 0; cursor: pointer;
-  border: 1px solid var(--borde); background: var(--fondo); color: var(--tinta);
-  font: 700 .75rem var(--fuente-texto); font-variant-numeric: tabular-nums;
-}
-.celda:disabled { cursor: default; }
-.celda:not(:disabled):hover { outline: 2px solid var(--accion); outline-offset: -2px; }
-
-.leyenda {
-  display: flex; flex-wrap: wrap; gap: .3rem .8rem; margin: 0; padding: .55rem .8rem .7rem;
-  list-style: none; border-top: 1px solid var(--borde); font-size: .72rem; color: var(--tinta-suave);
-}
-.leyenda li, .marcas li { display: inline-flex; align-items: center; gap: .3rem; }
-/* border-box en todos los cuadritos: con content-box el borde de 2px los hace
- * mas anchos que su columna, la casilla vecina les tapa el lado derecho y el
- * de "con tope" se ve como una C. */
-.leyenda i, .marcas i {
-  box-sizing: border-box; display: flex; align-items: center; justify-content: center;
-  width: .9rem; height: .9rem; border: 1px solid var(--borde); background: var(--fondo);
-  font: normal 700 .55rem/1 var(--fuente-texto); color: var(--tinta);
-}
-
-/* Estados de la semana: libre, una solicitud, con tope, aprobado. */
-.celda[data-e="una"], .leyenda i[data-e="una"] { background: var(--superficie); border-color: var(--tinta-suave); }
-.celda[data-e="competencia"], .leyenda i[data-e="competencia"] { background: var(--superficie); border: 2px solid var(--alerta); }
-.celda[data-e="aprobado"], .leyenda i[data-e="aprobado"] { background: var(--exito-suave); border-color: var(--exito-suave); }
-
-/* --- Mini calendario de cada solicitud y de cada tope --- */
-.cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: start; }
-@media (max-width: 40rem) { .cuerpo { grid-template-columns: minmax(0, 1fr); } }
-.postulantes .postulante:last-child { border-bottom: 0; }
-.mini { padding: .7rem .9rem; }
-.mini-grilla { display: grid; grid-template-columns: 2.3rem repeat(5, 1rem); gap: 2px; align-items: center; }
-.mini-dia { font-size: .6rem; text-align: center; color: var(--tinta-suave); font-family: var(--fuente-titulo); font-weight: 700; }
-.mini-hora { font-size: .58rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
-.mini-celda {
-  box-sizing: border-box; display: flex; align-items: center; justify-content: center;
-  width: 1rem; height: 1rem; background: var(--fondo); border: 1px solid var(--borde);
-  font: 700 .55rem/1 var(--fuente-texto); color: var(--tinta); font-variant-numeric: tabular-nums;
-}
-.mini-pie { margin: .3rem 0 0; font-size: .65rem; color: var(--tinta-suave); text-align: right; }
-
-.marcas { display: flex; flex-wrap: wrap; gap: .3rem .9rem; margin: 0 0 1.25rem; padding: 0; list-style: none; font-size: .75rem; color: var(--tinta-suave); }
-
-/* Estados de un bloque pedido: pendiente, con tope, aprobado, rechazado. */
-.mini-celda[data-e="pendiente"], .marcas i[data-e="pendiente"] { background: var(--superficie); border: 2px solid var(--accion); }
-.mini-celda[data-e="competencia"], .marcas i[data-e="competencia"] { background: var(--superficie); border: 2px solid var(--alerta); }
-.mini-celda[data-e="aprobado"], .marcas i[data-e="aprobado"] { background: var(--exito-suave); border-color: var(--exito-suave); }
-.mini-celda[data-e="rechazado"], .marcas i[data-e="rechazado"] {
-  background: repeating-linear-gradient(135deg, var(--borde) 0 2px, var(--superficie) 2px 4px);
-  border-color: var(--alerta);
+/* En pantalla angosta el panel va debajo, y al elegir algo sube como hoja. */
+@media (max-width: 60rem) {
+  .con-panel { grid-template-columns: minmax(0, 1fr); }
+  .lado { position: static; max-height: none; }
+  .con-panel[data-abierto="1"] .lado {
+    position: fixed; inset: 0; z-index: 10; max-height: none; border: 0;
+    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

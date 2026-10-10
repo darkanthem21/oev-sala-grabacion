@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
@@ -7,9 +7,7 @@ from django.urls import reverse
 
 from agenda.models import Bloque, Dia, primera_fecha_pedible
 from personas.models import Area, Rol
-from solicitudes.models import Acompanante, Solicitud, SolicitudBloque
-from solicitudes.services import guardar_solicitud_completa
-from solicitudes.wizard import PasoSolicitud, SolicitudWizard, obtener_limites_reserva
+from solicitudes.models import Solicitud, SolicitudBloque
 
 Usuario = get_user_model()
 
@@ -107,10 +105,15 @@ class SolicitarWizardTestCase(TestCase):
             "paso": "confirmacion",
             "acepta_terminos": "on",
         })
-        self.assertEqual(response_p3.status_code, 200)
-        self.assertTemplateUsed(response_p3, "solicitudes/enviada.html")
-        self.assertContains(response_p3, "Solicitud completa")
-        self.assertContains(response_p3, "Grabación cápsula docente")
+        # POST/Redirect/GET: el envío redirige a la confirmación.
+        solicitud_creada = Solicitud.objects.get(solicitante=self.usuario)
+        self.assertRedirects(response_p3, reverse("solicitud_enviada", args=[solicitud_creada.id]))
+        confirmacion = self.client.get(response_p3["Location"])
+        self.assertTemplateUsed(confirmacion, "solicitudes/enviada.html")
+        self.assertContains(confirmacion, "Solicitud completa")
+        self.assertContains(confirmacion, "Grabación cápsula docente")
+        self.assertContains(confirmacion, f"{self.bloque.inicio:%H:%M} – {self.bloque.termino:%H:%M}")
+        self.assertContains(confirmacion, "Juan Acompañante")
 
         # Verificar persistencia en base de datos
         solicitud = Solicitud.objects.filter(solicitante=self.usuario).first()
@@ -120,21 +123,21 @@ class SolicitarWizardTestCase(TestCase):
         self.assertEqual(solicitud.personas, 2)
         self.assertEqual(solicitud.solicitudes_bloques.count(), 1)
         self.assertEqual(solicitud.solicitudes_bloques.first().bloque, self.bloque)
-        self.assertEqual(solicitud.solicitudes_bloques.first().fecha, self.fecha_prueba)
+        self.assertEqual(solicitud.fecha, self.fecha_prueba)
         self.assertEqual(solicitud.acompanantes.count(), 1)
         self.assertEqual(solicitud.acompanantes.first().nombre, "Juan Acompañante")
 
-    def test_barra_superior_en_solicitar(self):
+    def test_techo_en_solicitar(self):
         url = reverse("solicitar")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'class="barra-superior"')
+        self.assertContains(response, 'class="techo"')
         self.assertContains(response, 'Facultad-color-negro.png')
-        self.assertContains(response, self.usuario.email)
+        self.assertContains(response, self.usuario.get_full_name())
         self.assertContains(response, 'action="/logout/"')
         self.assertContains(response, 'Cerrar sesión')
 
-    def test_barra_superior_en_sin_area(self):
+    def test_techo_en_sin_area(self):
         usuario_sin_area = Usuario.objects.create_user(
             email="sinarea@uach.cl",
             first_name="Sin",
@@ -147,9 +150,9 @@ class SolicitarWizardTestCase(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "solicitudes/sin_area.html")
-        self.assertContains(response, 'class="barra-superior"')
+        self.assertContains(response, 'class="techo"')
         self.assertContains(response, 'Facultad-color-negro.png')
-        self.assertContains(response, "sinarea@uach.cl")
+        self.assertContains(response, "Sin Area")
         self.assertContains(response, 'action="/logout/"')
 
 
@@ -176,11 +179,12 @@ class DisponibilidadEfectivaTestCase(TestCase):
         sol_aceptada = Solicitud.objects.create(
             solicitante=otro_usuario,
             area=self.area,
+            fecha=self.fecha_prueba,
             motivo="Reserva aceptada previa",
             estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
             estado_confirmacion=Solicitud.EstadoConfirmacion.CONFIRMADA,
         )
-        SolicitudBloque.objects.create(solicitud=sol_aceptada, bloque=self.bloque, fecha=self.fecha_prueba)
+        SolicitudBloque.objects.create(solicitud=sol_aceptada, bloque=self.bloque)
 
         url = reverse("solicitar")
         response = self.client.post(url, {
@@ -195,22 +199,23 @@ class DisponibilidadEfectivaTestCase(TestCase):
         sol_aceptada = Solicitud.objects.create(
             solicitante=self.usuario,
             area=self.area,
+            fecha=self.fecha_prueba,
             motivo="Reserva aceptada previa",
             estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
             estado_confirmacion=Solicitud.EstadoConfirmacion.CONFIRMADA,
         )
-        SolicitudBloque.objects.create(solicitud=sol_aceptada, bloque=self.bloque, fecha=self.fecha_prueba)
+        SolicitudBloque.objects.create(solicitud=sol_aceptada, bloque=self.bloque)
 
         otra_solicitud = Solicitud.objects.create(
             solicitante=self.usuario,
             area=self.area,
+            fecha=self.fecha_prueba,
             motivo="Segunda solicitud",
         )
         with self.assertRaises(ValidationError) as ctx:
             SolicitudBloque.objects.create(
                 solicitud=otra_solicitud,
                 bloque=self.bloque,
-                fecha=self.fecha_prueba,
             )
         self.assertIn("ya se encuentra reservado", str(ctx.exception).lower())
 
@@ -218,14 +223,16 @@ class DisponibilidadEfectivaTestCase(TestCase):
         sol_pendiente = Solicitud.objects.create(
             solicitante=self.usuario,
             area=self.area,
+            fecha=self.fecha_prueba,
             motivo="Primera solicitud pendiente",
             estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
         )
-        SolicitudBloque.objects.create(solicitud=sol_pendiente, bloque=self.bloque, fecha=self.fecha_prueba)
+        SolicitudBloque.objects.create(solicitud=sol_pendiente, bloque=self.bloque)
 
         otra_solicitud = Solicitud.objects.create(
             solicitante=self.usuario,
             area=self.area,
+            fecha=self.fecha_prueba,
             motivo="Segunda solicitud duplicada",
             estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
         )
@@ -233,7 +240,6 @@ class DisponibilidadEfectivaTestCase(TestCase):
             SolicitudBloque.objects.create(
                 solicitud=otra_solicitud,
                 bloque=self.bloque,
-                fecha=self.fecha_prueba,
             )
         self.assertIn("ya tienes una solicitud pendiente", str(ctx.exception).lower())
 
@@ -241,22 +247,58 @@ class DisponibilidadEfectivaTestCase(TestCase):
         sol_pendiente = Solicitud.objects.create(
             solicitante=self.usuario,
             area=self.area,
+            fecha=self.fecha_prueba,
             motivo="Primera solicitud pendiente",
             estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
         )
-        SolicitudBloque.objects.create(solicitud=sol_pendiente, bloque=self.bloque, fecha=self.fecha_prueba)
+        SolicitudBloque.objects.create(solicitud=sol_pendiente, bloque=self.bloque)
 
         otro_usuario = get_user_model().objects.create_user(email="competidor@uach.cl", password="123")
         otro_usuario.groups.add(Group.objects.get(name=Rol.SOLICITANTE))
         otra_solicitud = Solicitud.objects.create(
             solicitante=otro_usuario,
             area=self.area,
+            fecha=self.fecha_prueba,
             motivo="Solicitud de otro docente",
             estado_validacion=Solicitud.EstadoValidacion.PENDIENTE,
         )
         sb = SolicitudBloque.objects.create(
             solicitud=otra_solicitud,
             bloque=self.bloque,
-            fecha=self.fecha_prueba,
         )
         self.assertIsNotNone(sb.pk)
+
+
+class SolicitudEnviadaTestCase(TestCase):
+    """La confirmación tiene dirección propia y solo muestra solicitudes propias."""
+
+    def setUp(self):
+        self.area = Area.objects.create(nombre="Informática", activa=True)
+        self.usuario = Usuario.objects.create_user(email="docente@uach.cl", password="x")
+        self.usuario.groups.add(Group.objects.get(name=Rol.SOLICITANTE))
+        self.client.force_login(self.usuario)
+        fecha_minima = primera_fecha_pedible()
+        self.fecha = fecha_minima + date.resolution * ((Dia.JUEVES - fecha_minima.weekday()) % 7)
+
+    def _solicitud(self, usuario, **estados):
+        return Solicitud.objects.create(solicitante=usuario, area=self.area, fecha=self.fecha, motivo="Grabar", **estados)
+
+    def test_no_muestra_solicitudes_ajenas(self):
+        otro = Usuario.objects.create_user(email="otro@uach.cl", password="x")
+        ajena = self._solicitud(otro)
+        response = self.client.get(reverse("solicitud_enviada", args=[ajena.id]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_requiere_ingreso_de_solicitante(self):
+        propia = self._solicitud(self.usuario)
+        self.client.logout()
+        response = self.client.get(reverse("solicitud_enviada", args=[propia.id]))
+        self.assertIn(reverse("login_solicitante"), response["Location"])
+
+    def test_muestra_el_estado_actual(self):
+        en_revision = self._solicitud(self.usuario)
+        self.assertContains(self.client.get(reverse("solicitud_enviada", args=[en_revision.id])), "se encuentra en revisión")
+        aceptada = self._solicitud(self.usuario, estado_validacion=Solicitud.EstadoValidacion.ACEPTADA)
+        response = self.client.get(reverse("solicitud_enviada", args=[aceptada.id]))
+        self.assertContains(response, "está aceptada")
+        self.assertNotContains(response, "se encuentra en revisión")

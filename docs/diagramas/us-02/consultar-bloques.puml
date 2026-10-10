@@ -1,0 +1,64 @@
+@startuml consultar-bloques
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Ver los bloques de un día del calendario (US-02, paso 1)
+
+actor "Solicitante" as S
+participant "<b>enlace del día</b>\n<size:11>solicitudes/calendar.py</size>\n<size:11>AgendaCalendar.formatday</size>" as P <<presentación>>
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.forms</b>\n<size:11>solicitudes/forms.py</size>" as F <<presentación>>
+participant "<b>solicitudes.wizard</b>\n<size:11>solicitudes/wizard.py</size>" as W <<presentación>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as A <<dominio>>
+participant "<b>configuracion</b>\n<size:11>configuracion/models.py</size>" as C <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+S -> P ++ : clic en un día disponible del calendario
+P -> P : $comentario("marca la celda y deja la fecha en el formulario del paso 1")\nonclick: td.classList.add("selected")\ninput[name=fecha].value = "AAAA-MM-DD"
+P -> N ++ : $comentario("hx-get, sin cambiar la dirección")\nGET /solicitar/bloques/?fecha=AAAA-MM-DD → bloques_dia(request)
+N -> F ++ : $comentario("la misma validación de fecha del paso 1")\nFechaReservaForm.fecha_de(fecha_str)
+F -> F ++ : clean_fecha()
+F -> W ++ : obtener_limites_reserva()
+W -> A ++ : primera_fecha_pedible()
+A -> C ++ : $comentario("día y hora límite, semanas de desfase")\nParametros.cargar()
+C -> D ++ : SELECT configuracion_parametros
+return fila
+return parametros
+return fecha_minima
+return fecha_minima, fecha_maxima
+return fecha
+return fecha o None
+
+alt la fecha es un día pedible
+  N -> V ++ : obtener_bloques_dia_para_usuario(fecha, request.user)
+  V -> A ++ : disponibilidad(fecha, fecha)
+  A -> A ++ : $comentario("la jornada activa, por día de la semana")\nplantilla_semanal()
+  A -> D ++ : SELECT agenda_bloque
+  return filas
+  return plantilla
+  A -> A ++ : bloqueos_por_fecha(fecha, fecha)
+  A -> D ++ : SELECT agenda_bloqueo ⋈ agenda_bloque
+  return filas
+  return bloqueos
+  A -> A : $comentario("los bloques de ese día que ningún bloqueo deja fuera (US-17)")\n[b for b in plantilla[fecha.weekday()]\n if not any(x.cubre(fecha, b.inicio) for x in del_dia)]
+  return {fecha: bloques}
+  V -> D ++ : $comentario("las pendientes y aceptadas de ese día, sin las canceladas")\nSELECT solicitudes_solicitudbloque, solicitudes_solicitud, personas_usuario
+  return filas
+  V -> V : $comentario("quita los aceptados y marca los que el usuario ya tiene pendientes")\nBloqueVista(id, inicio, termino, es_propio)
+  return bloques
+else la fecha falta, está mal escrita o queda fuera del período
+  N -> N : bloques = []
+end
+N -> N : render(request, "solicitudes/bloques_dia.html", {fecha, fecha_str, bloques})
+N --> P -- : 200 · solicitudes/bloques_dia.html
+P -> P : $comentario("htmx pone la lista en el panel de bloques del paso 1")\nhx-target="#panel-bloques" hx-swap="innerHTML"
+P --> S : los bloques del día; los que ya pidió y siguen pendientes, sin poder elegirse
+deactivate P
+note right of P
+  Elegir bloques no llama al servidor:
+  se marcan casillas del formulario, que se
+  envía con «Continuar a datos de la actividad»
+  (Elegir el día y los bloques).
+end note
+@enduml

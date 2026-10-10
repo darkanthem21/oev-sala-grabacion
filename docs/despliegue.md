@@ -137,6 +137,61 @@ Para restaurar, sobre una base vacía:
 docker exec -i grupo6_db psql -U oev oev < respaldo-AAAA-MM-DD.sql
 ```
 
+## Solicitudes y panel del validador (US-02 y US-07)
+
+### Antes de desplegar
+
+Esta versión trae la migración de `solicitudes`, que crea las tablas de la
+solicitud, sus bloques y sus acompañantes. Hacer el respaldo de la base (ver
+[Respaldo de la base](#respaldo-de-la-base)) antes de bajar la imagen.
+
+No hay variables nuevas en el `.env`. El texto de los términos y condiciones se
+edita en el panel de administración, en **Reglas**, y no por entorno.
+
+### Rutas nuevas
+
+| Ruta | Quién entra |
+|---|---|
+| `/solicitar/` | Formulario de solicitud. Cuentas del grupo **Solicitante** con al menos un área activa |
+| `/validacion/entrar/` | Puerta de los validadores |
+| `/validador/` | Panel del validador. Cuentas del grupo **Validador** |
+
+El grupo y las áreas de cada cuenta se asignan en `/admin/` > **Usuarios**.
+
+### Verificar después de desplegar
+
+- Entrar por `/solicitante/entrar/` con una cuenta que tenga área y ver el paso
+  1 del formulario en `/solicitar/`.
+- Entrar por `/validacion/entrar/` con una cuenta validadora y ver en
+  `/validador/` las solicitudes pendientes reales.
+
+## Validación conectada a la base (US-07)
+
+### Antes de desplegar
+
+Esta versión trae la migración `solicitudes.0004_solicitud_resolucion`, que
+agrega a la solicitud quién la resolvió, cuándo y con qué motivo. Hacer el
+respaldo de la base (ver [Respaldo de la base](#respaldo-de-la-base)) antes de
+bajar la imagen.
+
+No hay variables nuevas en el `.env`. Los correos de resolución salen por el
+`EMAIL_BACKEND` configurado, igual que los avisos de bloqueo.
+
+### Rutas nuevas
+
+| Ruta | Quién entra |
+|---|---|
+| `/configuracion/validacion/` | Pestaña **Validación** del administrador. Cuentas con `is_staff` |
+| `/validador/resolver/` | Lo llama el panel al aprobar o rechazar. Validadores y cuentas con `is_staff` |
+
+### Verificar después de desplegar
+
+- Aprobar o rechazar una solicitud en `/validador/`, recargar y ver que quedó
+  resuelta.
+- Entrar como el solicitante y ver el estado y el motivo en **Mis solicitudes**.
+- `docker logs grupo6_frontend` muestra el correo de la resolución si el
+  backend de correo es la consola.
+
 ## Problemas conocidos
 
 | Síntoma | Causa | Solución |

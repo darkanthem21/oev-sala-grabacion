@@ -1,0 +1,62 @@
+@startuml ver-panel
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Abrir el panel del validador (US-07)
+
+actor "Validador" as A
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.validacion</b>\n<size:11>solicitudes/validacion.py</size>" as V <<dominio>>
+participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as G <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+participant "<b>panelValidador</b>\n<size:11>solicitudes/_validacion.html</size>" as P <<presentación>>
+
+A -> N ++ : GET /validador/ → panel_validador(request)
+N -> N ++ : _datos_validacion()
+N -> V ++ : validacion.cargar()
+V -> D ++ : $comentario("las pendientes desde hoy que tienen bloques, con área y solicitante")\nSELECT solicitudes_solicitud, personas_area, personas_usuario
+return filas
+V -> D ++ : $comentario("prefetch: los bloques de esas solicitudes y sus acompañantes")\nSELECT solicitudes_solicitudbloque, agenda_bloque, solicitudes_acompanante
+return filas
+V -> D ++ : $comentario("la jornada para la grilla y las áreas con su prioridad")\nSELECT agenda_bloque, personas_area
+return filas
+return datos
+N -> V ++ : marcar_bloqueos(datos)
+V -> G ++ : bloqueos_por_fecha(desde, hasta)
+G -> D ++ : SELECT agenda_bloqueo
+return filas
+return bloqueos
+V -> V : $comentario("US-17: las celdas bloqueadas, con la misma clave que cada pedido")\ndatos["bloqueados"]["AAAA-MM-DD HH:MM"] = bloqueo.razon
+return datos
+deactivate N
+N --> A : 200 · solicitudes/validador.html con datos
+deactivate N
+note right of N
+  La pestaña Validación del administrador es lo
+  mismo: GET /configuracion/validacion/ llama a
+  panel_validacion_admin, que incluye el mismo
+  _validacion.html dentro de panel.html.
+end note
+
+A -> P ++ : $comentario("Alpine arranca con los datos incrustados en la página")\npanelValidador(JSON.parse(datos-panel), validador, urlResolver)
+P -> P : $comentario("un pedido es un bloque de una solicitud en una fecha")\npedidos = [{...b, sol: s, clave: b.fecha + " " + b.inicio} for b in s.bloques]
+P -> P ++ : get competencias()
+loop cada clave (fecha y hora) con pedidos sin resolver
+  opt la piden dos o más solicitudes
+    P -> P : $comentario("P1 primero (AC2)")\nsort((a, b) => area(a.sol).prioridad - area(b.sol).prioridad)
+  end
+end
+return competencias
+P -> P ++ : get pendientes()
+note right of P
+  Las solicitudes que nadie más disputa
+  (AC1), por su fecha más próxima. Las que
+  chocan con otra se resuelven solo en
+  «Con tope».
+end note
+return pendientes
+P -> P ++ : get semana()
+return lunes a viernes del pendiente más próximo, o de hoy si no hay
+P --> A : la pantalla: semana, resumen, «Con tope», «Sin tope» y «Resueltas»
+deactivate P
+@enduml

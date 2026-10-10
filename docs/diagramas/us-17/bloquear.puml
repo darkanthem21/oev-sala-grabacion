@@ -1,0 +1,77 @@
+@startuml bloquear
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Bloquear la sala en unas fechas (US-17)
+
+actor "Administrador" as A
+participant "<b>agenda.views</b>\n<size:11>agenda/views.py</size>" as N <<presentación>>
+participant "<b>agenda.forms</b>\n<size:11>agenda/forms.py</size>" as F <<presentación>>
+participant "<b>agenda</b>\n<size:11>agenda/services.py</size>\n<size:11>agenda/models.py</size>" as V <<dominio>>
+participant "<b>solicitudes</b>\n<size:11>solicitudes/services.py</size>" as U <<dominio>>
+participant "<b>notificaciones</b>\n<size:11>notificaciones/services.py</size>" as M <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : POST /configuracion/bloqueos/ → editar_bloqueo(request)
+N -> F ++ : BloqueoForm(request.POST)
+return formulario
+N -> F ++ : formulario.is_valid()
+F -> F : $comentario("el modo dice qué campos valen: día, bloque o varios días")\ndatos["hasta"] = desde; datos["bloque"] = None
+opt la fecha ya pasó
+  F -> F : add_error("desde", "… ya pasó.")
+end
+F -> V ++ : disponibilidad(desde, hasta)
+V -> D ++ : SELECT agenda_bloque, agenda_bloqueo
+return filas
+return libres
+opt no queda nada que bloquear
+  F -> F : ValidationError("no hay jornada" o "ya está bloqueado")
+  note right of F : También frena un doble\nclic en «Bloquear».
+end
+return valido
+break el formulario no es válido
+  N --> A : 200 · agenda/_calendario.html (mensual) con el error
+end
+N -> F ++ : formulario.save(commit=False)
+return bloqueo
+N -> V ++ : services.afectadas(bloqueo)
+V -> U ++ : $comentario("agenda pregunta sin depender de quien tiene las reservas")\nreservas_aprobadas.send(sender=Bloqueo, desde, hasta)
+U -> D ++ : $comentario("las aceptadas y no canceladas de esas fechas")\nSELECT solicitudes_solicitudbloque, solicitudes_solicitud, agenda_bloque, personas_usuario
+return filas
+return reservas
+note right of U
+  Contesta solicitudes, que depende de agenda:
+  por eso agenda pregunta por señal y no la importa.
+end note
+V -> V : $comentario("las que el bloqueo cubre y aún no empiezan")\nsorted(r for r in reservas if bloqueo.cubre(r.fecha, r.inicio))
+return afectadas
+N -> N : vistas = request.POST["confirmadas"].split(",")
+break hay afectadas y no son las que el administrador ya vio (AC4)
+  N --> A : 200 · agenda/_calendario.html con las reservas afectadas
+  note right of N
+    La primera vez no se guarda: se muestran
+    las reservas para confirmar. Si cambiaron
+    entre medio, se vuelven a mostrar.
+  end note
+end
+N -> V ++ : services.bloquear(bloqueo, request.user, afectadas)
+group @transaction.atomic
+  V -> V : bloqueo.bloqueado_por = quien
+  V -> V ++ : bloqueo.full_clean()
+  deactivate V
+  V -> D ++ : INSERT agenda_bloqueo
+  deactivate D
+  loop cada persona con reservas afectadas
+    V -> V : $comentario("el correo sale solo si el bloqueo quedó guardado")\ntransaction.on_commit(partial(avisar, correo, …), robust=True)
+  end
+end
+V -> M ++ : avisar(correo, asunto, "notificaciones/bloqueo.txt", contexto)
+M -> M : send_mail(asunto, render_to_string(plantilla, contexto), …)
+deactivate M
+note right of M : Uno por persona, con todas sus\nreservas. Si uno falla, los demás salen.
+return bloqueo
+N -> N ++ : _responder_mes(request, listo=True, hecho="Bloqueaste la sala …")
+return respuesta
+N --> A : 200 · agenda/_calendario.html (mensual de esa fecha) + HX-Push-Url
+deactivate N
+@enduml

@@ -1,0 +1,46 @@
+@startuml levantar
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Levantar un bloqueo (US-17)
+
+actor "Administrador" as A
+participant "<b>agenda.views</b>\n<size:11>agenda/views.py</size>" as N <<presentación>>
+participant "<b>agenda.forms</b>\n<size:11>agenda/forms.py</size>" as F <<presentación>>
+participant "<b>agenda</b>\n<size:11>agenda/services.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : POST /configuracion/bloqueos/ (accion=levantar) → editar_bloqueo(request)
+N -> D ++ : SELECT agenda_bloqueo
+return fila
+N -> F ++ : LevantarForm(request.POST)
+return formulario
+N -> F ++ : formulario.is_valid()
+return valido
+break falta el motivo del levantamiento
+  N --> A : 200 · agenda/_calendario.html con «Escribe por qué se levanta el bloqueo.»
+end
+N -> V ++ : services.levantar(bloqueo, request.user, motivo)
+break el bloqueo ya pasó
+  V --> N : ValidationError("Ese bloqueo ya pasó: no hay horario que devolver.")
+  N --> A : 200 · agenda/_calendario.html con el aviso
+end
+V -> D ++ : $comentario("condicionado: dos administradores a la vez no se pisan")\nUPDATE agenda_bloqueo\nWHERE levantado_en IS NULL
+return levantados
+break no actualizó ninguna fila
+  V --> N : ValidationError("Ese bloqueo ya estaba levantado.")
+  N --> A : 200 · agenda/_calendario.html con el aviso
+end
+V -> D ++ : SELECT agenda_bloqueo
+return fila
+return bloqueo
+note right of V
+  La fila no se borra: el bloqueo levantado queda
+  en el registro con quién, cuándo y por qué (AC6),
+  y vigentes() ya no lo cuenta.
+end note
+N -> N ++ : _responder_mes(request, listo=True, hecho="Levantaste el bloqueo …")
+return respuesta
+N --> A : 200 · agenda/_calendario.html (mensual) + HX-Push-Url
+deactivate N
+@enduml

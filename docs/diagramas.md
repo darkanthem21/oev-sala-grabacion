@@ -44,7 +44,18 @@ de la puerta responde el mismo error que una clave mala, sin abrir sesión y sin
 sumar un intento, porque la clave era correcta (AC4).
 
 `django.contrib.auth` busca la cuenta y revisa la clave a través de
-`personas`, porque `Usuario` es el modelo de usuario del proyecto.
+`personas`, porque `Usuario` es el modelo de usuario del proyecto. La busca sin
+distinguir mayúsculas (`get_by_natural_key`), igual que la vista que cuenta los
+intentos: así un correo escrito con otras mayúsculas no suma fallos.
+
+Si el ingreso lo pidió otra página, como el enlace de confirmación del correo de
+aceptación (US-03), la puerta vuelve a ella (`next`) y no al panel del rol.
+Solo si la dirección es de este sitio: `url_has_allowed_host_and_scheme`
+descarta cualquier otra, así el formulario no sirve para mandar a alguien recién
+autenticado a una página ajena.
+
+Con la cuenta bloqueada la clave se revisa igual y la respuesta es el mismo
+aviso que una clave mala: ni el texto ni la demora dicen que la cuenta existe.
 
 ![Clave incorrecta y bloqueo](diagramas/us-01/intento-fallido.png)
 
@@ -56,6 +67,23 @@ correo escrito.
 La recuperación de clave (AC6) no tiene diagrama propio: son las cuatro vistas
 que trae Django (`PasswordReset`, `Done`, `Confirm` y `Complete`), con enlace
 firmado y sin tabla nuestra. El proyecto solo pone las plantillas.
+
+### Ir al panel desde la raíz (US-08)
+
+Al entrar, cada puerta lleva a su `destino`. La raíz `/` es para quien ya tiene
+sesión y vuelve al sitio. Como los roles son grupos de Django y una persona
+puede tener varios (AC6), `destino_tras_login` los pregunta en orden de
+prioridad, administración, validación y personal de apoyo, y manda al panel del
+primero que tiene. Sin ninguno va al formulario de reserva, que es el panel del
+solicitante (US-01 AC3). `is_staff` cuenta como administrador sin consultar la
+base, porque el superusuario que crea el despliegue no pertenece a ningún grupo.
+
+![Ir al panel desde la raíz](diagramas/us-08/ir-al-panel.png)
+
+Cada `tiene_rol` es una consulta, y se deja de preguntar en el primer rol que la
+persona tiene. Sin sesión, `login_required` manda a la puerta del solicitante con
+`?next=/`. Cerrar sesión no tiene diagrama: es `LogoutView` de Django, que
+vuelve a esa misma puerta.
 
 ### Elegir el área académica (US-02)
 
@@ -71,16 +99,49 @@ elegidos, porque se habían elegido para la otra.
 
 ### Elegir el día y los bloques (US-02)
 
-Cada clic en un día del calendario pide por htmx solo la lista de bloques de
-esa fecha. `obtener_bloques_dia_para_usuario` parte de la plantilla semanal
-(`agenda.disponibilidad`), esconde los bloques que ya tienen una reserva
-aceptada y marca los que el mismo usuario ya pidió.
+Todos los pasos del asistente parten igual: `solicitar` lee las áreas activas
+del usuario y `SolicitudWizard.ajustar_area` fija la única que tenga, o lo
+manda a elegir si tiene varias y falta o dejó de estar activa. Después
+`validar_acceso` decide el paso: si la sesión no completó los anteriores, se
+atiende el primero que falta.
 
 ![Elegir el día y los bloques](diagramas/us-02/elegir-horario.png)
 
-Al continuar, la vista vuelve a consultar los bloques en vez de fiarse de lo que
-mostró la pantalla: entre el clic y el envío alguien pudo ocuparlos. Lo elegido
-se guarda en la sesión; la base no se toca hasta el paso 3.
+La fecha y los bloques los valida `SeleccionHorarioForm`, que es la misma regla
+del calendario público: la fecha, con formato y dentro de los límites de
+reserva, y los bloques, que sigan libres para ese usuario. Un bloque que el
+usuario ya tiene pendiente se rechaza aquí, igual que la pantalla lo
+deshabilita. Si todo es válido queda en la sesión y se pasa al paso 2; si no,
+vuelve el calendario con el error y lo que ya tenía elegido.
+
+### Ver los bloques de un día (US-02)
+
+Elegir un día no envía el paso 1. Cada día pedible del calendario es un enlace
+con `hx-get` a `/solicitar/bloques/`, que devuelve solo la lista de bloques, y
+htmx la pone en el panel. La fecha pasa por `FechaReservaForm.fecha_de`, la
+misma regla del paso 1: una fecha escrita a mano fuera del período no muestra
+bloques. La lista sale de `obtener_bloques_dia_para_usuario`, igual que en la
+validación del paso 1: sin lo bloqueado (US-17) ni lo ya aceptado, y con lo que
+el usuario ya pidió marcado y sin poder elegirse.
+
+![Ver los bloques de un día](diagramas/us-02/consultar-bloques.png)
+
+### Cambiar de mes en el calendario (US-02)
+
+Las flechas y el selector de mes y año piden `/solicitar/calendario/` con htmx.
+Esa vista responde la página del calendario (`calendario.html`) y htmx toma de
+ella solo el componente (`hx-select="#calendario-componente"`).
+`construir_calendario_contexto` lleva el mes pedido a los límites de reserva y
+marca qué días tienen algún bloque libre (`obtener_dias_con_disponibilidad`).
+
+![Cambiar de mes en el calendario](diagramas/us-02/cambiar-mes.png)
+
+La petición incluye la fecha ya elegida (`hx-include`), para que el día siga
+marcado en el mes nuevo. Con esa fecha la vista también calcula sus bloques, que
+van en la respuesta pero quedan fuera de lo que htmx toma: la lista del paso 1 no
+cambia. El `POST` de esa vista, con su propio botón de confirmar, no tiene
+diagrama: no es parte del asistente y solo se alcanza sin JavaScript, desde el
+selector rápido.
 
 ### Completar los datos de la actividad (US-02)
 
@@ -93,11 +154,66 @@ acompañante están en formularios distintos, así que la regla que las cruza
 
 ### Enviar una solicitud de reserva (US-02)
 
-El envío de la solicitud corresponde al paso final de confirmación en el asistente multipaso. La solicitud exige la aceptación obligatoria de los términos y condiciones del servicio (AC10) antes de procesar el registro.
-
-El guardado se ejecuta en una transacción atómica dentro de `solicitudes.services.guardar_solicitud_completa`: se persiste la `Solicitud` con estado de validación pendiente (AC5), se crean los registros de `SolicitudBloque` asociando cada bloque de la plantilla semanal con la fecha elegida, y se registran los acompañantes declarados en sala (AC6). Si la validación de algún bloque o campo falla, la transacción se cancela por completo sin dejar datos huérfanos. Al finalizar con éxito, se purga la sesión del asistente (`wizard.limpiar()`) y se presenta la confirmación con el resumen de la solicitud.
+El envío es el paso 3 del asistente y exige aceptar los términos y condiciones
+(AC10). El guardado es una transacción atómica dentro de
+`guardar_solicitud_completa`: la `Solicitud` con la fecha elegida y la validación
+pendiente (AC5), un `SolicitudBloque` por bloque y los acompañantes declarados
+(AC6). Si un bloque está inactivo, ya tomado o ya pedido, la transacción se
+deshace entera y la vista vuelve a mostrar el paso 3 con el error.
 
 ![Enviar una solicitud de reserva](diagramas/us-02/enviar-solicitud.png)
+
+Al guardar se limpia la sesión del asistente y se redirige a
+`/solicitar/enviada/<id>/`: recargar no reenvía el formulario. La confirmación
+lee la solicitud de la base, solo si es del usuario, y muestra su estado actual.
+`SolicitudBloque.save()` vuelve a llamar a `clean()` después de `full_clean()`,
+así que las consultas de validación de cada bloque se hacen dos veces.
+
+### Abrir el panel del validador (US-07)
+
+`validacion.cargar()` lee las solicitudes pendientes desde hoy que tienen
+bloques, con un número fijo de consultas: las solicitudes con su área y
+solicitante, y después sus bloques y acompañantes en dos consultas para todas.
+Devuelve la forma que espera la plantilla, que no sabe de modelos. La pestaña
+Validación del administrador es la misma vista con otro envoltorio:
+`panel_validacion_admin` incluye `_validacion.html` dentro de `panel.html`.
+
+![Abrir el panel del validador](diagramas/us-07/ver-panel.png)
+
+El resto ocurre en el navegador. `panelValidador`, el componente de Alpine de
+`_validacion.html`, parte cada solicitud en pedidos (un bloque en una fecha) y
+de ahí arma los topes, ordenados por prioridad del área, y las tarjetas sin
+tope.
+
+### Resolver una solicitud con tope (US-07)
+
+Se aprueba o se rechaza la solicitud entera. Aprobar una que choca con otras
+las rechaza enteras con el mismo motivo, por eso el motivo es obligatorio: es
+lo que les llega a quienes pierden (AC4). `resolver()` bloquea la solicitud y
+sus rivales en orden de id, así dos validadores que deciden el mismo bloque a
+la vez quedan en fila y el segundo ve lo que hizo el primero (AC3). Cada
+resolución queda con `resuelta_por`, `resuelta_en` y `motivo_resolucion` (AC5),
+y el correo sale solo cuando la transacción se confirma.
+
+![Resolver una solicitud con tope](diagramas/us-07/resolver-tope.png)
+
+La pantalla cambia solo si el servidor respondió `{"ok": true}`. Si la sesión
+venció, la respuesta es la página de ingreso y no JSON, y el panel avisa que no
+se pudo guardar. Mientras va el pedido los botones se apagan (`enviando`): un
+doble clic mandaría dos, y el segundo respondería que ya fue resuelta aunque se
+guardó.
+
+El correo de una aprobada trae el enlace para confirmar la asistencia (US-03).
+La vista le pasa a `resolver()` el esquema y el dominio del sitio (`url_base`)
+para armar el enlace completo; sin ellos, el correo sale sin enlace.
+
+### Resolver una solicitud sin tope (US-07)
+
+Sin rivales, aprobar no pide motivo. Rechazar sí, y se confirma en la misma
+tarjeta, donde sale también el aviso si falta. Si otro validador ya la resolvió o el solicitante la retiró, el
+servidor lo dice y el panel lo muestra.
+
+![Resolver una solicitud sin tope](diagramas/us-07/resolver-sin-tope.png)
 
 ### Guardar los parámetros del sistema (US-04)
 
@@ -111,6 +227,20 @@ El rango se escribe una sola vez, en los validadores del modelo, y lo revisa el
 servidor. La vuelta por redirección es para que recargar no reenvíe el
 formulario y duplique filas en la bitácora. `changed_data` deja fuera lo que no
 cambió, así que guardar sin tocar nada no ensucia el historial.
+
+### Ver los parámetros y los últimos cambios (US-04)
+
+Es la vuelta de Guardar: la pestaña Reglas con los valores vigentes y los últimos
+15 cambios de la bitácora, con quién los hizo (AC4). El historial completo está
+en la administración de Django; aquí basta con lo último, que es como se nota un
+cambio ajeno. `Parametros.cargar()` es el único punto de entrada a la fila y la
+crea con los valores del cliente si todavía no existe (AC2).
+
+![Ver los parámetros y los últimos cambios](diagramas/us-04/ver-reglas.png)
+
+`?guardados=` llega por la barra de direcciones, así que `_guardados` acepta
+solo un número: con él la página dice cuántos cambios quedaron, y con 0, que no
+había nada que cambiar.
 
 ### Editar la plantilla semanal de bloques (US-04)
 
@@ -134,12 +264,82 @@ el bloque elegido.
 Quitar no pide confirmación: desactiva y ofrece deshacer después, que es más
 rápido y no se pierde nada.
 
+### Ver la jornada en la vista mensual (US-04)
+
+Es la vista con que abre el panel del administrador: la mensual es la de por
+defecto, a pedido del cliente. Sirve para revisar, no para editar. Como la
+jornada es la misma todas las semanas, se resume una vez por columna: cuántos
+bloques y horas tiene ese día de la semana, y si se sale del molde. Las celdas
+muestran lo que cambia por fecha, que son los bloqueos (US-17), y al pie va el
+registro de los últimos bloqueos y levantamientos (US-17 AC6).
+
+![Ver la jornada en la vista mensual](diagramas/us-04/ver-mes.png)
+
+El panel de cada bloqueo dice quién lo puso, y `bloqueos_por_fecha` trae el
+bloque pero no a esa persona: la plantilla hace una consulta por cada bloqueo
+del mes. La pestaña Áreas no tiene diagrama: hoy es un marcador que solo dibuja
+la plantilla, y su contenido llega con US-05.
+
+### Ver mis solicitudes (US-09)
+
+El historial lista todas las solicitudes del usuario, de cualquiera de sus
+áreas, con el área, la fecha, los bloques y el estado. Se separa en Próximas y
+Anteriores por día calendario: una solicitud es próxima si su fecha es hoy o
+posterior, aunque la hora de sus bloques ya haya pasado. Esas reglas
+viven en `SolicitudQuerySet` (`de`, `proximas`, `anteriores`, `con_detalle`) y
+no en la vista, porque son del dominio: la vista solo elige la pestaña, pagina y
+responde. La fecha es un campo de la solicitud, así que filtrar y ordenar no
+toca los bloques.
+
+![Ver mis solicitudes](diagramas/us-09/ver-mis-solicitudes.png)
+
+La página trae 20 solicitudes y siempre hace las mismas consultas: tres
+`COUNT` (el paginador y las dos pestañas), la página con su área y los bloques
+de esa página. Cambiar de pestaña o de página es el mismo `GET` con htmx, que
+recibe solo `_tabla_historial.html` y actualiza la dirección. Si htmx restaura
+el historial sin tenerlo en caché, pide la página entera, y `Vary: HX-Request`
+evita que el navegador confunda una respuesta con la otra.
+
+### Retirar una solicitud propia (US-09)
+
+Solo se retira una solicitud que la Oficina todavía no revisa. Pasa a
+`RETIRADA`, un estado más de la validación, y no se borra: sigue en el historial.
+`CANCELADA` queda para el flujo de confirmación. La disponibilidad y la regla de
+bloque ya pedido cuentan solo las pendientes y aceptadas, así que el bloque
+retirado queda libre sin tocarlas.
+
+![Retirar una solicitud propia](diagramas/us-09/retirar-solicitud.png)
+
+La confirmación es un `<dialog>` propio: el script intercepta `htmx:confirm` y
+la petición sale solo si se confirma. El retiro es un único `UPDATE`
+condicionado a que la solicitud siga pendiente y sea del usuario, para no pisar
+al validador si decide en el mismo instante. Si no aplica, el mensaje es el
+mismo sea ajena, inexistente o ya revisada. Con htmx vuelve la tabla en la misma
+pestaña y página, con el mensaje dentro. Sin htmx, la vuelta es por redirección
+al historial.
+
+### Confirmar la asistencia (US-03)
+
+El correo de una solicitud aceptada trae un enlace a
+`/solicitar/mis-solicitudes/<id>/confirmar/`, el mismo de **Confirmar
+asistencia** en Mis solicitudes. Abrirlo solo muestra la reserva; confirma el
+botón, con un `POST`, para que un lector de correo que abre los enlaces no
+confirme por su cuenta. Sin sesión, la puerta del solicitante vuelve al enlace
+después de entrar (`next`, ver Clave correcta).
+
+![Confirmar la asistencia](diagramas/us-03/confirmar-asistencia.png)
+
+Se confirma hasta el día anterior, y solo una aceptada que no esté confirmada ni
+cancelada. La regla está dos veces: `Solicitud.puede_confirmarse` decide si la
+página muestra el botón, y el `UPDATE` condicionado de `confirmar_solicitud` es
+el que vale, como al retirar. Si entre abrir la página y el clic la reserva
+cambió o llegó el día, no se confirma y vuelve a Mis solicitudes con el aviso.
+
 ### Ver los bloques del día (US-14)
 
-Los tickets todavía no existen en la base, así que `services._tickets()` los lee
-de un JSON de prueba con fechas relativas a hoy. Es el único punto que sabe de
-dónde vienen: cuando existan Solicitud y Ticket se cambia esa función, y ni
-`bloques_del_dia()` ni `buscar()` ni las vistas se enteran. Todos los del
+Cada ticket es un bloque de una solicitud aceptada en una fecha
+(`SolicitudBloque`), y `services._tickets()` es el único punto que lo consulta.
+Las pendientes no se listan (AC4): todavía pueden rechazarse. Todos los del
 personal de apoyo ven todos los bloques (AC7), porque el modelo no tiene a quién
 asignarlos.
 
@@ -161,11 +361,66 @@ y queda en la sesión.
 
 Si registra, la vuelta es por redirección, a la lista del día del bloque.
 
+### Completar el checklist de cierre de la sala (US-15)
+
+Este diagrama es la excepción a la regla de arriba: dibuja el prototipo de la
+rama `feat/us-15-checkout-de-constancia`, que todavía no está en `main`. Ahí,
+`/checklist/` solo entrega la plantilla y todo lo demás corre en
+`static/js/checklist.js`: cuatro pasos de preguntas Sí o No, y un No exige una
+observación de al menos 10 caracteres y una foto de integridad. El último paso
+pide además la hora efectiva de salida.
+
+![Completar el checklist de cierre de la sala](diagramas/us-15/completar-checklist.png)
+
+Ningún paso llama al servidor. La reserva está escrita en la plantilla, el
+reporte queda en el `localStorage` del navegador y de las fotos solo se guarda
+cuáles había. Todavía no reemplaza el check-out simulado de US-14: cuando se
+integre con él, este diagrama se tiene que rehacer.
+
+### Bloquear la sala en unas fechas (US-17)
+
+`BloqueoForm` decide qué campos valen según el modo (todo el día, un bloque o
+varios días) y rechaza el pasado y lo que no deja nada por bloquear, que es
+también lo que frena un doble clic. Las reglas solo del panel viven en el
+formulario y no en el modelo, para poder corregir una fila vieja desde la
+administración de Django.
+
+![Bloquear la sala en unas fechas](diagramas/us-17/bloquear.png)
+
+Para saber a quién le quita la sala, agenda pregunta por la señal
+`reservas_aprobadas` en vez de importar a quien tiene las reservas, porque
+`solicitudes` depende de agenda y no al revés. Contesta `solicitudes` con las
+aceptadas y no canceladas de esas fechas. La primera vez no se guarda nada si hay reservas afectadas
+(AC4): se muestran, y al confirmar el navegador devuelve sus códigos. Si ya no
+coinciden, se vuelven a mostrar antes de avisar a nadie. Los correos salen con
+`transaction.on_commit`, así un bloqueo que no alcanzó a guardarse no avisa.
+
+### Levantar un bloqueo (US-17)
+
+Levantar no borra la fila: la marca con quién, cuándo y por qué (AC5 y AC6), y
+`vigentes()` deja de contarla. Es un `UPDATE` condicionado a que siga vigente,
+para que dos administradores levantando el mismo bloqueo a la vez no pisen el
+registro del primero.
+
+![Levantar un bloqueo](diagramas/us-17/levantar.png)
+
+### Ver una semana con sus bloqueos (US-17)
+
+La vista semanal tiene fechas porque desde ahí se bloquea un bloque en una
+fecha, pero lo que se edita sigue siendo la jornada que se repite: un aviso fijo
+lo dice. Cada columna raya los bloques que algún bloqueo deja fuera en su fecha,
+con la misma regla `cubre()` que usa el resto del sistema.
+
+![Ver una semana con sus bloqueos](diagramas/us-17/ver-semana.png)
+
+Un sábado o domingo, sin fecha en la dirección, la vista abre la semana que
+viene, porque la rejilla es de lunes a viernes.
+
 ## Estructura y Modelo de Datos
 
 ### Solicitud de reserva y bloques horarios (US-02)
 
-El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_bloque`, administrada en US-04) de la **instancia concreta de reserva** (`solicitudes_solicitudbloque`), vinculando la fecha seleccionada con el bloque horario y la solicitud.
+El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_bloque`, administrada en US-04) de la **reserva concreta**: la solicitud lleva la fecha, porque es de un solo día, y `solicitudes_solicitudbloque` dice qué bloques de la plantilla se usan ese día. Hasta la migración `0003_fecha_en_solicitud` la fecha vivía en cada bloque, y nada impedía que dos bloques de una misma solicitud tuvieran fechas distintas.
 
 ![Modelo de datos: Solicitud y Bloques](diagramas/us-02/modelo-datos.png)
 
@@ -173,7 +428,69 @@ El modelo separa la definición de la **plantilla semanal** recurrente (`agenda_
 - **Integridad referencial y claves foráneas**:
   - `solicitudes_solicitud.solicitante_id` → `personas_usuario.id` (`on_delete=PROTECT`): protege el historial de solicitudes y auditoría.
   - `solicitudes_solicitud.area_id` → `personas_area.id` (`on_delete=PROTECT`): garantiza la trazabilidad del área académica requirente.
+  - `solicitudes_solicitud.resuelta_por_id` → `personas_usuario.id` (`on_delete=PROTECT`, vacío mientras está pendiente): quién la resolvió en el panel del validador, con `resuelta_en` y `motivo_resolucion` (US-07 AC5, migración `0004_solicitud_resolucion`).
   - `solicitudes_solicitudbloque.solicitud_id` → `solicitudes_solicitud.id` (`on_delete=CASCADE`): mantiene la consistencia de bloques asignados a la solicitud.
   - `solicitudes_solicitudbloque.bloque_id` → `agenda_bloque.id` (`on_delete=PROTECT`): permite desactivar bloques de la plantilla sin alterar las solicitudes históricas ya existentes.
-  - **Restricción de unicidad**: `UniqueConstraint(fields=["solicitud", "bloque", "fecha"])` previene asignar duplicados de un mismo bloque horario en la misma fecha para una solicitud.
+  - `personas_usuario_areas` (`Usuario.areas`): las áreas para las que una persona puede solicitar. El asistente lee de aquí las activas para fijar el área o pedir que la elija.
+  - **Restricción de unicidad**: `UniqueConstraint(fields=["solicitud", "bloque"])` impide pedir dos veces el mismo bloque en una solicitud. La fecha ya no entra: es la de la solicitud.
+- **Estados**: cada solicitud tiene dos, uno por quien decide.
+  - `estado_validacion` lo decide la Oficina: `PENDIENTE`, `ACEPTADA` o `RECHAZADA`. `RETIRADA` es la excepción: la pone el propio solicitante cuando la retira antes de que se revise (US-09).
+  - `estado_confirmacion` es del solicitante una vez aceptada: `NO_HABILITADA` hasta que se acepta, y después `PENDIENTE`, `CONFIRMADA` o `CANCELADA`. `Solicitud.clean()` exige que solo una solicitud aceptada pueda estar pendiente de confirmar, confirmada o cancelada.
+  - Lo que ve el solicitante combina los dos (`Solicitud.estado_general`): "En revisión por la Oficina", "Aceptada", "Pendiente de confirmación", "Confirmada", "Rechazada", "Cancelada" o "Retirada".
+
+### Apps de Django y sus dependencias
+
+Una caja por app y una flecha por dependencia que está en el código: los imports
+entre apps, sin contar tests ni migraciones; las FK escritas como texto
+(`settings.AUTH_USER_MODEL`, `"agenda.Bloque"`), que unen tablas sin importar el
+modelo; y la señal `reservas_aprobadas`. Cada flecha dice qué se usa del otro
+lado.
+
+![Apps de Django y sus dependencias](diagramas/estructura/paquetes.png)
+
+`configuracion` y `notificaciones` no importan ninguna otra app: las demás leen
+los parámetros y mandan correos a través de ellas, y `configuracion` solo apunta
+a `personas` por la FK de su bitácora. `agenda` no importa a `solicitudes`, que
+depende de ella: para saber qué reservas pierde un bloqueo le pregunta por la
+señal (ver Bloquear la sala en unas fechas). `oev` importa las vistas de cada app
+para armar las direcciones.
+
+En los modelos de datos que siguen, las columnas marcadas `NULL` admiten vacío y
+las demás son `NOT NULL`. Las tablas en gris son de otro diagrama y aparecen solo
+por la FK que llega a ellas.
+
+### Modelo de datos de agenda (US-04 y US-17)
+
+La jornada y los bloqueos son dos tablas porque son dos cosas: un bloque es un
+tramo de la semana que se repite, y un bloqueo, unas fechas concretas sin sala.
+Ninguna de las dos borra filas: un bloque quitado queda con `activo` en falso, y
+un bloqueo levantado queda con quién, cuándo y por qué, así la tabla es también
+el registro (US-17 AC6).
+
+![Modelo de datos de agenda](diagramas/estructura/modelo-agenda.png)
+
+Las reglas que la base puede declarar están en la base: el término después del
+inicio, un solo bloque activo por día y hora de inicio, y que un bloqueo de un bloque sea
+de una sola fecha. Que dos bloques no se crucen lo valida `Bloque.clean()`,
+porque declararlo necesitaría una extensión de PostgreSQL.
+
+### Modelo de datos de configuración (US-04)
+
+`configuracion_parametros` tiene una sola fila, y cada cambio deja una fila en
+`configuracion_cambioparametro` con el valor anterior, el nuevo, quién y cuándo
+(AC4). `campo` guarda el nombre de la columna y no es una FK, así un parámetro
+que se quite del modelo sigue en la bitácora.
+
+![Modelo de datos de configuración](diagramas/estructura/modelo-configuracion.png)
+
+### Modelo de datos de personas (US-01, US-05 y US-08)
+
+`personas_usuario` reemplaza al usuario de Django: se entra con el correo y no
+hay `username`. Los roles no son una columna sino grupos de Django, porque una
+persona puede tener varios (US-08 AC6): una cuenta que valida y además pide la
+sala está en dos filas de `personas_usuario_groups`. Los permisos de Django
+(`personas_usuario_user_permissions`) no se dibujan: el sistema no los usa, solo
+aparecen en la administración.
+
+![Modelo de datos de personas](diagramas/estructura/modelo-personas.png)
 

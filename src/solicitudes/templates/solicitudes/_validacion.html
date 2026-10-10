@@ -1,0 +1,481 @@
+{% comment %}
+  US-07. El panel del validador sin envoltorio: lo incluyen validador.html (su
+  propia página) y validacion_admin.html (pestaña del administrador). La agenda
+  es la Jornada semanal de Configuración (agenda/calendario.css), con quién pide
+  cada bloque adentro; el detalle va en el panel lateral.
+{% endcomment %}
+{{ datos|json_script:"datos-panel" }}
+<script>
+/* Toda la lógica de pantalla del panel. Aprobar y rechazar se guardan
+ * (services.resolver) y la pantalla cambia solo si el servidor aceptó. Lo que
+ * se revisa acá (motivo, bloqueo) es para avisar rápido; AC3 lo garantiza el
+ * servidor. */
+function panelValidador(datos, validador, urlResolver) {
+  const MINIMO_MOTIVO = 10;
+  const DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes"];
+  const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+                 "septiembre", "octubre", "noviembre", "diciembre"];
+  const areas = Object.fromEntries(datos.areas.map(a => [a.id, a]));
+  const bloques = Object.fromEntries(datos.bloques.map(b => [b.id, b]));
+  const dos = n => String(n).padStart(2, "0");
+  const minutos = h => +h.slice(0, 2) * 60 + +h.slice(3);
+  const fechaDe = iso => new Date(iso + "T12:00");
+  const isoDe = d => d.getFullYear() + "-" + dos(d.getMonth() + 1) + "-" + dos(d.getDate());
+  const cap = t => t[0].toUpperCase() + t.slice(1);
+  const clave = (fecha, bloque) => fecha + "#" + bloque;
+  const lunesDe = iso => { const d = fechaDe(iso); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return isoDe(d); };
+  const conPendientes = datos.semanas.findIndex(l => datos.solicitudes.some(s => lunesDe(s.fecha) === l));
+
+  return {
+    datos,
+    // La semana que se ve parte en la primera con algo que resolver.
+    semana: Math.max(conPendientes, 0),
+    // sel: null (Por resolver), {tipo: "sol", id} o {tipo: "tope", clave, foco}.
+    sel: null, confirmando: null, rechazando: null,
+    // Lo resuelto hoy llega de la base; lo de esta sesión se suma con registrar().
+    resoluciones: Object.fromEntries(datos.resueltas.map((r, orden) => [r.s.id, { ...r, orden }])),
+    motivos: {}, error: "", enviando: false,
+
+    // --- Fechas y nombres ---
+    get dias() {
+      const lunes = fechaDe(datos.semanas[this.semana]);
+      return DIAS.map((nombre, i) => {
+        const d = new Date(lunes); d.setDate(lunes.getDate() + i);
+        return { iso: isoDe(d), numero: i, nombre: cap(nombre), dia: d.getDate(), mes: d.getMonth(), anio: d.getFullYear() };
+      });
+    },
+    // Como el título de Configuración → Bloques.
+    get periodo() {
+      const [a, b] = [this.dias[0], this.dias[4]];
+      const hasta = b.dia + " de " + MESES[b.mes] + " de " + b.anio;
+      return "Semana del " + a.dia + (a.mes === b.mes ? "" : " de " + MESES[a.mes]) + " al " + hasta;
+    },
+    tramo(id) { return bloques[id].inicio + "–" + bloques[id].termino; },
+    activo(id) { return bloques[id].activo; },
+    diaLargo(iso) { const d = fechaDe(iso); return cap(DIAS[(d.getDay() + 6) % 7]) + " " + d.getDate(); },
+    cuando(fecha, id) { return this.diaLargo(fecha) + ", " + this.tramo(id); },
+    fechaLarga(iso) { const d = fechaDe(iso); return this.diaLargo(iso) + " de " + MESES[d.getMonth()]; },
+    enviada(iso) { const d = fechaDe(iso.slice(0, 10)); return d.getDate() + " de " + MESES[d.getMonth()] + ", " + iso.slice(11); },
+    area(s) { return areas[s.area]; },
+    personas(s) { return s.personas + (s.acompanantes.length ? ", con " + s.acompanantes.map(a => a.nombre).join(", ") : ""); },
+
+    // --- Lo que hay en cada bloque ---
+    sol(id) { return datos.solicitudes.find(s => s.id === id); },
+    viva(s) { return !this.resoluciones[s.id]; },
+    pide(s, fecha, id) { return s.fecha === fecha && s.bloques.some(b => b.bloque === id); },
+    // Las pendientes de un bloque, por prioridad del área y después por envío.
+    pedidos(fecha, id) {
+      return datos.solicitudes.filter(s => this.viva(s) && this.pide(s, fecha, id))
+        .sort((a, b) => this.area(a).prioridad - this.area(b).prioridad || a.enviada.localeCompare(b.enviada));
+    },
+    reservas(fecha, id) {
+      return datos.reservadas.filter(r => r.fecha === fecha && r.bloques.includes(id)).map(r => r.encargado)
+        .concat(datos.solicitudes.filter(s => this.resoluciones[s.id]?.estado === "aprobada" && this.pide(s, fecha, id))
+          .map(s => s.encargado.nombre));
+    },
+    razon(fecha, id) { return datos.bloqueos.find(b => b.fecha === fecha && b.bloque === id)?.razon || ""; },
+    // Los bloques del día: los de la jornada y los quitados que esa fecha todavía tienen algo.
+    bloquesDel(d) {
+      return datos.bloques.filter(b => b.dia === d.numero &&
+        (b.activo || this.pedidos(d.iso, b.id).length || this.reservas(d.iso, b.id).length));
+    },
+    // La rejilla mide lo que mide la jornada, nunca menos que la laboral, como en Configuración.
+    get geometria() {
+      let [desde, hasta] = datos.ventana;
+      this.dias.flatMap(d => this.bloquesDel(d)).forEach(b => {
+        desde = Math.min(desde, Math.floor(minutos(b.inicio) / 60) * 60);
+        hasta = Math.max(hasta, Math.ceil(minutos(b.termino) / 60) * 60);
+      });
+      const largo = hasta - desde, reloj = [];
+      for (let m = desde; m < hasta; m += 60) reloj.push({ etiqueta: dos(m / 60) + ":00", posicion: (m - desde) / largo * 100 });
+      return { desde, largo, horas: largo / 60, reloj };
+    },
+    posicion(b) {
+      const { desde, largo } = this.geometria;
+      return "top: " + (minutos(b.inicio) - desde) / largo * 100 + "%; height: " +
+             (minutos(b.termino) - minutos(b.inicio)) / largo * 100 + "%";
+    },
+    // En el bloque va quién lo pide; si nadie, quién lo tiene reservado.
+    nombres(fecha, id) {
+      const vivas = this.pedidos(fecha, id).map(s => s.encargado.nombre);
+      if (vivas.length > 2) return [vivas[0], "y " + (vivas.length - 1) + " más"];
+      return vivas.length ? vivas : this.reservas(fecha, id);
+    },
+    clases(d, b) {
+      const vivas = this.pedidos(d.iso, b.id).length;
+      return {
+        tope: vivas > 1,
+        reservada: !vivas && this.reservas(d.iso, b.id).length > 0,
+        bloqueado: !!this.razon(d.iso, b.id),
+        quitado: !b.activo,
+        elegido: this.elegido(d.iso, b.id),
+      };
+    },
+    describir(d, b) {
+      const vivas = this.pedidos(d.iso, b.id), bq = this.razon(d.iso, b.id), ocupada = this.reservas(d.iso, b.id);
+      return this.cuando(d.iso, b.id) + (bq ? ". Bloqueado: " + bq : "") + (!b.activo ? ". Quitado de la jornada" : "") +
+        (vivas.length > 1 ? ". Tope: " + vivas.map(s => s.encargado.nombre).join(", ")
+         : vivas.length ? ". Lo pide " + vivas[0].encargado.nombre
+         : ocupada.length ? ". Reservado por " + ocupada[0] : ". Libre");
+    },
+
+    // --- Topes (AC2): misma fecha, mismo bloque ---
+    rivales(s) {
+      return datos.solicitudes.filter(o => o.id !== s.id && this.viva(o) && o.fecha === s.fecha &&
+        o.bloques.some(b => s.bloques.some(x => x.bloque === b.bloque)));
+    },
+    get topes() {
+      return this.dias.flatMap(d => this.bloquesDel(d).filter(b => this.pedidos(d.iso, b.id).length > 1).map(b => clave(d.iso, b.id)));
+    },
+    get sueltas() {
+      const fechas = new Set(this.dias.map(d => d.iso));
+      const primero = s => s.fecha + bloques[s.bloques[0].bloque].inicio;
+      return datos.solicitudes.filter(s => this.viva(s) && fechas.has(s.fecha) && !this.rivales(s).length)
+        .sort((a, b) => primero(a).localeCompare(primero(b)));
+    },
+    partes(cl) { const [fecha, id] = cl.split("#"); return [fecha, +id]; },
+    porque(lista) {
+      const [a, b] = lista, cuantas = lista.length === 2 ? "Dos solicitudes" : lista.length + " solicitudes";
+      return this.area(a).prioridad === this.area(b).prioridad
+        ? cuantas + " piden este bloque y empatan en prioridad: decides tú."
+        : cuantas + " piden este bloque. " + this.area(a).nombre + " tiene la prioridad más alta.";
+    },
+
+    // --- Selección ---
+    elegido(fecha, id) {
+      if (!this.sel) return false;
+      if (this.sel.tipo === "tope") return this.sel.clave === clave(fecha, id);
+      const s = this.sol(this.sel.id);
+      return !!s && this.pide(s, fecha, id);
+    },
+    get solicitud() { return this.sel?.tipo === "sol" ? this.sol(this.sel.id) : null; },
+    get tope() {
+      if (this.sel?.tipo !== "tope") return null;
+      const [fecha, id] = this.partes(this.sel.clave), lista = this.pedidos(fecha, id);
+      if (lista.length < 2) return null;
+      const foco = lista.find(s => s.id === this.sel.foco) || lista[0];
+      return { clave: this.sel.clave, fecha, id, lista, foco };
+    },
+    get modo() {
+      if (this.solicitud && this.viva(this.solicitud)) return "ficha";
+      if (this.tope) return this.confirmando ? "confirmar" : "tope";
+      return "cola";
+    },
+    abrir(d, b) {
+      const vivas = this.pedidos(d.iso, b.id);
+      if (!vivas.length) return;
+      this.elegir(vivas.length > 1 ? { tipo: "tope", clave: clave(d.iso, b.id), foco: vivas[0].id } : { tipo: "sol", id: vivas[0].id });
+    },
+    elegir(sel) {
+      this.sel = sel; this.confirmando = null; this.rechazando = null; this.error = "";
+      // En pantalla angosta el panel es una hoja: el foco va a su título.
+      if (matchMedia("(max-width: 60rem)").matches) this.$nextTick(() => this.$root.querySelector(".lado-titulo")?.focus());
+    },
+    cerrar() { this.sel = null; this.confirmando = null; this.rechazando = null; this.error = ""; },
+    cerrarConEsc() { if (!document.querySelector("dialog[open]")) this.cerrar(); },
+    // El motivo se pide recién al rechazar a alguien, y nombra a quién le llega.
+    // En un tope, aprobar a una rechaza a las demás: también pasa por ahí.
+    pierden() {
+      const t = this.tope;
+      return this.confirmando === "aprobar" ? this.rivales(t.foco) : [t.foco];
+    },
+    frasePierden() {
+      const nombres = this.pierden().map(s => s.encargado.nombre);
+      return nombres.length > 1 ? "Las solicitudes de " + nombres.join(" y ") + " quedan rechazadas."
+                                : "La solicitud de " + nombres[0] + " queda rechazada.";
+    },
+    confirmar(accion) { this.confirmando = accion; this.error = ""; this.enfocarMotivo(); },
+    enfocarMotivo() { this.$nextTick(() => this.$root.querySelector(".lado textarea")?.focus()); },
+
+    // --- Resolver ---
+    // Devuelve null si se guardó, o el texto del error.
+    async enviar(s, accion, motivo) {
+      // Mientras va el pedido los botones se apagan: un doble clic mandaría
+      // dos, y el segundo respondería "ya fue resuelta" aunque se guardó.
+      this.enviando = true;
+      try {
+        const r = await fetch(urlResolver, {
+          method: "POST",
+          headers: { "X-CSRFToken": this.$root.querySelector("[name=csrfmiddlewaretoken]").value },
+          body: new URLSearchParams({ solicitud: s.id, accion, motivo }),
+        });
+        // fetch sigue la redirección al ingreso si la sesión venció, y esa
+        // página responde 200: solo vale como guardado un JSON con ok.
+        const respuesta = await r.json();
+        return respuesta.ok ? null : respuesta.error;
+      } catch {
+        return "No se pudo guardar. Recarga la página e inténtalo de nuevo.";
+      } finally {
+        this.enviando = false;
+      }
+    },
+    // AC5: cada resolución con validador, hora y motivo.
+    // `asignada` es a quién se le dio el bloque, cuando esta perdió un tope.
+    registrar(s, estado, motivo, asignada) {
+      const ahora = new Date();
+      this.resoluciones[s.id] = { s, estado, motivo, asignada, validador,
+        hora: dos(ahora.getHours()) + ":" + dos(ahora.getMinutes()), orden: Object.keys(this.resoluciones).length };
+    },
+    get resueltas() { return Object.values(this.resoluciones).sort((a, b) => a.orden - b.orden); },
+    falla(texto) { this.error = texto; this.enfocarMotivo(); },
+    // AC3 y AC6: se aprueba la solicitud entera; las que chocan pierden enteras.
+    async aprobar(s, claveMotivo) {
+      this.error = "";
+      const b = s.bloques.find(b => this.razon(s.fecha, b.bloque));
+      if (b) return this.falla("La sala está bloqueada el " + this.cuando(s.fecha, b.bloque).toLowerCase() + " (" +
+                               this.razon(s.fecha, b.bloque) + "): no se puede aprobar. Recházala con ese motivo.");
+      const fuera = s.bloques.find(b => !this.activo(b.bloque));
+      if (fuera) return this.falla("El bloque de las " + bloques[fuera.bloque].inicio +
+                                   " ya no está en la jornada: no se puede aprobar. Recházala.");
+      const rivales = this.rivales(s), motivo = (this.motivos[claveMotivo] || "").trim();
+      if (rivales.length && motivo.length < MINIMO_MOTIVO) return this.falla("Escribe el motivo del rechazo (mínimo " + MINIMO_MOTIVO + " caracteres).");
+      const error = await this.enviar(s, "aprobar", motivo);
+      if (error) return this.falla(error);
+      // El motivo es del rechazo: la aprobada queda sin él.
+      this.registrar(s, "aprobada", "", "");
+      rivales.forEach(r => this.registrar(r, "rechazada", motivo, s.encargado.nombre));
+      avisar("Aprobaste la solicitud de " + s.encargado.nombre + "." +
+             (rivales.length ? " " + (rivales.length > 1 ? "Las de " + rivales.map(r => r.encargado.nombre).join(" y ") + " quedaron rechazadas."
+                                                         : "La de " + rivales[0].encargado.nombre + " quedó rechazada.") : ""));
+      this.cerrar();
+    },
+    // AC4: rechazar sin motivo no se puede.
+    async rechazar(s, claveMotivo) {
+      this.error = "";
+      const motivo = (this.motivos[claveMotivo] || "").trim();
+      if (motivo.length < MINIMO_MOTIVO) return this.falla("Escribe el motivo del rechazo (mínimo " + MINIMO_MOTIVO + " caracteres).");
+      const error = await this.enviar(s, "rechazar", motivo);
+      if (error) return this.falla(error);
+      this.registrar(s, "rechazada", motivo, "");
+      avisar("Rechazaste la solicitud de " + s.encargado.nombre + ".");
+      // En un tope de dos, la que queda se abre sola; si quedan más, sigue el tope.
+      if (this.sel?.tipo === "tope") {
+        const quedan = this.pedidos(...this.partes(this.sel.clave));
+        if (quedan.length > 1) { this.sel = { ...this.sel, foco: quedan[0].id }; this.confirmando = null; return; }
+        if (quedan.length) { this.elegir({ tipo: "sol", id: quedan[0].id }); return; }
+      }
+      this.cerrar();
+    },
+  };
+}
+</script>
+
+<div class="validacion"
+     x-data="panelValidador(JSON.parse(document.getElementById('datos-panel').textContent), '{{ user.get_full_name|default:user.email|escapejs }}', '{% url "resolver_solicitud" %}')"
+     @keydown.escape.window="cerrarConEsc()">
+{% csrf_token %}
+
+<div class="barra">
+  <h2 class="periodo" x-text="periodo"></h2>
+  <div class="mandos">
+    <button type="button" class="btn" data-abre="resueltas" x-text="'Resueltas (' + resueltas.length + ')'"></button>
+    <div class="grupo">
+      <button type="button" class="btn ico" :disabled="semana === 0" @click="semana--" aria-label="Semana anterior">&larr;</button>
+      <button type="button" class="btn" @click="semana = 0">Hoy</button>
+      <button type="button" class="btn ico" :disabled="semana === datos.semanas.length - 1" @click="semana++" aria-label="Semana siguiente">&rarr;</button>
+    </div>
+  </div>
+</div>
+
+<div class="con-panel" :data-abierto="sel ? 1 : 0">
+  <div class="izq">
+    <div class="marco">
+      <div class="semana" :style="'--horas: ' + geometria.horas">
+        <div class="regla" aria-hidden="true">
+          <template x-for="h in geometria.reloj" :key="h.etiqueta">
+            <span class="hora" :style="'top: ' + h.posicion + '%'" x-text="h.etiqueta"></span>
+          </template>
+        </div>
+        <template x-for="d in dias" :key="d.iso">
+          <div class="columna">
+            <div class="cabecera"><span class="dsem" x-text="d.nombre"></span><span class="dnum" x-text="d.dia"></span></div>
+            <div class="rejilla">
+              {# Un bloque sin pendientes no se elige: es reservado, bloqueado o libre. #}
+              <template x-for="b in bloquesDel(d)" :key="b.id">
+                <button type="button" class="bloque" :class="clases(d, b)" :style="posicion(b)"
+                        :disabled="!pedidos(d.iso, b.id).length" :aria-pressed="elegido(d.iso, b.id)"
+                        :title="describir(d, b)" :aria-label="describir(d, b)" @click="abrir(d, b)">
+                  <span><span class="desde" x-text="b.inicio"></span><span class="hasta" x-text="'–' + b.termino"></span></span>
+                  <template x-for="(n, i) in nombres(d.iso, b.id)" :key="i">
+                    <span class="quien-b" x-text="n"></span>
+                  </template>
+                </button>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+    <ul class="leyenda">
+      <li><span class="muestra tope-m" aria-hidden="true"></span>Tope: dos o más piden el bloque</li>
+      <li><span class="muestra reservada-m" aria-hidden="true"></span>Reservada</li>
+      <li><span class="muestra bloqueado-m" aria-hidden="true"></span>Bloqueado: no se puede aprobar</li>
+      <li><span class="muestra quitado-m" aria-hidden="true"></span>Quitado de la jornada, con pedidos</li>
+    </ul>
+  </div>
+
+  <aside class="lado" aria-label="Detalle">
+    {# Sin nada elegido: lo que queda por resolver en la semana, los topes primero. #}
+    <template x-if="modo === 'cola'">
+      <div>
+        <div class="lado-cab"><h2 class="lado-titulo" tabindex="-1">Por resolver</h2></div>
+        <p class="trozo vacio" x-show="!topes.length && !sueltas.length">No queda nada por resolver esta semana.</p>
+        <ul class="cola" x-show="topes.length || sueltas.length">
+          <li x-show="topes.length"><h3 x-text="'Con tope (' + topes.length + ')'"></h3></li>
+          <template x-for="cl in topes" :key="cl">
+            <li><button type="button" @click="elegir({ tipo: 'tope', clave: cl, foco: pedidos(...partes(cl))[0].id })">
+              <span class="marca-tope" aria-hidden="true"></span>
+              <span class="cuando" x-text="cuando(...partes(cl))"></span>
+              <span class="quienes" x-text="pedidos(...partes(cl)).map(s => s.encargado.nombre).join(' y ')"></span>
+            </button></li>
+          </template>
+          <li x-show="sueltas.length"><h3 x-text="'Sin tope (' + sueltas.length + ')'"></h3></li>
+          <template x-for="s in sueltas" :key="s.id">
+            <li><button type="button" @click="elegir({ tipo: 'sol', id: s.id })">
+              <span></span>
+              <span class="cuando" x-text="cuando(s.fecha, s.bloques[0].bloque) + (s.bloques.length > 1 ? ' y ' + (s.bloques.length - 1) + ' más' : '')"></span>
+              <span class="quienes" x-text="s.encargado.nombre"></span>
+            </button></li>
+          </template>
+        </ul>
+      </div>
+    </template>
+
+    {# Una solicitud sin tope: se aprueba directo; rechazar pide el motivo. #}
+    <template x-if="modo === 'ficha'">
+      <div>
+        <div class="lado-cab">
+          <button type="button" class="volver" @click="cerrar()">Volver a la lista</button>
+          <h2 class="lado-titulo" tabindex="-1" x-text="solicitud.encargado.nombre"></h2>
+          <p class="meta" x-text="area(solicitud).nombre + ', prioridad ' + area(solicitud).prioridad"></p>
+        </div>
+        <div class="trozo">
+          <dl class="ficha">
+            <dt>Motivo</dt><dd x-text="solicitud.motivo"></dd>
+            <template x-if="solicitud.observaciones"><div><dt>Observaciones</dt><dd x-text="solicitud.observaciones"></dd></div></template>
+            <dt>Personas</dt><dd x-text="personas(solicitud)"></dd>
+            <dt>Enviada</dt><dd x-text="enviada(solicitud.enviada)"></dd>
+            <dt>Fecha</dt><dd x-text="fechaLarga(solicitud.fecha)"></dd>
+            <dt x-text="solicitud.bloques.length > 1 ? 'Bloques' : 'Bloque'"></dt>
+            <dd x-text="solicitud.bloques.map(b => tramo(b.bloque)).join(', ')"></dd>
+          </dl>
+        </div>
+        <template x-if="rivales(solicitud).length">
+          <div class="trozo">
+            <p>Choca con <span x-text="rivales(solicitud).map(r => r.encargado.nombre).join(' y ')"></span>
+              en uno de sus bloques. Se resuelve ahí.
+              <button type="button" class="enlace"
+                      @click="elegir({ tipo: 'tope', clave: solicitud.fecha + '#' + solicitud.bloques.find(b => pedidos(solicitud.fecha, b.bloque).length > 1).bloque, foco: solicitud.id })">Ver el tope</button></p>
+          </div>
+        </template>
+        <template x-if="!rivales(solicitud).length">
+          <div>
+            <p class="trozo" x-show="solicitud.bloques.some(b => !activo(b.bloque))">
+              <span class="error">Uno de sus bloques ya no está en la jornada: no se puede aprobar. Recházala.</span></p>
+            <p class="trozo" x-show="solicitud.bloques.some(b => razon(solicitud.fecha, b.bloque))">
+              <span class="error">La sala está bloqueada ese día: no se puede aprobar. Recházala con ese motivo.</span></p>
+            <template x-if="rechazando === solicitud.id">
+              <div class="campo">
+                <label for="motivo-validacion">Motivo del rechazo</label>
+                <textarea id="motivo-validacion" rows="2" :class="{ falta: error }" x-model="motivos['s:' + solicitud.id]"></textarea>
+                <p class="ayuda" x-text="'Se le envía por correo a ' + solicitud.encargado.nombre + '.'"></p>
+              </div>
+            </template>
+            <p class="trozo error" role="alert" x-show="error" x-text="error"></p>
+            <div class="acciones" x-show="rechazando !== solicitud.id">
+              <button type="button" class="btn peligro" :disabled="enviando" @click="rechazando = solicitud.id; error = ''; enfocarMotivo()">Rechazar</button>
+              <button type="button" class="btn activa"
+                      :disabled="enviando || solicitud.bloques.some(b => razon(solicitud.fecha, b.bloque) || !activo(b.bloque))"
+                      @click="aprobar(solicitud, 's:' + solicitud.id)">Aprobar</button>
+            </div>
+            <div class="acciones" x-show="rechazando === solicitud.id">
+              <button type="button" class="btn" @click="rechazando = null; error = ''">Cancelar</button>
+              <button type="button" class="btn peligro" :disabled="enviando" @click="rechazar(solicitud, 's:' + solicitud.id)">Confirmar rechazo</button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    {# Un tope: se elige a quién darle el bloque. El motivo viene después. #}
+    <template x-if="modo === 'tope'">
+      <div>
+        <div class="lado-cab">
+          <button type="button" class="volver" @click="cerrar()">Volver a la lista</button>
+          <h2 class="lado-titulo" tabindex="-1" x-text="cuando(tope.fecha, tope.id)"></h2>
+          <p class="meta" x-text="porque(tope.lista)"></p>
+        </div>
+        <div role="radiogroup" aria-label="Solicitudes que piden el bloque">
+          <template x-for="s in tope.lista" :key="s.id">
+            <label class="opcion">
+              <input type="radio" name="foco" :value="s.id" :checked="s.id === tope.foco.id" @change="sel = { ...sel, foco: s.id }">
+              <b x-text="s.encargado.nombre"></b>
+              <span class="suave" x-text="area(s).nombre + ', prioridad ' + area(s).prioridad"></span>
+              <span x-text="s.motivo"></span>
+              <span class="suave" x-show="s.bloques.length > 1"
+                    x-text="'También pide ' + s.bloques.filter(b => b.bloque !== tope.id).map(b => tramo(b.bloque)).join(' y ')"></span>
+            </label>
+          </template>
+        </div>
+        <p class="trozo" x-show="razon(tope.fecha, tope.id)">
+          <span class="error">La sala está bloqueada en este horario: ninguna se puede aprobar.</span></p>
+        <p class="trozo" x-show="!activo(tope.id)">
+          <span class="error">Este bloque ya no está en la jornada: ninguna se puede aprobar.</span></p>
+        <div class="acciones">
+          <button type="button" class="btn peligro" @click="confirmar('rechazar')" x-text="'Rechazar a ' + tope.foco.encargado.nombre"></button>
+          <button type="button" class="btn activa" :disabled="!!razon(tope.fecha, tope.id) || !activo(tope.id)" @click="confirmar('aprobar')"
+                  x-text="'Aprobar a ' + tope.foco.encargado.nombre"></button>
+        </div>
+      </div>
+    </template>
+
+    {# Quien queda rechazado, con nombre, y el motivo que le llega. #}
+    <template x-if="modo === 'confirmar'">
+      <div>
+        <div class="lado-cab">
+          <button type="button" class="volver" @click="confirmando = null; error = ''">Volver al tope</button>
+          <h2 class="lado-titulo" tabindex="-1" x-text="cuando(tope.fecha, tope.id)"></h2>
+        </div>
+        <p class="trozo"><template x-if="confirmando === 'aprobar'"><span><b x-text="tope.foco.encargado.nombre"></b> obtiene el bloque. </span></template><span x-text="frasePierden()"></span></p>
+        <div class="campo">
+          <label for="motivo-validacion">Motivo del rechazo</label>
+          <textarea id="motivo-validacion" rows="2" :class="{ falta: error }" x-model="motivos['t:' + tope.clave]"></textarea>
+          <p class="ayuda" x-text="'Se le envía por correo a ' + pierden().map(s => s.encargado.nombre).join(' y a ') + '.'"></p>
+        </div>
+        <p class="trozo error" role="alert" x-show="error" x-text="error"></p>
+        <div class="acciones">
+          <button type="button" class="btn" @click="confirmando = null; error = ''">Volver</button>
+          <button type="button" class="btn" :class="confirmando === 'aprobar' ? 'activa' : 'peligro'" :disabled="enviando"
+                  @click="confirmando === 'aprobar' ? aprobar(tope.foco, 't:' + tope.clave) : rechazar(tope.foco, 't:' + tope.clave)"
+                  x-text="confirmando === 'aprobar' ? 'Confirmar' : 'Confirmar rechazo'"></button>
+        </div>
+      </div>
+    </template>
+  </aside>
+</div>
+
+{# AC5: cada resolución de hoy, de quien sea, con quién, cuándo y por qué. #}
+<dialog id="resueltas" class="dialogo ancho" aria-labelledby="resueltas-titulo">
+  <h2 id="resueltas-titulo" class="dialogo-titulo">Resueltas hoy</h2>
+  <p class="vacio" x-show="!resueltas.length">Hoy no se ha resuelto nada todavía.</p>
+  <div class="marco" x-show="resueltas.length">
+    <table class="tabla">
+      <thead><tr><th>Solicitud</th><th>Resolución</th><th>Motivo</th><th>Validador</th><th>Hora</th></tr></thead>
+      <tbody>
+        <template x-for="r in resueltas" :key="r.s.id">
+          <tr>
+            <td><span x-text="r.s.encargado.nombre"></span><br>
+              <span class="suave" x-text="cuando(r.s.fecha, r.s.bloques[0].bloque) + (r.s.bloques.length > 1 ? ' y ' + (r.s.bloques.length - 1) + ' más' : '')"></span></td>
+            <td><span class="estado" :class="r.estado"
+                      x-text="r.estado === 'aprobada' ? 'Aprobada' : r.asignada ? 'Asignada a ' + r.asignada : 'Rechazada'"></span></td>
+            <td x-text="r.motivo || '—'"></td>
+            <td x-text="r.validador"></td>
+            <td x-text="r.hora"></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+  <form method="dialog" class="dialogo-acciones"><button class="btn">Cerrar</button></form>
+</dialog>
+</div>

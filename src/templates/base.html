@@ -5,17 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block titulo %}{% endblock %} · Sala de grabación OEV</title>
 <link rel="stylesheet" href="{% static 'css/marca.css' %}">
+<link rel="stylesheet" href="{% static 'css/flotantes.css' %}">
 {% block estilos %}{% endblock %}
 <script src="https://unpkg.com/htmx.org@2/dist/htmx.min.js"></script>
+<script defer src="{% static 'js/flotantes.js' %}"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
 </head>
 <body>
-{% block barra_superior %}
-  {% if user.is_authenticated %}
-    {% include "solicitudes/componentes/barra_superior.html" %}
-  {% endif %}
-{% endblock %}
+{% comment %}
+  Sin encabezado propio: cada panel trae el suyo (`techo`), y uno por defecto
+  se sumaría encima.
+{% endcomment %}
 {% block contenido %}{% endblock %}
+<div id="avisos" class="avisos" aria-live="polite">{% include "_avisos.html" %}</div>
 {% block scripts %}{% endblock %}
 </body>
 </html>

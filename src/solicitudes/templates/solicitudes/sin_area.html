@@ -1,13 +1,8 @@
-{% extends "base.html" %}
+{% extends "solicitudes/_base.html" %}
 {% load static %}
 {% block titulo %}Sin área académica{% endblock %}
-{% block estilos %}<link rel="stylesheet" href="{% static 'solicitudes/solicitud.css' %}">{% endblock %}
 
-{% block barra_superior %}
-{% include "solicitudes/componentes/barra_superior.html" %}
-{% endblock %}
-
-{% block contenido %}
+{% block hoja %}
 <main class="hoja">
   <h1>No puedes solicitar todavía</h1>
   {% comment %}

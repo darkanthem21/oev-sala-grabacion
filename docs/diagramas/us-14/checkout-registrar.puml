@@ -7,22 +7,23 @@ title Registrar el check-out (US-14)
 actor "Personal de apoyo" as A
 participant "<b>uso.views</b>\n<size:11>uso/views.py</size>" as N <<presentación>>
 participant "<b>uso</b>\n<size:11>uso/services.py</size>" as V <<dominio>>
-participant "<b>bloques_apoyo.json</b>\n<size:11>uso/datos_prueba/</size>" as J <<persistencia>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
 A -> N ++ : POST /apoyo/checkout/<codigo>/ → checkout(request, codigo)
 N -> N ++ : _enviados(request)
 return enviados
 N -> V ++ : buscar(codigo, enviados)
-V -> V : ahora = timezone.localtime()
-V -> V ++ : _tickets()
-V -> J ++ : json.load(archivo)
+V -> V : numero = codigo.removeprefix("T-")
+V -> V ++ : _tickets(pk=int(numero))
+V -> D ++ : SELECT solicitudes_solicitudbloque, solicitudes_solicitud, agenda_bloque, personas_usuario, personas_area
+return filas
 return tickets
-return tickets
-opt algún ticket visible tiene ese código
-  V -> V ++ : _armar(t, enviados, ahora)
+opt el ticket tiene exactamente ese código
+  V -> V ++ : _armar(t, enviados, timezone.localtime())
   return bloque
 end
 return bloque
+note right of V : Un código que no es «T-» y un\nnúmero no llega a la base: None.
 note right of N : Vuelve a buscar el ticket:\nno se fía de lo que mostró la pantalla.
 
 break no existe, no ha terminado o se canceló

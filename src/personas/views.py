@@ -6,15 +6,13 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 
 from configuracion.models import Parametros
 
 from .models import Rol, Usuario
 
-# AC4: el mismo texto para credenciales malas y para correo inexistente. Decir
-# "ese correo no existe" le regalaría al atacante la lista de cuentas.
-ERROR_CREDENCIALES = "Correo o contraseña incorrectos."
 
 
 def destino_tras_login(usuario):
@@ -38,11 +36,20 @@ def destino_tras_login(usuario):
     return reverse("solicitar")
 
 
-def _con_error(request, form, mensaje, ruta):
+def _con_error(request, form, ruta):
+    """AC4: el mismo texto para clave mala, correo inexistente, cuenta sin el rol
+    de la puerta y cuenta bloqueada. Cualquier diferencia le regalaría al atacante
+    la lista de cuentas. La regla del bloqueo (AC5) va en el texto para que quien
+    quedó bloqueado entienda por qué no entra."""
+    parametros = Parametros.cargar()
+    mensaje = (
+        f"Correo o contraseña incorrectos. Tras {parametros.intentos_maximos} intentos "
+        f"seguidos la cuenta se bloquea {parametros.minutos_bloqueo} minutos."
+    )
     return render(
         request,
         "personas/_formulario_ingreso.html",
-        {"form": form, "error": mensaje, "ruta": ruta},
+        {"form": form, "error": mensaje, "ruta": ruta, "next": request.POST.get("next", "")},
     )
 
 
@@ -70,42 +77,48 @@ def _puede_pasar(usuario, rol):
     return usuario.tiene_rol(rol)
 
 
-def entrar(request, rol, destino, ruta, titulo):
-    """Las puertas del sistema. Cada una cambia el título, a quién deja pasar y a
-    qué panel lo lleva (`destino`, nombre de URL). La plantilla, la
-    autenticación, el bloqueo por intentos y la recuperación de clave son las
-    mismas para todas."""
-    contexto = {"form": AuthenticationForm(), "ruta": ruta, "titulo": titulo}
+def entrar(request, rol, destino, ruta, titulo, puerta, nombre):
+    """Las puertas del sistema. Cada una cambia el título, a quién deja pasar, a
+    qué panel lo lleva (`destino`, nombre de URL) y su panel de color (`puerta`
+    y `nombre`). La plantilla, la autenticación, el bloqueo por intentos y la
+    recuperación de clave son las mismas para todas."""
+    contexto = {"form": AuthenticationForm(), "ruta": ruta, "titulo": titulo, "next": request.GET.get("next", ""),
+                "puerta": puerta, "nombre": nombre}
     if request.method != "POST":
         return render(request, "personas/login.html", contexto)
 
     form = AuthenticationForm(request, data=request.POST)
     usuario = Usuario.objects.filter(email__iexact=request.POST.get("username", "")).first()
+    # Se revisa la clave aunque la cuenta esté bloqueada: si no, la respuesta
+    # rápida (sin calcular el hash) delataría qué cuentas existen.
+    valido = form.is_valid()
 
     if usuario and usuario.esta_bloqueado:
-        minutos = max(1, int((usuario.bloqueado_hasta - timezone.now()).total_seconds() // 60) + 1)
-        return _con_error(
-            request, form, f"Cuenta bloqueada. Vuelve a intentar en {minutos} minutos.", ruta
-        )
+        return _con_error(request, form, ruta)
 
-    if form.is_valid():
+    if valido:
         entrante = form.get_user()
         # Una puerta de rol no responde "no eres administrador". Ese mensaje la
         # convertiría en un oráculo para saber qué correos existen y cuáles
         # mandan, así que contesta lo mismo que una clave mala, y sin sesión.
         if not _puede_pasar(entrante, rol):
-            return _con_error(request, form, ERROR_CREDENCIALES, ruta)
+            return _con_error(request, form, ruta)
         if entrante.intentos_fallidos or entrante.bloqueado_hasta:
             entrante.intentos_fallidos = 0
             entrante.bloqueado_hasta = None
             entrante.save(update_fields=["intentos_fallidos", "bloqueado_hasta"])
         login(request, entrante)
+        # Vuelve a la página que pidió el ingreso (p. ej. el enlace de
+        # confirmación del correo), solo si es de este sitio.
+        siguiente = request.POST.get("next", "")
+        if not url_has_allowed_host_and_scheme(siguiente, {request.get_host()}, request.is_secure()):
+            siguiente = reverse(destino)
         # 204 sin cuerpo porque no hay nada que pegar; el navegador navega.
-        return HttpResponse(status=204, headers={"HX-Redirect": reverse(destino)})
+        return HttpResponse(status=204, headers={"HX-Redirect": siguiente})
 
     if usuario:
         _registrar_fallo(usuario)
-    return _con_error(request, form, ERROR_CREDENCIALES, ruta)
+    return _con_error(request, form, ruta)
 
 
 @login_required
