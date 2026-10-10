@@ -10,7 +10,6 @@ El detalle técnico, precondiciones y el paso a paso de cada prueba se encuentra
 |---|---|---|
 | US-01 Inicio de sesión | Todos | [1-us-01.md](tests/1-us-01.md) |
 | US-02 Solicitud de reserva | Solicitante | [1-us-02.md](tests/1-us-02.md) |
-| US-03 Confirmar la asistencia | Solicitante | [1-us-03.md](tests/1-us-03.md) |
 | US-04 Panel de administrador | Administrador | [1-us-04.md](tests/1-us-04.md) |
 | US-07 Panel del validador | Validador | [1-us-07.md](tests/1-us-07.md) |
 | US-09 Historial y retiro de solicitudes | Solicitante | [1-us-09.md](tests/1-us-09.md) |
