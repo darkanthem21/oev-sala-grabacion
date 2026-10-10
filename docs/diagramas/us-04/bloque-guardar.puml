@@ -57,6 +57,7 @@ else formulario válido
   deactivate D
   deactivate V
   deactivate N
+  N -> N : messages.success(request, "Guardaste el bloque de los …. Vale para todas las semanas.")
 end
 
 N -> N ++ : _responder(request, …)
@@ -67,8 +68,11 @@ alt pedido con htmx
   return filas
   return plantilla
   return contexto
-  N --> A : 200 · agenda/_calendario.html
+  N --> A : 200 · agenda/_calendario.html, con el aviso flotante fuera de banda (hx-swap-oob)
 else sin htmx
+  opt formulario con errores
+    N -> N : $comentario("sin pop-up que lo muestre, el error va como aviso")\nmessages.error(request, error)
+  end
   N --> A : 302 · /configuracion/bloques/?vista=semana&desde=…
   note left of N : Así recargar no\nreenvía el POST.
 end

@@ -8,7 +8,7 @@ actor "Solicitante" as S
 participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
 participant "<b>solicitudes.forms</b>\n<size:11>solicitudes/forms.py</size>" as F <<presentación>>
 participant "<b>solicitudes.wizard</b>\n<size:11>solicitudes/wizard.py</size>" as W <<presentación>>
-participant "<b>solicitudes</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
 
 S -> N ++ : POST /solicitar/ (paso=2) → solicitar(request)
 N -> W ++ : SolicitudWizard(request.session)

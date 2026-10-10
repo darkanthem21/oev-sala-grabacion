@@ -171,19 +171,21 @@ así que las consultas de validación de cada bloque se hacen dos veces.
 
 ### Abrir el panel del validador (US-07)
 
-`validacion.cargar()` lee las solicitudes pendientes desde hoy que tienen
-bloques, con un número fijo de consultas: las solicitudes con su área y
-solicitante, y después sus bloques y acompañantes en dos consultas para todas.
-Devuelve la forma que espera la plantilla, que no sabe de modelos. La pestaña
-Validación del administrador es la misma vista con otro envoltorio:
-`panel_validacion_admin` incluye `_validacion.html` dentro de `panel.html`.
+El panel es la Jornada semanal de Configuración con quién pide cada bloque
+adentro. `validacion.cargar()` lee, con un número fijo de consultas, lo que esa
+agenda dibuja: las pendientes desde hoy que tienen bloques, las ya aceptadas de
+esas semanas, lo resuelto hoy por cualquier validador (AC5), la jornada con los
+bloques quitados y los bloqueos (US-17). Devuelve la forma que espera la
+plantilla, que no sabe de modelos. La pestaña Validación del administrador es la
+misma vista con otro envoltorio: `panel_validacion_admin` incluye
+`_validacion.html` dentro de `panel.html`.
 
 ![Abrir el panel del validador](diagramas/us-07/ver-panel.png)
 
 El resto ocurre en el navegador. `panelValidador`, el componente de Alpine de
-`_validacion.html`, parte cada solicitud en pedidos (un bloque en una fecha) y
-de ahí arma los topes, ordenados por prioridad del área, y las tarjetas sin
-tope.
+`_validacion.html`, arma cada día de la semana con sus bloques y, en cada uno,
+las solicitudes que lo piden, ordenadas por prioridad del área (AC2). Un bloque
+quitado de la jornada se dibuja solo si esa fecha todavía tiene algo.
 
 ### Resolver una solicitud con tope (US-07)
 
@@ -210,8 +212,10 @@ para armar el enlace completo; sin ellos, el correo sale sin enlace.
 ### Resolver una solicitud sin tope (US-07)
 
 Sin rivales, aprobar no pide motivo. Rechazar sí, y se confirma en la misma
-tarjeta, donde sale también el aviso si falta. Si otro validador ya la resolvió o el solicitante la retiró, el
-servidor lo dice y el panel lo muestra.
+ficha, donde sale también el aviso si falta. Si otro validador ya la resolvió o
+el solicitante la retiró, el servidor lo dice y el panel lo muestra. Lo que la
+pantalla revisa antes de enviar (motivo, bloqueo, bloque quitado) es para avisar
+rápido: el servidor lo vuelve a revisar.
 
 ![Resolver una solicitud sin tope](diagramas/us-07/resolver-sin-tope.png)
 
@@ -238,9 +242,8 @@ crea con los valores del cliente si todavía no existe (AC2).
 
 ![Ver los parámetros y los últimos cambios](diagramas/us-04/ver-reglas.png)
 
-`?guardados=` llega por la barra de direcciones, así que `_guardados` acepta
-solo un número: con él la página dice cuántos cambios quedaron, y con 0, que no
-había nada que cambiar.
+Cuántos cambios quedaron, o que no había nada que cambiar, llega como mensaje
+de Django en la sesión, y `base.html` lo dibuja como aviso flotante.
 
 ### Editar la plantilla semanal de bloques (US-04)
 
@@ -256,8 +259,9 @@ día fuera de lunes a viernes no llega al formulario: la vista contesta 400.
 Cada respuesta es la rejilla completa: htmx reemplaza `#calendario` entero y
 Alpine arranca de nuevo sobre el fragmento. Sin htmx el formulario se envía
 normal y `_responder` contesta con una redirección a
-`/configuracion/bloques/?vista=semana&desde=…`. Ese camino no lleva el aviso ni
-el bloque elegido.
+`/configuracion/bloques/?vista=semana&desde=…`. Ese camino no lleva el bloque
+elegido, y el error, que con htmx va dentro del pop-up, llega como aviso
+flotante.
 
 ![Quitar y reponer un bloque](diagramas/us-04/bloque-quitar.png)
 
@@ -315,8 +319,8 @@ la petición sale solo si se confirma. El retiro es un único `UPDATE`
 condicionado a que la solicitud siga pendiente y sea del usuario, para no pisar
 al validador si decide en el mismo instante. Si no aplica, el mensaje es el
 mismo sea ajena, inexistente o ya revisada. Con htmx vuelve la tabla en la misma
-pestaña y página, con el mensaje dentro. Sin htmx, la vuelta es por redirección
-al historial.
+pestaña y página, y el mensaje llega fuera de banda como aviso flotante. Sin
+htmx, la vuelta es por redirección al historial.
 
 ### Confirmar la asistencia (US-03)
 
@@ -407,8 +411,8 @@ registro del primero.
 ### Ver una semana con sus bloqueos (US-17)
 
 La vista semanal tiene fechas porque desde ahí se bloquea un bloque en una
-fecha, pero lo que se edita sigue siendo la jornada que se repite: un aviso fijo
-lo dice. Cada columna raya los bloques que algún bloqueo deja fuera en su fecha,
+fecha, pero lo que se edita sigue siendo la jornada que se repite: lo dice el
+pop-up de cada bloque. Cada columna raya los bloques que algún bloqueo deja fuera en su fecha,
 con la misma regla `cubre()` que usa el resto del sistema.
 
 ![Ver una semana con sus bloqueos](diagramas/us-17/ver-semana.png)

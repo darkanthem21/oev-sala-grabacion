@@ -18,18 +18,21 @@ return formulario
 N -> F ++ : formulario.is_valid()
 return valido
 break falta el motivo del levantamiento
-  N --> A : 200 · agenda/_calendario.html con «Escribe por qué se levanta el bloqueo.»
+  N -> N : $comentario("el error va dentro del pop-up del bloqueo, que sigue abierto")\n_responder_mes(request, levantando=bloqueo.pk, error_levantar=_mensaje(formulario))
+  N --> A : 200 · agenda/_calendario.html con el pop-up y su error
 end
 N -> V ++ : services.levantar(bloqueo, request.user, motivo)
 break el bloqueo ya pasó
   V --> N : ValidationError("Ese bloqueo ya pasó: no hay horario que devolver.")
-  N --> A : 200 · agenda/_calendario.html con el aviso
+  N -> N : messages.error(request, " ".join(error.messages))
+  N --> A : 200 · agenda/_calendario.html con el aviso flotante
 end
 V -> D ++ : $comentario("condicionado: dos administradores a la vez no se pisan")\nUPDATE agenda_bloqueo\nWHERE levantado_en IS NULL
 return levantados
 break no actualizó ninguna fila
   V --> N : ValidationError("Ese bloqueo ya estaba levantado.")
-  N --> A : 200 · agenda/_calendario.html con el aviso
+  N -> N : messages.error(request, " ".join(error.messages))
+  N --> A : 200 · agenda/_calendario.html con el aviso flotante
 end
 V -> D ++ : SELECT agenda_bloqueo
 return fila
@@ -39,8 +42,9 @@ note right of V
   en el registro con quién, cuándo y por qué (AC6),
   y vigentes() ya no lo cuenta.
 end note
-N -> N ++ : _responder_mes(request, listo=True, hecho="Levantaste el bloqueo …")
+N -> N : messages.success(request, "Levantaste el bloqueo por …. La sala vuelve a estar disponible …")
+N -> N ++ : _responder_mes(request, listo=True)
 return respuesta
-N --> A : 200 · agenda/_calendario.html (mensual) + HX-Push-Url
+N --> A : 200 · agenda/_calendario.html (mensual) + HX-Push-Url, con el aviso flotante
 deactivate N
 @enduml

@@ -41,9 +41,10 @@ else navegador sin htmx
   N --> A : 200 · agenda/bloques.html
 end
 note right of N
-  Un aviso fijo dice que los horarios valen para todas
-  las semanas y los bloqueos solo para su fecha. Los
-  bloques bloqueados se dibujan rayados.
+  Los bloques bloqueados se dibujan rayados. Que
+  el horario vale para todas las semanas y el
+  bloqueo solo para su fecha lo dice el pop-up
+  de cada bloque.
 end note
 deactivate N
 @enduml

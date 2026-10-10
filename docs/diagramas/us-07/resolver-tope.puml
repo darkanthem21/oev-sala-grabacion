@@ -12,50 +12,82 @@ participant "<b>agenda</b>\n<size:11>agenda/models.py</size>" as G <<dominio>>
 participant "<b>notificaciones</b>\n<size:11>notificaciones/services.py</size>" as M <<dominio>>
 database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
 
-A -> P ++ : clic «Aprobar esta solicitud» → aprobar(p)
-P -> P ++ : rivalesSol(p.sol)
+A -> P ++ : clic en un bloque que piden dos o más → abrir(d, b)
+P -> P : $comentario("el tope en el panel lateral, con la de mayor prioridad elegida")\nelegir({tipo: "tope", clave: clave(d.iso, b.id), foco: vivas[0].id})
+P -> P ++ : porque(tope.lista)
+return «Dos solicitudes piden este bloque. … tiene la prioridad más alta.»
+P --> A : las solicitudes por prioridad (AC2), «Rechazar a …» y «Aprobar»
+deactivate P
+A -> P ++ : clic «Aprobar» → confirmar("aprobar")
+P -> P ++ : frasePierden()
+P -> P : $comentario("aprobar una rechaza a las que chocan con ella")\npierden = rivales(tope.foco)
+return «La solicitud de … queda rechazada.»
+P --> A : quién obtiene el bloque, quién lo pierde y el campo del motivo
+deactivate P
+A -> P ++ : clic en confirmar → aprobar(tope.foco, "t:" + tope.clave)
+P -> P : $comentario("aviso rápido; el servidor lo vuelve a revisar")\nrazon(s.fecha, b.bloque), activo(b.bloque)
+P -> P ++ : rivales(s)
 return rivales
-P -> P : $comentario("el motivo es el de la tarjeta del tope")\nmotivo = (motivos[p.clave] || "").trim()
-break hay rivales y el motivo tiene menos de 10 caracteres
-  P -> P : avisar("Sus bloques los piden … solicitudes: escribe el motivo …", p.clave)
-  P --> A : aviso en la tarjeta del tope
+break un bloque bloqueado o quitado de la jornada, o hay rivales y el motivo tiene menos de 10 caracteres
+  P -> P : falla("Escribe el motivo del rechazo (mínimo 10 caracteres).")
+  P --> A : el aviso en el panel, con el cursor en el motivo
 end
+P -> P ++ : enviar(s, "aprobar", motivo)
 P -> P : $comentario("apaga los botones mientras va el pedido: un doble clic mandaría dos")\nenviando = true
-P -> N ++ : $comentario("enviar(s, 'aprobar', motivo)")\nfetch POST /validador/resolver/ → resolver_solicitud(request)
+P -> N ++ : fetch POST /validador/resolver/ → resolver_solicitud(request)
 N -> V ++ : $comentario("url_base: esquema y dominio del sitio, para el enlace del correo")\nresolver(solicitud_id, True, motivo, request.user, url_base=request.build_absolute_uri("/").rstrip("/"))
-V -> D ++ : $comentario("_rivales(solicitud): las pendientes del mismo día con algún bloque en común")\nSELECT solicitudes_solicitud, solicitudes_solicitudbloque
+V -> D ++ : SELECT solicitudes_solicitud
+return fila
+V -> D ++ : $comentario("_rivales(solicitud): las pendientes del mismo día con algún bloque en común")\nSELECT solicitudes_solicitud ⋈ solicitudes_solicitudbloque
 return filas
 V -> D ++ : $comentario("la solicitud y sus rivales, en orden de id (AC3)")\nSELECT … FROM solicitudes_solicitud FOR UPDATE
 return filas
-loop cada bloque pedido
+V -> D ++ : $comentario("sus bloques con la hora")\nSELECT solicitudes_solicitudbloque ⋈ agenda_bloque
+return pedidos
+loop cada pedido
+  V -> V : $comentario("lo que el administrador quitó de la jornada ya no se da")\nif not pedido.bloque.activo: raise ValidationError
   V -> G ++ : bloqueo_de(solicitud.fecha, pedido.bloque.inicio)
-  G -> D ++ : SELECT agenda_bloqueo
+  G -> D ++ : SELECT agenda_bloqueo ⋈ agenda_bloque
   return filas
   return bloqueo
 end
-V -> D ++ : $comentario("AC3: otra aceptada ese día en alguno de sus bloques")\nSELECT solicitudes_solicitud, solicitudes_solicitudbloque
-return filas
-alt bloqueado, ya aprobado o motivo corto
+V -> D ++ : $comentario("AC3: otra aceptada y no cancelada ese día en alguno de sus bloques")\nSELECT EXISTS solicitudes_solicitud ⋈ solicitudes_solicitudbloque
+return ocupada
+alt ya resuelta, bloque quitado o bloqueado, ya aprobado o motivo corto
   V --> N -- : ValidationError
   N --> P -- : 400 · {"error": "…"}
-  P -> P : avisar(error, p.clave)
-  P --> A : aviso en la tarjeta del tope
+  P --> P -- : error
+  P -> P : falla(error)
+  P --> A : el aviso en el panel
 else
+  activate P
+  activate N
+  activate V
   loop la aprobada y cada rival
-    V -> D ++ : $comentario("ACEPTADA o RECHAZADA, con motivo, resuelta_por y resuelta_en (AC5)")\nUPDATE solicitudes_solicitud
-    return fila
-    opt quedó ACEPTADA
-      V -> V : $comentario("el enlace para confirmar la asistencia (US-03)")\nurl_confirmar = url_base + reverse("confirmar_solicitud", args=[solicitud.pk])
-    end
+    V -> D ++ : $comentario("ACEPTADA, o RECHAZADA con el motivo y asignada_a la aprobada; resuelta_por y resuelta_en (AC5)")\nUPDATE solicitudes_solicitud
+    deactivate D
     V -> V : $comentario("el correo sale solo si la resolución quedó guardada (AC4)")\ntransaction.on_commit(partial(avisar, correo, …), robust=True)
   end
   V --> N : [solicitud, *rivales]
-  V -> M ++ : avisar(correo, asunto, "notificaciones/resolucion.txt", contexto)
-  deactivate M
-  N --> P : 200 · {"ok": true}
-  P -> P : registrarSol(s, "aprobado", motivo, "")
-  P -> P : $comentario("pierden la solicitud entera")\nrivales.forEach(r => registrarSol(r, "rechazado", motivo, "Se asignó a la solicitud #…"))
-  P --> A : la casilla queda verde con el número de la solicitud y todas van a «Resueltas»
+  loop cada una, después del commit
+    V -> M ++ : avisar(correo, asunto, "notificaciones/resolucion.txt", contexto)
+    deactivate M
+  end
+  deactivate V
+  N --> P -- : 200 · {"ok": true}
+  P --> P -- : null
+  P -> P : registrar(s, "aprobada", ~"~", ~"~")
+  P -> P : $comentario("pierden la solicitud entera, y queda a quién se le dio el bloque")\nrivales.forEach(r => registrar(r, "rechazada", motivo, s.encargado.nombre))
+  P -> P : $comentario("aviso flotante de static/js/flotantes.js")\navisar("Aprobaste la solicitud de …. La de … quedó rechazada.")
+  P --> A : el bloque queda reservado y las resoluciones van a «Resueltas hoy»
 end
+note right of P
+  «Rechazar a …» en el tope es el camino de
+  rechazar(): solo esa solicitud, con motivo.
+  Si queda una sola, su ficha se abre sola.
+  El correo de la aprobada trae el enlace para
+  confirmar la asistencia (US-03); el de las
+  rechazadas, el motivo y a quién se asignó.
+end note
 deactivate P
 @enduml
