@@ -2,19 +2,19 @@
 
 Sistema de gestión de horarios y uso de la sala de grabación de la Facultad de Ciencias de la Ingeniería, UACh.
 
-Este manual cubre lo que hoy está disponible en el sistema:
+Este manual cubre lo que hoy está disponible en el sistema, ordenado por rol:
 
 | Historia | Quién la usa | Sección |
 |---|---|---|
 | US-01 Inicio de sesión | Todos | [Iniciar sesión](#1-iniciar-sesión) |
-| US-02 Solicitud de reserva | Solicitante | [Solicitar una reserva](#4-solicitar-una-reserva) |
-| US-03 Confirmar la asistencia | Solicitante | [Confirmar la asistencia](#confirmar-la-asistencia) |
-| US-04 Panel de administrador | Administrador | [Configurar la sala](#2-configurar-la-sala) |
-| US-07 Panel del validador | Validador | [Panel del validador](#5-panel-del-validador) |
+| US-02 Solicitud de reserva | Solicitante | [Solicitar una reserva](#solicitar-una-reserva) |
 | US-09 Historial de solicitudes | Solicitante | [Mis solicitudes](#mis-solicitudes) |
-| US-14 Bloques del personal de apoyo | Personal de apoyo | [Bloques del día](#3-bloques-del-día) |
-| US-15 Checkout de constancia | Personal de apoyo | [Checklist de cierre de la sala](#7-checklist-de-cierre-de-la-sala) |
-| US-17 Bloquear fechas de la sala | Administrador | [Bloquear fechas de la sala](#6-bloquear-fechas-de-la-sala) |
+| US-03 Confirmar la asistencia | Solicitante | [Confirmar la asistencia](#confirmar-la-asistencia) |
+| US-07 Panel del validador | Validador y administrador | [Validador](#3-validador) |
+| US-04 Panel de administrador | Administrador | [Jornada semanal](#jornada-semanal) y [Reglas](#reglas-los-parámetros-del-sistema) |
+| US-17 Bloquear fechas de la sala | Administrador | [Bloquear fechas de la sala](#bloquear-fechas-de-la-sala) |
+| US-14 Bloques del personal de apoyo | Personal de apoyo | [Bloques del día](#bloques-del-día) |
+| US-15 Checklist de cierre (prototipo) | Personal de apoyo | [Checklist de cierre de la sala](#checklist-de-cierre-de-la-sala) |
 
 ## Puertas de acceso
 
@@ -28,6 +28,15 @@ por el panel de la izquierda, con el nombre y el color del rol.
 | Administrador | `/configuracion/entrar/` | Azul petróleo, **Administración** |
 | Validador | `/validacion/entrar/` | Vino, **Validación** |
 | Personal de apoyo | `/apoyo/entrar/` | Gris azulado, **Personal de apoyo** |
+
+### Dar un rol a alguien
+
+Mientras la pestaña **Áreas** no tenga contenido (US-05), los roles se asignan
+desde `/admin` con la cuenta de administrador: en **Usuarios**, abre la cuenta de
+la persona, agrégale el grupo de su rol (**Solicitante**, **Validador**,
+**Personal de apoyo** o **Administrador**) y guarda. Un solicitante necesita
+además al menos un área académica activa. Una persona puede tener más de un rol
+a la vez.
 
 ---
 
@@ -74,163 +83,30 @@ cuántos minutos lo decide el administrador (ver
 El enlace sirve una sola vez y vence en unas horas. Si ya no funciona, la
 pantalla ofrece **Pedir otro enlace**.
 
----
+### Avisos
 
-## 2. Configurar la sala
-
-El panel del administrador tiene cuatro pestañas: **Bloques**, **Áreas**,
-**Reglas** y **Validación**. Se entra por `/configuracion/entrar/`.
-
-![Puerta de la administración](uso/us-04/puerta-administracion.png)
-
-### Bloques: la jornada semanal
-
-Un bloque es un tramo horario de un día de la semana, por ejemplo *lunes de
-08:10 a 09:40*. La jornada se define una vez y se repite todas las semanas.
-
-![Jornada semanal](uso/us-04/bloques-semana.png)
-
-**Agregar un bloque**
-
-1. En la vista **Semanal**, haz clic en un hueco de la columna del día o pulsa
-   **+** junto al nombre del día.
-2. Ajusta **Inicio** y **Término** en el editor de abajo. La **Duración** se
-   calcula sola.
-3. Pulsa **Agregar el bloque**.
-
-**Editar o quitar un bloque**
-
-1. Haz clic sobre el bloque. Queda marcado y se abre el editor.
-2. Cambia las horas y pulsa **Guardar el bloque**, o pulsa **Quitar de la
-   jornada**. **Cancelar** cierra el editor sin cambios.
-
-![Editar un bloque](uso/us-04/bloques-editar.png)
-
-Si el bloque se cruza con otro del mismo día, no se guarda: aparece un aviso y
-el otro bloque queda marcado. Quitar un bloque no pide confirmación; en su lugar
-aparece **Reponerlo**, por si fue un error. Un bloque quitado nunca se borra,
-así que las solicitudes que ya lo apuntan siguen siendo válidas.
-
-**Vista mensual**
-
-La vista **Mensual** muestra el mes completo, con cuántos bloques y horas tiene
-cada día de la semana. Sirve para revisar, no para editar. Con **←**, **Hoy** y
-**→** te mueves entre meses.
-
-![Vista mensual](uso/us-04/bloques-mes.png)
-
-### Áreas
-
-La pestaña **Áreas** todavía no tiene contenido. Llega con US-05.
-
-### Reglas: los parámetros del sistema
-
-Aquí se ajustan los umbrales con los que opera el sistema, sin reinstalar nada.
-Cada fila explica qué hace el sistema con ese valor.
-
-![Parámetros del sistema](uso/us-04/reglas.png)
-
-| Grupo | Parámetros |
-|---|---|
-| Recepción de solicitudes | Día y hora límite para pedir la semana siguiente, desfase mínimo en semanas |
-| Reserva | Días de anticipación para confirmar, tope mensual por persona, bloques por solicitud |
-| Cierre y sanciones | Inasistencias para sancionar, duración de la sanción |
-| Acceso | Intentos antes de bloquear una cuenta, duración del bloqueo |
-| Términos y condiciones | El texto que acepta el solicitante al enviar una solicitud |
-
-Para cambiar valores:
-
-1. Modifica los que necesites.
-2. Pulsa **Guardar cambios**.
-
-Si un valor está fuera de su rango permitido, la fila se marca y no se guarda
-nada. Los cambios rigen para las solicitudes nuevas; las que ya se enviaron no
-cambian.
-
-Al final de la página, **Últimos cambios** muestra quién cambió cada parámetro,
-cuándo y de qué valor a cuál.
+Lo que resulta de una acción, como guardar, bloquear o retirar, aparece como un
+aviso abajo a la derecha. Se va solo después de unos segundos; la **×** lo
+cierra antes.
 
 ---
 
-## 3. Bloques del día
+## 2. Solicitante
 
-La vista del personal de apoyo muestra las reservas de la sala para un día. Se
-entra por `/apoyo/entrar/`.
-
-![Puerta del personal de apoyo](uso/us-14/puerta-apoyo.png)
-
-### Dar el rol a alguien
-
-El rol se asigna desde `/admin` con la cuenta de administrador: en **Usuarios**,
-abre la cuenta de la persona, agrégale el grupo **Personal de apoyo** y guarda.
-Una persona puede tener más de un rol a la vez.
-
-### Leer la lista
-
-Al entrar se ven las reservas de hoy, ordenadas por hora de inicio.
-
-![Bloques del día](uso/us-14/bloques-del-dia.png)
-
-| Columna | Qué indica |
-|---|---|
-| Hora | Inicio y término del bloque |
-| Solicitante | Quién pidió la sala |
-| Área | El área académica de la reserva |
-| Personas | Cuántas personas declaró el solicitante |
-| Estado | **Aprobada** o **Confirmada**. Una **Cancelada** aparece tachada: ya no hay que esperar a nadie |
-| Check-out | **Completado** si ya se registró, **Hacer check-out** si el bloque terminó y falta, o **—** si el bloque aún no termina o se canceló |
-
-Las reservas pendientes de aprobación no aparecen, porque todavía pueden
-rechazarse. Todo el personal de apoyo ve todos los bloques; no se asignan a una
-persona en particular.
-
-### Cambiar de día
-
-Usa **‹** y **›** para ir al día anterior o al siguiente, **Hoy** para volver al
-día actual, o el selector de fecha para saltar a cualquier día.
-
-### Hacer el check-out
-
-El botón **Hacer check-out** aparece recién cuando termina el bloque.
-
-1. Pulsa **Hacer check-out** en la fila del bloque.
-2. Revisa los datos del bloque y pulsa **Registrar check-out (simulado)**.
-3. El sistema vuelve a la lista y el bloque aparece como **Completado**.
-
-![Check-out pendiente](uso/us-14/checkout-pendiente.png)
-
-Un check-out completado no se puede enviar de nuevo. Al pulsar **Completado**
-se ve quién lo registró y cuándo.
-
-![Check-out completado](uso/us-14/checkout-completado.png)
-
-> **Estado actual.** La lista muestra los bloques de las solicitudes aceptadas
-> en el panel del validador (sección 5). El formulario de check-out con el
-> checklist de la sala llega con US-15; hasta entonces el registro es simulado y
-> solo lo ve quien lo envió.
-
----
-
-## 4. Solicitar una reserva
+### Solicitar una reserva
 
 Aquí se pide una reserva de la sala de grabación. Se entra por
 `/solicitante/entrar/` y el formulario está en `/solicitar/`. Son tres pasos:
 **Horario y disponibilidad**, **Datos de la actividad** y **Confirmación**.
 Enviar la solicitud no la confirma: queda **en revisión** hasta que la acepte un
-validador (US-07).
+validador.
 
-### Antes de empezar
+Tu cuenta necesita el rol **Solicitante** y al menos un área académica activa
+(ver [Dar un rol a alguien](#dar-un-rol-a-alguien)). Si no perteneces a ninguna,
+en vez del formulario aparece el aviso **No puedes solicitar todavía**, que te
+pide pedirle al administrador que te asocie a tu área.
 
-Tu cuenta necesita el rol **Solicitante** y al menos un área académica activa.
-Si no perteneces a ninguna, en vez del formulario aparece el aviso **No puedes
-solicitar todavía**, que te pide pedirle al administrador que te asocie a tu
-área.
-
-Mientras la pestaña **Áreas** no tenga contenido (US-05), el rol y las áreas se
-asignan desde `/admin` con la cuenta de administrador: en **Usuarios**, abre la
-cuenta de la persona, agrégale el grupo **Solicitante** y sus áreas, y guarda.
-
-### Elegir el área académica
+**Elegir el área académica**
 
 Si perteneces a más de un área, lo primero es elegir para cuál es la grabación.
 Selecciónala y pulsa **Continuar al calendario**. Si perteneces a una sola, este
@@ -241,7 +117,7 @@ paso no aparece.
 Para cambiarla después, pulsa **Cambiar área** en el paso 1. Cambiar de área
 borra el día y los bloques que ya habías marcado.
 
-### Paso 1: elegir el día y los bloques
+**Paso 1: elegir el día y los bloques**
 
 1. En el calendario, los días que se pueden pedir aparecen destacados y con un
    punto. Arriba se indica desde qué fecha se puede solicitar: entre la
@@ -252,14 +128,14 @@ borra el día y los bloques que ya habías marcado.
    de mes y año. Solo se puede pedir con unos meses de anticipación.
 3. Haz clic en un día. Abajo aparecen sus bloques horarios.
 4. Marca uno o más bloques. Cada uno dice **Disponible** o, al marcarlo,
-   **Seleccionado**. Los que ya están reservados no aparecen, y los que ya
-   pediste tú aparecen como **Ya solicitaste este bloque · Pendiente** y no se
-   pueden marcar de nuevo.
+   **Seleccionado**. Los que ya están reservados o bloqueados no aparecen, y los
+   que ya pediste tú aparecen como **Ya solicitaste este bloque · Pendiente** y
+   no se pueden marcar de nuevo.
 5. Pulsa **Continuar a datos de la actividad**.
 
 ![Paso 1: día y bloques](uso/us-02/paso1-horario.png)
 
-### Paso 2: completar los datos de la actividad
+**Paso 2: completar los datos de la actividad**
 
 1. Arriba se ve el día y los bloques elegidos. **Cambiar horario** vuelve al
    paso 1.
@@ -282,7 +158,7 @@ completo:
 
 ![Paso 2 con un aviso](uso/us-02/paso2-error.png)
 
-### Paso 3: revisar y enviar
+**Paso 3: revisar y enviar**
 
 1. Revisa el **Resumen de la reserva**: fecha, horario, solicitante, área,
    motivo, personas y acompañantes. **Modificar datos** vuelve al paso 2.
@@ -299,7 +175,8 @@ de nuevo.
 
 ![Solicitud enviada](uso/us-02/solicitud-enviada.png)
 
-### Avisos del formulario
+Lo que eliges en cada paso queda guardado mientras completas el formulario. La
+solicitud se registra recién al pulsar **Confirmar y enviar solicitud**.
 
 | Paso | Situación | Aviso |
 |---|---|---|
@@ -316,9 +193,6 @@ de nuevo.
 | 2 | Dos acompañantes tienen el mismo correo | Hay un correo repetido entre los acompañantes. |
 | 2 | Se incluyó tu propio correo como acompañante | Tu propio correo ya está incluido: eres parte de la cuenta de personas. |
 | 3 | No se aceptaron los términos | Tienes que aceptar los términos y condiciones para enviar la solicitud. |
-
-Lo que eliges en cada paso queda guardado mientras completas el formulario. La
-solicitud se registra recién al pulsar **Confirmar y enviar solicitud**.
 
 ### Mis solicitudes
 
@@ -361,9 +235,9 @@ aceptada o rechazada, el botón ya no aparece.
 
 ![Confirmar el retiro](uso/us-09/retirar-confirmar.png)
 
-La solicitud queda **Retirada** en la misma pestaña, con el aviso **Retiraste la
-solicitud #… Su horario queda libre.** No se borra: sigue en el historial. Si la
-Oficina la revisó justo antes, el aviso dice que ya no está en revisión y no
+La solicitud queda **Retirada** en la misma pestaña, y el aviso dice **Retiraste
+la solicitud #… Su horario queda libre.** No se borra: sigue en el historial. Si
+la Oficina la revisó justo antes, el aviso dice que ya no está en revisión y no
 cambia nada.
 
 ![Solicitud retirada](uso/us-09/solicitud-retirada.png)
@@ -394,129 +268,165 @@ cancelada o es el mismo día, la página lo dice y no muestra el botón.
 
 ---
 
-## 5. Panel del validador
+## 3. Validador
 
-Aquí el validador revisa las solicitudes pendientes y aprueba o rechaza cada
-solicitud entera. Se entra por `/validacion/entrar/` y el panel está en
-`/validador/`. El administrador tiene el mismo panel en la pestaña
-**Validación** de `/configuracion/`.
+Aquí se revisan las solicitudes pendientes y se aprueba o rechaza cada solicitud
+entera. Se entra por `/validacion/entrar/` y el panel está en `/validador/`. El
+administrador tiene el mismo panel en la pestaña **Validación** de
+`/configuracion/`.
 
 | Al resolver | Qué pasa |
 |---|---|
 | Aprobar | La solicitud queda **Aceptada** y su bloque deja de ofrecerse en el calendario |
 | Rechazar | La solicitud queda **Rechazada** con el motivo |
-| En ambos casos | Queda guardado quién resolvió, a qué hora y con qué motivo. El solicitante recibe un correo y ve el resultado en **Mis solicitudes** |
-
-### Dar el rol a alguien
-
-El rol se asigna desde `/admin` con la cuenta de administrador: en **Usuarios**,
-abre la cuenta de la persona, agrégale el grupo **Validador** y guarda.
+| En ambos casos | Queda guardado quién resolvió y a qué hora. El solicitante recibe un correo y ve el resultado en **Mis solicitudes** |
 
 ### Leer el panel
 
+El panel es la jornada semanal, la misma que configura el administrador, con
+quién pide cada bloque escrito adentro. Abre en la primera semana que tiene algo
+por resolver; **←**, **Hoy** y **→** cambian de semana.
+
 ![Panel del validador](uso/us-07/panel-con-tope.png)
 
-**Bloques de la semana**, en la columna izquierda, es un calendario de lunes a
-viernes con los bloques de la jornada:
-
-| Casilla | Qué indica |
+| Bloque | Qué indica |
 |---|---|
-| Vacía | Libre |
-| Borde gris con un número | Una solicitud pendiente |
-| Borde rojo con un número | Tope: varias solicitudes piden ese bloque. El número dice cuántas |
-| Verde | Aprobado, con el número de la solicitud |
+| Con un nombre | Una solicitud pendiente lo pide |
+| Borde rojo, con dos nombres o más | Tope: varias solicitudes piden ese bloque |
+| Celeste, con el nombre en gris | Reservado: ya está aprobado para esa persona |
+| Rayado | Bloqueado por el administrador: no se puede aprobar |
+| Borde punteado | Quitado de la jornada, pero con pedidos de antes |
 
-Al hacer clic en una casilla, el panel baja a la solicitud o al tope
-correspondiente.
-
-Arriba a la derecha, el resumen dice cuántos bloques quedan **pendientes**,
-cuántos tienen **tope** y cuántos están **resueltos**.
-
-Cada tarjeta tiene además un mini calendario con sus bloques: borde azul es un
-pedido pendiente, borde rojo con número es un tope, verde es aprobado y rayado
-es rechazado.
-
-### Con tope
-
-Agrupa los bloques que piden dos o más solicitudes en la misma fecha y hora.
-Esos bloques se resuelven solo aquí.
-
-Cada tarjeta muestra el bloque, las solicitudes que lo piden, ordenadas por
-prioridad del área (P1 primero), y una sugerencia según esa prioridad. De cada
-solicitud se ve el encargado, el área, el motivo y las personas, y si pide otros
-bloques también se indica.
-
-Para resolver un tope:
-
-1. Escribe el **Motivo de la resolución** (mínimo 10 caracteres). Es el motivo
-   que recibe quien no obtiene el bloque.
-2. Pulsa **Aprobar esta solicitud** en la elegida. Las demás que chocan con
-   ella quedan rechazadas enteras, con ese motivo.
-3. También puedes **Rechazar** una solicitud en particular, con el mismo
-   motivo. Si en el bloque queda una sola, pasa a **Sin tope**.
-
-Si pulsas **Aprobar esta solicitud** o **Rechazar** sin motivo, la tarjeta lo
-avisa y deja el cursor en el campo.
-
-![Aviso de motivo faltante](uso/us-07/tope-falta-motivo.png)
-
-![Motivo escrito antes de aprobar](uso/us-07/tope-motivo-escrito.png)
-
-Al aprobar, la casilla del calendario queda verde con el número de la solicitud
-y el tope sale de la lista.
-
-![Tope resuelto](uso/us-07/tope-aprobado.png)
+A la derecha, **Por resolver** lista los topes y las solicitudes sin tope de la
+semana. Un clic en un bloque o en un elemento de la lista abre su detalle en ese
+mismo panel; **Volver a la lista** regresa.
 
 ### Sin tope
 
-Muestra una tarjeta por solicitud con bloques que nadie más pide: encargado,
-área, motivo, observaciones, personas y acompañantes, fecha de envío y su mini
-calendario.
+Una solicitud que nadie más disputa se abre en su ficha: solicitante, área y su
+prioridad, motivo, personas y acompañantes, cuándo se envió, la fecha y el
+bloque.
 
-![Solicitudes sin tope](uso/us-07/panel-sin-tope.png)
+![Ficha de una solicitud sin tope](uso/us-07/panel-sin-tope.png)
 
-La solicitud se resuelve entera:
+- **Aprobar**: se aprueba de inmediato.
+- **Rechazar**: abre el campo **Motivo del rechazo** (mínimo 10 caracteres) y
+  luego **Confirmar rechazo**. **Cancelar** lo cierra.
 
-- **Aprobar solicitud**: se aprueba de inmediato.
-- **Rechazar solicitud**: abre el campo **Motivo del rechazo** (mínimo 10
-  caracteres) y luego **Confirmar rechazo**. Si el motivo es corto, el aviso
-  sale en la misma tarjeta. **Cancelar** o Esc lo cierran.
+Si la solicitud choca con otra en algún bloque, la ficha lo dice y ofrece **Ver
+el tope**: se resuelve ahí.
 
-Una solicitud que choca con otra en algún bloque no aparece aquí: se resuelve
-en **Con tope**.
+### Con tope
 
-### Resueltas
+El tope lista las solicitudes que piden el mismo bloque en la misma fecha,
+ordenadas por la prioridad de su área, con una sugerencia según esa prioridad.
+De cada una se ve el solicitante, el área, el motivo y, si pide otros bloques,
+cuáles. La elegida es la de mayor prioridad; marca otra para cambiarla.
 
-Un registro de lo resuelto en la sesión: bloque, solicitud, resultado, motivo,
-validador y hora. Al recargar la página ya no aparecen, porque el panel muestra
-solo lo pendiente; lo resuelto queda guardado.
+![Tope con dos solicitudes](uso/us-07/tope.png)
+
+1. Pulsa **Aprobar a …** para darle el bloque a la elegida, o **Rechazar a …**
+   para rechazar solo esa.
+2. El panel dice quién obtiene el bloque y quién queda rechazada. Aprobar una
+   rechaza enteras a las que chocan con ella.
+3. Escribe el **Motivo del rechazo** (mínimo 10 caracteres). Les llega por
+   correo a quienes pierden.
+4. Pulsa **Confirmar**. **Volver** regresa al tope sin resolver.
+
+Si confirmas sin motivo, el panel lo avisa y deja el cursor en el campo.
+
+![Aviso de motivo faltante](uso/us-07/tope-falta-motivo.png)
+
+![Motivo escrito antes de confirmar](uso/us-07/tope-motivo-escrito.png)
+
+Al confirmar, el bloque queda reservado y el aviso resume lo que pasó, por
+ejemplo **Aprobaste la solicitud de Sofía Solicitante. La de Marcela Rivas quedó
+rechazada.**
+
+![Tope resuelto](uso/us-07/tope-aprobado.png)
+
+Si rechazas una en un tope de dos, la que queda se abre sola en su ficha.
+
+### Resueltas hoy
+
+**Resueltas (…)**, arriba, abre lo resuelto hoy por cualquier validador:
+solicitud, resolución, motivo, quién y a qué hora. Una que perdió un tope dice a
+quién se le asignó el bloque. Queda guardado: recargar la página no lo borra.
+
+![Resueltas hoy](uso/us-07/resueltas.png)
 
 | Aviso | Cuándo |
 |---|---|
-| Esta solicitud ya fue resuelta o retirada. | Otro validador la resolvió, o el solicitante la retiró, mientras tenías la página abierta |
+| Escribe el motivo del rechazo (mínimo 10 caracteres). | Se rechaza, o se aprueba en un tope, sin motivo o con uno muy corto |
+| La sala está bloqueada …: no se puede aprobar. Recházala con ese motivo. | Hay un bloqueo en ese horario |
+| El bloque de las … ya no está en la jornada: no se puede aprobar. Recházala. | El administrador quitó el bloque después de que se pidiera |
+| Esta solicitud ya fue resuelta o retirada. Recarga la página para ver lo último. | Otro validador la resolvió, o el solicitante la retiró, mientras tenías la página abierta |
 | Uno de sus bloques ya está aprobado para otra solicitud ese día. | El bloque se aprobó para otra solicitud |
-| La sala está bloqueada a las …: no se puede aprobar. | Hay un bloqueo en ese horario; se rechaza con ese motivo |
 | No se pudo guardar. Recarga la página e inténtalo de nuevo. | La sesión venció o se perdió la conexión |
-
-![Registro de resoluciones](uso/us-07/resueltas.png)
 
 ---
 
-## 6. Bloquear fechas de la sala
+## 4. Administrador
+
+El panel del administrador tiene cuatro pestañas: **Bloques**, **Áreas**,
+**Reglas** y **Validación**. Se entra por `/configuracion/entrar/`.
+
+![Puerta de la administración](uso/us-04/puerta-administracion.png)
+
+**Validación** es el panel del validador (ver [Validador](#3-validador)): el
+administrador también aprueba y rechaza, y la resolución queda a su nombre. La
+pestaña **Áreas** todavía no tiene contenido; llega con US-05.
+
+### Jornada semanal
+
+Un bloque es un tramo horario de un día de la semana, por ejemplo *lunes de
+08:10 a 09:40*. La jornada se define una vez y se repite todas las semanas. Se
+edita en la pestaña **Bloques**, vista **Semanal**.
+
+![Jornada semanal](uso/us-04/bloques-semana.png)
+
+La vista semanal dice qué semana es y cada columna muestra su fecha, porque
+desde ahí también se bloquea un bloque en una fecha. Para cambiar de semana usa
+**←**, **Hoy** y **→**, o haz clic en un día del mini calendario de la izquierda.
+
+**Agregar un bloque**
+
+1. Pulsa **+** junto al nombre del día, o haz clic en un hueco de su columna.
+2. En el recuadro, ajusta **Inicio** y **Término**, o la **Duración**, que se
+   calcula sola.
+3. Pulsa **Agregar el bloque**.
+
+**Cambiar o quitar un bloque**
+
+1. Haz clic sobre el bloque. Se abre un recuadro junto a él.
+2. Cambia las horas y pulsa **Guardar el bloque**, o pulsa **Quitar de la
+   jornada**. **Cancelar** o Esc lo cierran sin cambios.
+
+![Cambiar un bloque](uso/us-04/bloques-editar.png)
+
+El recuadro recuerda que el horario vale para todas las semanas, y un bloqueo,
+solo para su fecha. Si el bloque se cruza con otro del mismo día, no se guarda:
+el error aparece en el recuadro y el otro bloque queda marcado. Quitar un bloque
+no pide confirmación; el aviso trae **Reponerlo**, por si fue un error. Un
+bloque quitado nunca se borra, así que las solicitudes que ya lo apuntan siguen
+siendo válidas.
+
+**Vista mensual**
+
+La vista **Mensual** es la que abre por defecto. Muestra el mes completo y, en
+la cabecera, cuántos bloques y horas tiene cada día de la semana. Sirve para
+revisar la jornada y para bloquear fechas; no para editar bloques.
+
+![Vista mensual](uso/us-04/bloques-mes.png)
+
+### Bloquear fechas de la sala
 
 El administrador puede dejar la sala fuera de servicio por una **mantención**,
 un **feriado** o un **evento**. El bloqueo vale para fechas concretas: la
 jornada semanal sigue igual. Mientras está vigente, esos horarios no se pueden
 solicitar ni aprobar, y quien solicita ve el motivo.
 
-Se entra con la cuenta de administración por `/configuracion/entrar/`, pestaña
-**Bloques** (`/configuracion/bloques/`). La vista **Mensual** sirve para crear y
-revisar bloqueos; la **Semanal** muestra la jornada de una semana concreta y
-permite bloquear un bloque en una fecha.
-
-![Vista mensual con un día bloqueado](uso/us-17/mes-con-bloqueo.png)
-
-### Crear un bloqueo
+**Crear un bloqueo**
 
 1. En la vista mensual, haz clic en el día que quieres bloquear.
 2. En **Qué bloquear**, elige una opción:
@@ -528,73 +438,134 @@ permite bloquear un bloque en una fecha.
    **Detalle**, como *Taller de profesores*. El solicitante lo ve.
 4. Pulsa **Bloquear**.
 
-![Formulario para bloquear la sala](uso/us-17/crear-bloqueo.png)
+![Recuadro para bloquear la sala](uso/us-17/crear-bloqueo.png)
 
-El día queda marcado en el calendario y arriba del registro aparece la
-confirmación, por ejemplo **Bloqueaste la sala el martes 6 de octubre, de 08:10
-a 09:40 (Evento: Taller de profesores).**
+El día queda rayado y el aviso confirma lo bloqueado, por ejemplo **Bloqueaste
+la sala el miércoles 21 de octubre, todo el día (Evento: Taller de
+profesores).**
 
 ![Bloqueo creado](uso/us-17/bloqueo-creado.png)
 
 No se puede bloquear un día que ya pasó, una fecha sin jornada ni algo que ya
 está bloqueado entero. Si el bloqueo le quita la sala a reservas aprobadas que
 todavía no empiezan, el sistema no lo guarda a la primera: muestra esas
-reservas para que revises a quién afecta. Al confirmar, guarda el bloqueo y
-avisa por correo a cada persona afectada.
+reservas en el recuadro para que revises a quién afecta, y el botón pasa a ser
+**Bloquear y avisar**. Al pulsarlo, guarda el bloqueo y avisa por correo a cada
+persona afectada.
 
-### Ver y levantar un bloqueo
+**Bloquear un bloque desde la vista semanal**
 
-Los días bloqueados aparecen rayados. Haz clic en el bloqueo para ver su motivo
-y quién lo registró. Para devolver el horario, escribe el **Motivo para
-levantarlo** y pulsa **Levantar el bloqueo**.
+Haz clic en el bloque, pulsa **Bloquear una fecha**, elige la fecha (viene
+elegida la de la semana que estás mirando) y el motivo, y pulsa **Bloquear esa
+fecha**. Los bloques bloqueados en esa semana aparecen rayados.
+
+![Semana con un bloque bloqueado](uso/us-17/semana-con-bloqueo.png)
+
+**Ver y levantar un bloqueo**
+
+Haz clic en el bloqueo, dentro de su día en la vista mensual. El recuadro dice
+el motivo, las fechas y quién lo registró. Para devolver el horario, escribe el
+**Motivo para levantarlo** y pulsa **Levantar el bloqueo**.
 
 ![Ver y levantar un bloqueo](uso/us-17/levantar-bloqueo.png)
 
 El horario vuelve a estar disponible y queda anotado quién levantó el bloqueo,
 cuándo y por qué. Un bloqueo que ya pasó no se puede levantar.
 
-El **Registro de bloqueos**, al final de la vista mensual, muestra las últimas
-acciones, bloqueos y levantamientos, con fecha, qué se bloqueó, motivo y
-responsable.
+**Registro (…)**, arriba de la vista mensual, abre las últimas acciones,
+bloqueos y levantamientos, con fecha, qué se bloqueó, motivo y responsable.
 
 ![Registro de bloqueos](uso/us-17/bloqueo-levantado.png)
-
-### Bloquear desde la vista semanal
-
-La vista semanal dice qué semana es, por ejemplo **Semana del 28 de septiembre
-al 2 de octubre de 2026**, y cada columna muestra su fecha. Para cambiar de
-semana usa **←**, **Hoy** y **→**, o haz clic en un día del mini calendario de la
-izquierda. Los bloques bloqueados en esa semana aparecen rayados.
-
-![Semana con un día bloqueado](uso/us-17/semana-con-bloqueo.png)
-
-Para bloquear un bloque en una fecha, haz clic en el bloque, pulsa **Bloquear
-una fecha**, elige la fecha (viene elegida la de la semana que estás mirando),
-el motivo y pulsa **Bloquear esa fecha**.
-
-### Cómo se relaciona con la jornada
-
-La jornada semanal se configura aparte y se repite todas las semanas. Un
-bloqueo afecta solo la fecha o el rango indicado: no quita ni cambia los bloques
-de la jornada. Así, un evento puede cerrar el bloque del martes 6 de octubre de
-08:10 a 09:40 sin cerrar ese horario los martes siguientes. La vista semanal lo
-recuerda con un aviso fijo: los horarios valen para todas las semanas; los
-bloqueos, solo para su fecha.
 
 > **Estado actual.** Las reservas que un bloqueo afecta son las solicitudes
 > aceptadas y no canceladas de esas fechas. En desarrollo, los correos de aviso
 > se escriben en el log del contenedor en vez de enviarse.
 
+### Reglas: los parámetros del sistema
+
+Aquí se ajustan los umbrales con los que opera el sistema, sin reinstalar nada.
+Cada fila explica qué hace el sistema con ese valor.
+
+| Grupo | Parámetros |
+|---|---|
+| Recepción de solicitudes | Día y hora límite para pedir la semana siguiente, desfase mínimo en semanas |
+| Reserva | Días de anticipación para confirmar, tope mensual por persona, bloques por solicitud |
+| Cierre y sanciones | Inasistencias para sancionar, duración de la sanción |
+| Acceso | Intentos antes de bloquear una cuenta, duración del bloqueo |
+| Términos y condiciones | El texto que acepta el solicitante al enviar una solicitud |
+
+Para cambiar valores:
+
+1. Modifica los que necesites.
+2. Pulsa **Guardar cambios**.
+
+El aviso dice cuántos cambios quedaron guardados. Los cambios rigen para las
+solicitudes nuevas; las que ya se enviaron no cambian. Si un valor está fuera de
+su rango permitido, la fila se marca y no se guarda nada.
+
+![Parámetros del sistema](uso/us-04/reglas.png)
+
+**Últimos cambios (…)**, al pie, abre los últimos 15: quién cambió cada
+parámetro, cuándo y de qué valor a cuál.
+
 ---
 
-## 7. Checklist de cierre de la sala
+## 5. Personal de apoyo
+
+Se entra por `/apoyo/entrar/`.
+
+![Puerta del personal de apoyo](uso/us-14/puerta-apoyo.png)
+
+### Bloques del día
+
+La vista muestra las reservas de la sala para un día. Al entrar se ven las de
+hoy, ordenadas por hora de inicio.
+
+![Bloques del día](uso/us-14/bloques-del-dia.png)
+
+| Columna | Qué indica |
+|---|---|
+| Hora | Inicio y término del bloque |
+| Solicitante | Quién pidió la sala |
+| Área | El área académica de la reserva |
+| Personas | Cuántas personas declaró el solicitante |
+| Estado | **Aprobada** o **Confirmada**. Una **Cancelada** aparece tachada: ya no hay que esperar a nadie |
+| Check-out | **Completado** si ya se registró, **Hacer check-out** si el bloque terminó y falta, o **—** si el bloque aún no termina o se canceló |
+
+Las reservas pendientes de aprobación no aparecen, porque todavía pueden
+rechazarse. Todo el personal de apoyo ve todos los bloques; no se asignan a una
+persona en particular.
+
+Usa **‹** y **›** para ir al día anterior o al siguiente, **Hoy** para volver al
+día actual, o el selector de fecha para saltar a cualquier día.
+
+### Hacer el check-out
+
+El botón **Hacer check-out** aparece recién cuando termina el bloque.
+
+1. Pulsa **Hacer check-out** en la fila del bloque.
+2. Revisa los datos del bloque y pulsa **Registrar check-out (simulado)**.
+3. El sistema vuelve a la lista y el bloque aparece como **Completado**.
+
+![Check-out pendiente](uso/us-14/checkout-pendiente.png)
+
+Un check-out completado no se puede enviar de nuevo. Al pulsar **Completado**
+se ve quién lo registró y cuándo.
+
+![Check-out completado](uso/us-14/checkout-completado.png)
+
+> **Estado actual.** La lista muestra los bloques de las solicitudes aceptadas
+> en el panel del validador. El formulario de check-out con el checklist de la
+> sala llega con US-15; hasta entonces el registro es simulado y solo lo ve
+> quien lo envió.
+
+### Checklist de cierre de la sala
 
 > **Estado actual.** Esta pantalla es el prototipo de US-15 y todavía no está
 > en `main`: vive en la rama `feat/us-15-checkout-de-constancia`. Se abre en
 > `/checklist/`, sin iniciar sesión, y muestra siempre la misma reserva de
 > ejemplo (*Sala Virtual, 09:00 - 12:00*). El reporte queda guardado solo en el
-> navegador: todavía no llega al sistema ni reemplaza el check-out de la
-> sección 3.
+> navegador: todavía no llega al sistema ni reemplaza el check-out de arriba.
 
 Al terminar el uso de la sala, el personal de apoyo la revisa y deja constancia
 de su estado. Son cuatro pasos; la barra de arriba dice en cuál vas y cuánto
@@ -609,7 +580,7 @@ falta.
 
 ![Paso 1 del checklist](uso/us-15/checklist-paso1.png)
 
-### Responder un paso
+**Responder un paso**
 
 1. Marca **Sí** o **No** en cada pregunta.
 2. Si marcas **No**, aparecen dos campos obligatorios: una **Observación** de al
@@ -631,7 +602,7 @@ Si falta algo, el paso no avanza y el aviso aparece bajo los botones.
 | Un No sin foto | Adjunta una foto de integridad para cada respuesta marcada como No. |
 | El paso 4 sin hora de salida | Indica la hora efectiva de salida. |
 
-### Cerrar la revisión
+**Cerrar la revisión**
 
 En el paso 4, además de las dos preguntas:
 
