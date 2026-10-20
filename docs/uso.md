@@ -10,6 +10,7 @@ Este manual cubre lo que hoy está disponible en el sistema, ordenado por rol:
 | US-02 Solicitud de reserva | Solicitante | [Solicitar una reserva](#solicitar-una-reserva) |
 | US-09 Historial de solicitudes | Solicitante | [Mis solicitudes](#mis-solicitudes) |
 | US-03 Confirmar la asistencia | Solicitante | [Confirmar la asistencia](#confirmar-la-asistencia) |
+| US-10 Historial de sanciones | Solicitante y administrador | [Mis sanciones](#mis-sanciones) y [Sanciones](#sanciones) |
 | US-07 Panel del validador | Validador y administrador | [Validador](#3-validador) |
 | US-04 Panel de administrador | Administrador | [Jornada semanal](#jornada-semanal) y [Reglas](#reglas-los-parámetros-del-sistema) |
 | US-17 Bloquear fechas de la sala | Administrador | [Bloquear fechas de la sala](#bloquear-fechas-de-la-sala) |
@@ -266,6 +267,29 @@ cancelada o es el mismo día, la página lo dice y no muestra el botón.
 
 ![Reserva que ya no se puede confirmar](uso/us-03/confirmacion-no-disponible.png)
 
+### Mis sanciones
+
+Una sanción suspende por un tiempo la posibilidad de enviar solicitudes nuevas.
+La pone la Oficina, por ejemplo tras inasistencias, con un motivo y un periodo.
+Rige desde su primer día hasta las **23:59 de su último día**, en hora de Chile;
+al día siguiente se puede volver a pedir sin hacer nada.
+
+Mientras hay una sanción vigente:
+
+- En todas las pantallas del solicitante aparece, bajo el encabezado, una franja
+  que dice hasta cuándo rige y desde qué día se puede volver a solicitar.
+- **Solicitar reserva** no muestra el formulario: aparece **No puedes solicitar
+  por ahora**, con el motivo, el periodo y la fecha desde la que se puede pedir de
+  nuevo.
+- Las reservas ya **aceptadas** no cambian: se pueden confirmar y usar como
+  siempre. Las que estaban **en revisión** también siguen: la Oficina las
+  resuelve igual que antes.
+
+La pestaña **Mis sanciones**, arriba junto a **Mis solicitudes**, muestra primero
+la sanción vigente y debajo las anteriores, cada una con su motivo y su periodo.
+Si la Oficina levantó una antes de tiempo, dice cuándo y por qué. Está en
+`/solicitar/mis-sanciones/` y solo muestra las sanciones propias.
+
 ---
 
 ## 3. Validador
@@ -368,8 +392,8 @@ quién se le asignó el bloque. Queda guardado: recargar la página no lo borra.
 
 ## 4. Administrador
 
-El panel del administrador tiene cuatro pestañas: **Bloques**, **Áreas**,
-**Reglas** y **Validación**. Se entra por `/configuracion/entrar/`.
+El panel del administrador tiene cinco pestañas: **Bloques**, **Áreas**,
+**Reglas**, **Validación** y **Sanciones**. Se entra por `/configuracion/entrar/`.
 
 ![Puerta de la administración](uso/us-04/puerta-administracion.png)
 
@@ -507,6 +531,30 @@ su rango permitido, la fila se marca y no se guarda nada.
 
 **Últimos cambios (…)**, al pie, abre los últimos 15: quién cambió cada
 parámetro, cuándo y de qué valor a cuál.
+
+### Sanciones
+
+Una sanción impide a un solicitante enviar solicitudes nuevas desde su fecha de
+inicio hasta las 23:59 de su fecha de término. **No cancela sus reservas ya
+aceptadas ni sus solicitudes en revisión** (decisión del 20/10 sobre AC6 de
+US-10).
+
+**Crear o acortar una sanción** lo hace solo el superusuario, en `/admin`:
+**Personas › Sanciones › Añadir**, con la persona, el motivo, la fecha de inicio
+y la de término. La de término es obligatoria y el inicio no puede ser una fecha
+futura. Para acortarla se cambia la fecha de término. Las sanciones no se
+borran, y el administrador sin cuenta de superusuario no las ve en `/admin`.
+
+**Levantar una sanción** antes de tiempo se hace en la pestaña **Sanciones**, que
+lista las vigentes con la persona, el motivo, el periodo y quién la puso:
+
+1. En la fila, escribe el motivo del levantamiento. Es obligatorio.
+2. Pulsa **Levantar**.
+
+La persona puede volver a solicitar de inmediato y el aviso dice **Levantaste la
+sanción de …**. La sanción no se borra: queda en su historial con quién la
+levantó, cuándo y por qué. Si otra persona la levantó justo antes, o ya terminó,
+el aviso lo dice y no cambia nada.
 
 ---
 

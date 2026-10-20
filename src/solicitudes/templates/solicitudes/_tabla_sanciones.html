@@ -1,0 +1,22 @@
+<table class="historial">
+  <thead>
+    <tr>
+      <th scope="col">Motivo</th>
+      <th scope="col">Periodo</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for sancion in sanciones %}
+      <tr>
+        <td data-titulo="Motivo">{{ sancion.motivo }}</td>
+        <td data-titulo="Periodo">
+          <time datetime="{{ sancion.inicio|date:'Y-m-d' }}">{{ sancion.inicio|date:"d/m/Y" }}</time>
+          al <time datetime="{{ sancion.termino|date:'Y-m-d' }}">{{ sancion.termino|date:"d/m/Y" }}</time>
+          {% if sancion.levantada %}
+            <p class="motivo-rechazo">Levantada el {{ sancion.levantada_en|date:"d/m/Y" }}: {{ sancion.motivo_levantamiento }}</p>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

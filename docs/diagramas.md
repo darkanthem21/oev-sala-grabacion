@@ -420,6 +420,35 @@ con la misma regla `cubre()` que usa el resto del sistema.
 Un sábado o domingo, sin fecha en la dirección, la vista abre la semana que
 viene, porque la rejilla es de lunes a viernes.
 
+### Pedir la sala con una sanción vigente (US-10)
+
+`solicitar` y `solicitar_area` preguntan primero por `Usuario.sancion_vigente`,
+antes que por el área. Con una sanción vigente devuelven
+`solicitudes/sancionado.html` con el motivo y desde cuándo se puede volver a
+pedir, también ante un POST de cualquier paso. `guardar_solicitud_completa`
+repite la pregunta, para el POST que llegue sin pasar por la vista.
+
+![Pedir la sala con una sanción vigente](diagramas/us-10/solicitar-sancionado.png)
+
+La vigencia se calcula al leer, contra `timezone.localdate()` en America/Santiago:
+rige desde `inicio` hasta las 23:59 de `termino`, ambos incluidos, y al día
+siguiente la consulta ya no la encuentra. No hay tarea programada que la apague.
+La franja de aviso es un include de `solicitudes/_base.html`, así que sale en
+todas las páginas del solicitante con la misma consulta.
+
+AC6 quedó decidido el 20/10: la sanción solo impide pedir. Las reservas ya
+aceptadas y las solicitudes en revisión siguen su curso, así que crear una
+sanción no cancela ni avisa a nadie.
+
+### Levantar una sanción (US-10)
+
+Crear y acortar sanciones es del superusuario, en la administración de Django.
+El administrador las levanta desde la pestaña **Sanciones** del panel. Como en
+los bloqueos de US-17, levantar no borra la fila: la marca con quién, cuándo y
+por qué con un `UPDATE` condicionado a que siga vigente.
+
+![Levantar una sanción](diagramas/us-10/levantar-sancion.png)
+
 ## Estructura
 
 ### Arquitectura

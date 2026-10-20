@@ -2,8 +2,8 @@
 {% load static %}
 {% comment %}
   Cascarón del panel de administración. Cada pestaña la sirve su propio módulo:
-  Bloques es de agenda, Reglas de configuracion, Validación de solicitudes y Áreas
-  será de personas (US-05). Por eso el cascarón vive acá y no dentro de ninguno.
+  Bloques es de agenda, Reglas de configuracion, Validación de solicitudes,
+  Sanciones de personas (US-10) y Áreas será de personas (US-05). Por eso el cascarón vive acá y no dentro de ninguno.
 {% endcomment %}
 {% block titulo %}Configuración{% endblock %}
 {% block estilos %}
@@ -35,6 +35,8 @@
          {% if pestana == "reglas" %}aria-current="page"{% endif %}>Reglas</a>
       <a class="pestana {% if pestana == 'validacion' %}activa{% endif %}" href="{% url 'panel_validacion' %}"
          {% if pestana == "validacion" %}aria-current="page"{% endif %}>Validación</a>
+      <a class="pestana {% if pestana == 'sanciones' %}activa{% endif %}" href="{% url 'panel_sanciones' %}"
+         {% if pestana == "sanciones" %}aria-current="page"{% endif %}>Sanciones</a>
     </nav>
   </div>
 </header>

@@ -1,0 +1,49 @@
+{% extends "panel.html" %}
+{% load static %}
+{% comment %}
+  US-10. El administrador ve las sanciones vigentes y las levanta con un motivo.
+  Crearlas y acortarlas es del superusuario en /admin/, donde está también el
+  historial completo.
+{% endcomment %}
+{% block estilos_seccion %}<link rel="stylesheet" href="{% static 'personas/sanciones.css' %}">{% endblock %}
+
+{% block seccion %}
+<section class="marco sanciones">
+  <h2>Sanciones vigentes</h2>
+  <p class="detalle">
+    Mientras está vigente, la persona no puede enviar solicitudes nuevas; sus
+    reservas ya aceptadas no cambian. Levantarla le devuelve el acceso de
+    inmediato y queda registrado quién lo hizo, cuándo y por qué.
+  </p>
+
+  {% if vigentes %}
+    <table>
+      <thead>
+        <tr><th>Persona</th><th>Motivo</th><th>Periodo</th><th>Puesta por</th><th>Levantar</th></tr>
+      </thead>
+      <tbody>
+        {% for sancion in vigentes %}
+          <tr>
+            <td>{{ sancion.usuario.get_full_name|default:sancion.usuario.email }}</td>
+            <td>{{ sancion.motivo }}</td>
+            <td class="cifra">{{ sancion.inicio|date:"d/m/Y" }} al {{ sancion.termino|date:"d/m/Y" }}</td>
+            <td>{{ sancion.creada_por.email|default:"—" }}</td>
+            <td>
+              <form method="post" class="levantar">
+                {% csrf_token %}
+                <input type="hidden" name="sancion" value="{{ sancion.pk }}">
+                <input type="text" name="motivo" maxlength="200" required
+                       placeholder="Motivo del levantamiento"
+                       aria-label="Motivo para levantar la sanción de {{ sancion.usuario.email }}">
+                <button class="btn" type="submit">Levantar</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="vacio">No hay sanciones vigentes.</p>
+  {% endif %}
+</section>
+{% endblock %}

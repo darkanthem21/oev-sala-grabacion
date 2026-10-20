@@ -1,0 +1,15 @@
+{% comment %}
+  US-10 T3. Se pregunta una vez por página; sin sanción vigente no dibuja nada.
+  La pantalla del formulario bloqueado la omite, porque ya dice lo mismo en
+  grande.
+{% endcomment %}
+{% with sancion=user.sancion_vigente %}{% if sancion %}
+<div class="franja-sancion" role="status">
+  <p>
+    <strong>Tienes una sanción vigente hasta el {{ sancion.hasta }}.</strong>
+    No puedes enviar solicitudes nuevas; tus reservas ya aceptadas siguen en pie.
+    Podrás solicitar de nuevo desde el {{ sancion.rehabilita }}.
+    <a href="{% url 'mis_sanciones' %}">Ver mis sanciones</a>
+  </p>
+</div>
+{% endif %}{% endwith %}

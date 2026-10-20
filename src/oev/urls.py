@@ -77,5 +77,6 @@ urlpatterns = [
     path("configuracion/areas/", configuracion.seccion, {"pestana": "areas"}, name="panel_areas"),
     path("configuracion/reglas/", configuracion.reglas, name="panel_reglas"),
     path("configuracion/validacion/", solicitudes.panel_validacion_admin, name="panel_validacion"),
+    path("configuracion/sanciones/", views.sanciones, name="panel_sanciones"),
     path("admin/", admin.site.urls),
 ]

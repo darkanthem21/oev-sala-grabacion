@@ -669,3 +669,16 @@ a.btn-accion:focus-visible { outline: 2px solid var(--acento); outline-offset: 2
 .dialogo-confirmar:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 
 
+
+
+/* --- US-10: franja de sanción bajo el encabezado --- */
+/* Avisa un impedimento, no un error: precaución y no alerta. */
+.franja-sancion {
+  border-bottom: 1px solid var(--borde); border-left: 4px solid var(--precaucion);
+  background: var(--superficie);
+}
+.franja-sancion p {
+  max-width: 74rem; margin: 0 auto; padding: .7rem 1.5rem;
+  font-size: .88rem; line-height: 1.5;
+}
+.franja-sancion a { color: var(--accion); white-space: nowrap; }

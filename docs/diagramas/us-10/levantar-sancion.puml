@@ -1,0 +1,43 @@
+@startuml levantar-sancion
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Levantar una sanción (US-10)
+
+actor "Administrador" as A
+participant "<b>personas.views</b>\n<size:11>personas/views.py</size>" as N <<presentación>>
+participant "<b>personas.forms</b>\n<size:11>personas/forms.py</size>" as F <<presentación>>
+participant "<b>personas</b>\n<size:11>personas/services.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : POST /configuracion/sanciones/ → sanciones(request)
+N -> D ++ : SELECT personas_sancion
+return fila
+N -> F ++ : LevantarSancionForm(request.POST)
+return formulario
+N -> F ++ : formulario.is_valid()
+return valido
+break falta el motivo
+  N -> N : messages.error(request, "Escribe por qué se levanta la sanción.")
+  N --> A : 302 · /configuracion/sanciones/ con el aviso flotante
+end
+N -> V ++ : services.levantar(sancion, request.user, motivo)
+V -> D ++ : $comentario("condicionado a que siga vigente: dos administradores a la vez no se pisan")\nUPDATE personas_sancion\nWHERE inicio <= hoy AND termino >= hoy AND levantada_en IS NULL
+return levantadas
+break no actualizó ninguna fila
+  V --> N : ValidationError("Esa sanción ya no está vigente: terminó o alguien la levantó.")
+  N -> N : messages.error(request, " ".join(error.messages))
+  N --> A : 302 · /configuracion/sanciones/ con el aviso flotante
+end
+V -> D ++ : SELECT personas_sancion
+return fila
+return sancion
+note right of V
+  La fila no se borra: queda con quién, cuándo y por qué,
+  y vigentes() ya no la cuenta. Las reservas no cambian,
+  porque la sanción nunca las tocó (AC6).
+end note
+N -> N : messages.success(request, "Levantaste la sanción de …. Ya puede solicitar la sala.")
+N --> A : 302 · /configuracion/sanciones/ con el aviso flotante
+deactivate N
+@enduml
