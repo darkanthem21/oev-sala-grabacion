@@ -14,7 +14,7 @@ from django.views.decorators.http import require_POST
 
 from agenda.models import Bloqueo, primera_fecha_pedible
 from configuracion.models import Parametros
-from personas.models import Rol
+from personas.models import Rol, Sancion
 
 from . import validacion
 from .calendar import construir_calendario_contexto
@@ -215,9 +215,32 @@ def bloques_dia(request):
     })
 
 
+def _sancionado(request):
+    """US-10 T2: en vez del formulario, el motivo y desde cuándo puede volver a
+    pedir. None si no tiene una sanción vigente. Va antes que el área, porque
+    elegir un área no le serviría de nada."""
+    sancion = request.user.sancion_vigente
+    if sancion is None:
+        return None
+    return render(request, "solicitudes/sancionado.html", {"sancion": sancion})
+
+
+@user_passes_test(es_solicitante, login_url="login_solicitante")
+def mis_sanciones(request):
+    """US-10 T4: las vigentes primero y después las pasadas, siempre del usuario
+    conectado. No hay dirección por sanción, así que no hay cómo pedir una ajena."""
+    propias = Sancion.objects.filter(usuario=request.user).select_related("levantada_por")
+    return render(request, "solicitudes/mis_sanciones.html", {
+        "vigentes": propias.vigentes().order_by("-termino", "-id"),
+        "pasadas": propias.pasadas(),
+    })
+
+
 @user_passes_test(es_solicitante, login_url="login_solicitante")
 def solicitar_area(request):
     """Paso previo de selección de área académica para usuarios con múltiples áreas activas."""
+    if respuesta := _sancionado(request):
+        return respuesta
     areas = list(request.user.areas.filter(activa=True))
     if not areas:
         return render(request, "solicitudes/sin_area.html")
@@ -260,6 +283,9 @@ def solicitar(request):
     Paso 2: Datos de la actividad (motivo y acompañantes).
     Paso 3: Revisión de la reserva, aceptación de términos y confirmación.
     """
+    # También corta los POST de cualquier paso: quien está sancionado no avanza.
+    if respuesta := _sancionado(request):
+        return respuesta
     areas = list(request.user.areas.filter(activa=True))
     if not areas:
         return render(request, "solicitudes/sin_area.html")

@@ -1,0 +1,29 @@
+{% extends "solicitudes/_base.html" %}
+{% block titulo %}Mis sanciones{% endblock %}
+
+{% block hoja %}
+<main class="hoja hoja-historial">
+  {% comment %}
+  US-10 T4. Solo las del usuario conectado: la vista no recibe a quién mirar.
+  {% endcomment %}
+  <h1>Mis sanciones</h1>
+  <p class="sub">
+    Una sanción impide enviar solicitudes nuevas mientras está vigente, hasta las
+    23:59 de su último día. No cancela las reservas que ya estaban aceptadas.
+  </p>
+
+  <h2>Vigente</h2>
+  {% if vigentes %}
+    {% include "solicitudes/_tabla_sanciones.html" with sanciones=vigentes %}
+  {% else %}
+    <div class="aviso" role="status">No tienes sanciones vigentes: puedes solicitar la sala.</div>
+  {% endif %}
+
+  <h2>Anteriores</h2>
+  {% if pasadas %}
+    {% include "solicitudes/_tabla_sanciones.html" with sanciones=pasadas %}
+  {% else %}
+    <div class="aviso" role="status">No tienes sanciones anteriores.</div>
+  {% endif %}
+</main>
+{% endblock %}

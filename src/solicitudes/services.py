@@ -157,6 +157,14 @@ def guardar_solicitud_completa(
     datos_reserva: Dict[str, Any],
 ) -> Solicitud:
     """Crea y persiste una nueva Solicitud, sus SolicitudBloque y Acompanantes de forma atómica."""
+    # US-10 T2: la vista ya no muestra el formulario a quien está sancionado.
+    # Esto es para el POST que llega igual, armado a mano o desde una pestaña
+    # que quedó abierta antes de la sanción.
+    sancion = usuario.sancion_vigente
+    if sancion is not None:
+        raise ValidationError(
+            f"Tienes una sanción vigente hasta el {sancion.hasta}: no puedes enviar solicitudes."
+        )
     with transaction.atomic():
         area = Area.objects.get(id=datos_reserva["area_id"])
         fecha_obj = datos_reserva.get("fecha")
