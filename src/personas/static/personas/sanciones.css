@@ -1,0 +1,21 @@
+/* Pestaña Sanciones (US-10). Solo variables de marca.css (docs/estilo.md). */
+
+.sanciones { padding: .9rem 1.1rem 1.1rem; }
+.sanciones h2 { margin: 0 0 .2rem; font-size: .85rem; }
+.sanciones .detalle { margin: 0 0 .8rem; font-size: .8rem; line-height: 1.45; color: var(--tinta-suave); max-width: 60ch; }
+
+.sanciones table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.sanciones th {
+  text-align: left; font-weight: 500; font-size: .8rem; color: var(--tinta-suave);
+  padding: .3rem .6rem .3rem 0; border-bottom: 1px solid var(--borde);
+}
+.sanciones td { padding: .45rem .6rem .45rem 0; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+.sanciones tr:last-child td { border-bottom: 0; }
+.sanciones .cifra { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.levantar { display: flex; gap: .4rem; margin: 0; }
+.levantar input {
+  min-width: 12rem; flex: 1;
+  border: 1px solid var(--borde); background: var(--superficie); color: var(--tinta);
+  font-family: var(--fuente-texto); font-size: .85rem; padding: .2rem .4rem;
+}

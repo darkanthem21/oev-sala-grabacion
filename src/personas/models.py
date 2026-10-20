@@ -1,6 +1,12 @@
+from datetime import timedelta
+
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser, UserManager
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import F, Q
 from django.utils import timezone
+from django.utils.formats import date_format
 
 
 class Area(models.Model):
@@ -98,3 +104,118 @@ class Usuario(AbstractUser):
     @property
     def esta_bloqueado(self):
         return self.bloqueado_hasta is not None and self.bloqueado_hasta > timezone.now()
+
+    @property
+    def sancion_vigente(self):
+        """US-10: la sanción que hoy le impide pedir, o None.
+
+        Si se pisan dos, la que termina más tarde, porque es la que dice desde
+        cuándo puede volver a pedir. No se guarda en caché: una sanción
+        levantada a media sesión tiene que dejar de contar en la próxima página.
+        """
+        return Sancion.objects.filter(usuario=self).vigentes().order_by("-termino").first()
+
+
+class SancionQuerySet(models.QuerySet):
+    """Vigente y pasada se calculan contra la fecha de hoy en Santiago, así la
+    rehabilitación es automática y no hace falta una tarea que la apague."""
+
+    def vigentes(self, hoy=None):
+        """Las que rigen hoy: empezaron, no terminaron y nadie las levantó. El día
+        de término cuenta entero."""
+        hoy = hoy or timezone.localdate()
+        return self.filter(inicio__lte=hoy, termino__gte=hoy, levantada_en__isnull=True)
+
+    def pasadas(self, hoy=None):
+        """Las que terminaron o se levantaron antes. La más reciente primero."""
+        hoy = hoy or timezone.localdate()
+        return self.filter(Q(termino__lt=hoy) | Q(levantada_en__isnull=False)).order_by("-termino", "-id")
+
+
+class Sancion(models.Model):
+    """Una suspensión temporal del derecho a pedir la sala (US-10).
+
+    Vive en `personas` porque es un dato de la persona (README.md). Solo impide
+    pedir: las reservas que ya estaban aprobadas y las solicitudes en revisión
+    siguen su curso (AC6, decidido el 20/10).
+
+    Las fechas son días completos en la hora de Santiago: rige desde el primer
+    minuto de `inicio` hasta las 23:59 de `termino`. Nunca se borra; levantarla
+    antes de tiempo deja quién, cuándo y por qué, como un bloqueo de la sala.
+    """
+
+    # PROTECT como `Solicitud.solicitante`: el historial de una persona no puede
+    # desaparecer con su cuenta.
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="sanciones",
+        verbose_name="persona sancionada",
+    )
+    motivo = models.CharField(max_length=300)
+    inicio = models.DateField(default=timezone.localdate)
+    termino = models.DateField("término")
+
+    # SET_NULL por lo mismo que en los bloqueos: el registro no puede impedir dar
+    # de baja a un administrador, ni desaparecer con él.
+    creada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="sanciones_puestas",
+    )
+    creada_en = models.DateTimeField(auto_now_add=True)
+    levantada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="sanciones_levantadas",
+    )
+    levantada_en = models.DateTimeField(null=True, blank=True)
+    motivo_levantamiento = models.CharField("motivo del levantamiento", max_length=200, blank=True)
+
+    objects = SancionQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "sanción"
+        verbose_name_plural = "sanciones"
+        ordering = ["-inicio", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(termino__gte=F("inicio")),
+                name="sancion_termina_despues_de_empezar",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.usuario}, {self.periodo}"
+
+    @property
+    def levantada(self):
+        return self.levantada_en is not None
+
+    @property
+    def periodo(self):
+        """Las fechas como las diría una persona: «del 3 al 30 de noviembre»."""
+        dia_y_mes = r"j \d\e F"
+        if self.inicio == self.termino:
+            return "el " + date_format(self.inicio, "l " + dia_y_mes)
+        termino = date_format(self.termino, dia_y_mes)
+        if self.inicio.month == self.termino.month:
+            return f"del {self.inicio.day} al {termino}"
+        return f"del {date_format(self.inicio, dia_y_mes)} al {termino}"
+
+    @property
+    def hasta(self):
+        """Hasta cuándo rige, con la hora: el día de término cuenta entero."""
+        return date_format(self.termino, r"l j \d\e F \d\e Y") + " a las 23:59"
+
+    @property
+    def rehabilita(self):
+        """Desde qué día se puede volver a pedir."""
+        return date_format(self.termino + timedelta(days=1), r"l j \d\e F \d\e Y")
+
+    def clean(self):
+        """Una sanción sin término no se permite (lo exige la columna) y una que
+        empieza en el futuro tampoco: se pone cuando corresponde, no por
+        adelantado (decidido el 20/10)."""
+        if self.inicio is None or self.termino is None:
+            return  # Falta una fecha: eso lo reporta `clean_fields`, no este.
+        if self.inicio > timezone.localdate():
+            raise ValidationError({"inicio": "Una sanción no puede empezar en una fecha futura."})
+        if self.termino < self.inicio:
+            raise ValidationError({"termino": "La sanción tiene que terminar el mismo día que empieza o después."})
