@@ -9,6 +9,7 @@ from personas import views
 from personas.models import Rol
 from solicitudes import views as solicitudes
 from uso import views as uso
+from uso.checkout import views as checkout
 
 urlpatterns = [
     path("", views.panel, name="panel"),
@@ -69,7 +70,9 @@ urlpatterns = [
         name="login_apoyo",
     ),
     path("apoyo/", uso.bloques, name="panel_apoyo"),
-    path("apoyo/checkout/<str:codigo>/", uso.checkout, name="checkout_apoyo"),
+    path("apoyo/checkout/<str:codigo>/", checkout.checkout, name="checkout_apoyo"),
+    path("apoyo/evidencia/<int:pk>/", checkout.foto_integridad, name="foto_integridad"),
+    path("configuracion/checkout/", checkout.editor_checkout, name="panel_checkout"),
     path("configuracion/", RedirectView.as_view(pattern_name="panel_bloques")),
     path("configuracion/bloques/", agenda.bloques, name="panel_bloques"),
     path("configuracion/bloques/editar/", agenda.editar_bloque, name="editar_bloque"),

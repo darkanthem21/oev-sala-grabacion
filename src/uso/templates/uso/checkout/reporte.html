@@ -1,0 +1,69 @@
+{% extends "uso/_base.html" %}
+{% load static %}
+{% block estilos %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'uso/checkout/checkout.css' %}">
+{% endblock %}
+
+{% block seccion %}
+<p><a href="{{ volver }}">‹ Volver a los bloques</a></p>
+
+<h2>Check-out · {{ bloque.fecha|date:"l j \d\e F" }}, <span class="num">{{ bloque.inicio|time:"H:i" }}–{{ bloque.termino|time:"H:i" }}</span></h2>
+<dl class="ficha">
+  <dt>Solicitante</dt><dd>{{ bloque.solicitante }}</dd>
+  <dt>Área</dt><dd>{{ bloque.area }}</dd>
+  <dt>Personas declaradas</dt><dd class="num">{{ bloque.personas }}</dd>
+</dl>
+
+{% if bloque.checkout == "completado" %}
+  {% comment %} US-15 AC4: enviado, ya no se edita. {% endcomment %}
+  <p class="marca completado">Check-out completado</p>
+  {% if registro %}
+    <p>Lo registró {{ registro.registrado_por|default:"Usuario eliminado" }} el {{ registro.registrado_en|date:"j \d\e F \a \l\a\s H:i" }}. Versión {{ registro.revision }}.</p>
+    <p>Hora efectiva de salida: {{ registro.hora_salida|time:"H:i" }}</p>
+    {% for seccion in resumen %}
+      <section class="checkout-seccion">
+        <h3>{{ seccion.titulo }}</h3>
+        {% for pregunta in seccion.preguntas %}
+          <p><strong>{{ pregunta.texto }}</strong> · {% if pregunta.cumple %}Sí{% else %}No{% endif %}</p>
+          {% if not pregunta.cumple %}
+            <p>{{ pregunta.observacion|linebreaksbr }}</p>
+            {% if pregunta.foto %}<p><a href="{% url 'foto_integridad' pregunta.foto.pk %}">Descargar foto de integridad</a></p>{% endif %}
+          {% endif %}
+        {% endfor %}
+      </section>
+    {% endfor %}
+    {% if registro.observaciones %}<p>{{ registro.observaciones|linebreaksbr }}</p>{% endif %}
+  {% endif %}
+{% else %}
+  <p>Responde todas las preguntas. Cada «No» exige una observación de al menos 10 caracteres y una foto de integridad (JPEG, PNG o WebP, máximo 5 MB). El envío queda bloqueado hasta completar estos antecedentes.</p>
+  <form method="post" enctype="multipart/form-data" id="checkout-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}{{ form.revision }}{{ form.revision.errors }}
+    {% for seccion in form.secciones %}
+      <section class="checkout-seccion">
+        <h3>{{ forloop.counter }}. {{ seccion.titulo }}</h3>
+        {% for pregunta in seccion.preguntas %}
+          <fieldset class="checkout-pregunta">
+            <legend>{{ pregunta.respuesta.label }}</legend>
+            {{ pregunta.respuesta.errors }}{{ pregunta.respuesta }}
+            <div class="checkout-evidencia">
+              <p>{{ pregunta.observacion.label_tag }}{{ pregunta.observacion.errors }}{{ pregunta.observacion }}</p>
+              <p>{{ pregunta.foto.label_tag }}{{ pregunta.foto.errors }}{{ pregunta.foto }}</p>
+            </div>
+          </fieldset>
+        {% endfor %}
+      </section>
+    {% endfor %}
+    <section class="checkout-seccion">
+      <h3>Cierre</h3>
+      {{ form.hora_salida.as_field_group }}
+      <p>{{ form.observaciones.as_field_group }}</p>
+    </section>
+    <button class="btn activa" type="submit">Finalizar y enviar reporte</button>
+  </form>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script defer src="{% static 'uso/checkout/reporte.js' %}"></script>
+{% endblock %}

@@ -27,6 +27,8 @@
     </div>
 
     <nav class="pestanas" aria-label="Secciones de la configuración">
+      <a class="pestana {% if pestana == 'checkout' %}activa{% endif %}" href="{% url 'panel_checkout' %}"
+         {% if pestana == "checkout" %}aria-current="page"{% endif %}>Check-out</a>
       <a class="pestana {% if pestana == 'bloques' %}activa{% endif %}" href="{% url 'panel_bloques' %}"
          {% if pestana == "bloques" %}aria-current="page"{% endif %}>Bloques</a>
       <a class="pestana {% if pestana == 'areas' %}activa{% endif %}" href="{% url 'panel_areas' %}"

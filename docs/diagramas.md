@@ -449,6 +449,26 @@ por qué con un `UPDATE` condicionado a que siga vigente.
 
 ![Levantar una sanción](diagramas/us-10/levantar-sancion.png)
 
+### Editar el listado y registrar un check-out (US-20)
+
+El código de esta funcionalidad está agrupado en `src/uso/checkout/`, con sus
+plantillas en `src/uso/templates/uso/checkout/` y los recursos visuales en
+`src/uso/static/uso/checkout/`.
+
+El administrador prepara secciones y preguntas en el editor visual y las publica
+con una revisión. El servidor valida la estructura y bloquea la configuración
+durante la publicación; una edición desactualizada no sobrescribe cambios ajenos.
+
+El check-out usa ese listado y valida en el servidor todas las respuestas, la hora
+de salida y las evidencias: cada **No** exige una observación de al menos 10
+caracteres y una foto válida de hasta 5 MB. Se bloquean el ticket y el listado
+durante el envío para evitar duplicados y comprobar la revisión vigente. Cada
+reporte guarda una copia del listado respondido para conservar el historial.
+
+[Diagrama de secuencia en PlantUML](diagramas/us-20/editar-checkout.puml).
+Este flujo reemplaza el registro simulado de US-14 y conecta las validaciones
+de integridad del prototipo de US-15 con la persistencia del check-out.
+
 ## Estructura
 
 ### Arquitectura

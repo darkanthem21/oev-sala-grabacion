@@ -89,6 +89,7 @@ LANGUAGE_CODE = "es-cl"
 TIME_ZONE = "America/Santiago"
 USE_TZ = True
 STATIC_URL = "static/"
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", str(BASE_DIR / "media")))
 # Estáticos compartidos por todos los módulos; los propios van en <modulo>/static/.
 STATICFILES_DIRS = [BASE_DIR / "static"]
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

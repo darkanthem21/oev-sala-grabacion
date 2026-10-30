@@ -8,6 +8,14 @@ archivos de compose y un `.env`.
 Al arrancar, el contenedor aplica las migraciones y crea el superusuario si no
 existe. No hay pasos manuales de base de datos.
 
+El check-out configurable añade la migración `uso/0001_initial` y requiere Pillow
+(incluido en `requirements.txt`). Fuera de Docker, instalar las dependencias y
+ejecutar `python src/manage.py migrate` antes de iniciar la aplicación.
+Las fotos se guardan en `MEDIA_ROOT` (por defecto `src/media`); Docker monta el
+volumen `checkoutmedia` en `/app/media` para conservarlas al recrear el contenedor.
+Respaldar ese volumen junto con la base. No se necesita publicar una ruta de medios:
+Django entrega las evidencias mediante una vista con control de acceso.
+
 ## Servidor del curso
 
 | Dato | Valor |

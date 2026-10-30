@@ -592,8 +592,9 @@ día actual, o el selector de fecha para saltar a cualquier día.
 El botón **Hacer check-out** aparece recién cuando termina el bloque.
 
 1. Pulsa **Hacer check-out** en la fila del bloque.
-2. Revisa los datos del bloque y pulsa **Registrar check-out (simulado)**.
-3. El sistema vuelve a la lista y el bloque aparece como **Completado**.
+2. Revisa los datos del bloque, responde las preguntas del listado vigente e indica la hora efectiva de salida.
+3. Cada respuesta **No** requiere una observación de al menos 10 caracteres y una foto JPEG, PNG o WebP de hasta 5 MB. Pulsa **Finalizar y enviar reporte**.
+4. El sistema vuelve a la lista y el bloque aparece como **Completado**.
 
 ![Check-out pendiente](uso/us-14/checkout-pendiente.png)
 
@@ -602,14 +603,29 @@ se ve quién lo registró y cuándo.
 
 ![Check-out completado](uso/us-14/checkout-completado.png)
 
-> **Estado actual.** La lista muestra los bloques de las solicitudes aceptadas
-> en el panel del validador. El formulario de check-out con el checklist de la
-> sala llega con US-15; hasta entonces el registro es simulado y solo lo ve
-> quien lo envió.
+El registro queda en la base de datos y lo ve todo el personal de apoyo. Al abrirlo
+se muestran sus preguntas originales, respuestas y evidencias. Las fotos solo se
+descargan con una sesión de apoyo o administración. Las capturas de US-14 de arriba
+corresponden al simulador anterior.
 
-### Checklist de cierre de la sala
+### Administrar el listado de check-out
 
-> **Estado actual.** Esta pantalla es el prototipo de US-15 y todavía no está
+En **Configuración → Check-out** (`/configuracion/checkout/`) el administrador puede
+editar títulos y preguntas, añadir o eliminar secciones y preguntas, y cambiar su
+orden con **Subir** y **Bajar**. Debe conservar al menos una sección con una pregunta.
+
+Los botones de edición preparan los cambios; **Publicar listado** los guarda.
+Todas las preguntas son obligatorias y cada **No** exige observación y foto:
+el editor no permite quitar esa regla. Las preguntas nuevas heredan la validación.
+
+Los reportes completados conservan una copia del listado que se respondió.
+Si el listado cambia mientras alguien responde o edita, el servidor rechaza la
+versión anterior y solicita recargar. Un envío con errores no registra el check-out;
+hay que corregirlo y volver a seleccionar las fotos antes de enviarlo.
+
+### Checklist de cierre de la sala: prototipo anterior
+
+> **Referencia histórica.** Esta pantalla es el prototipo de US-15 y todavía no está
 > en `main`: vive en la rama `feat/us-15-checkout-de-constancia`. Se abre en
 > `/checklist/`, sin iniciar sesión, y muestra siempre la misma reserva de
 > ejemplo (*Sala Virtual, 09:00 - 12:00*). El reporte queda guardado solo en el
