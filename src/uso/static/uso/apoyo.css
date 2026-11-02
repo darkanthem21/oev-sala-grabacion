@@ -27,6 +27,26 @@
 .bloqueos ul { margin: .25rem 0 0; padding-left: 1.1rem; }
 
 a.marca { text-decoration: none; color: var(--tinta); }
+
+/* En el celular cada bloque pasa a ser una ficha, como en Mis solicitudes: en
+ * tabla, la columna de check-out, que es a lo que se viene, quedaba fuera de la
+ * pantalla. Las etiquetas repiten el encabezado, que acá se oculta. */
+@media (max-width: 36rem) {
+  .bloques thead { display: none; }
+  .bloques tr { display: block; padding: .6rem .8rem; border-bottom: 1px solid var(--borde); }
+  .bloques tr:last-child { border-bottom: 0; }
+  .bloques td { display: grid; grid-template-columns: 6rem 1fr; gap: .75rem; align-items: center; padding: .2rem 0; border: 0; }
+  .bloques td > * { justify-self: start; }
+  .bloques td::before { color: var(--tinta-suave); font-size: .75rem; }
+  .bloques td:nth-child(1)::before { content: "Hora"; }
+  .bloques td:nth-child(2)::before { content: "Solicitante"; }
+  .bloques td:nth-child(3)::before { content: "Área"; }
+  .bloques td:nth-child(4)::before { content: "Personas"; }
+  .bloques td:nth-child(5)::before { content: "Estado"; }
+  .bloques td:nth-child(6)::before { content: "Check-out"; }
+  /* Más alto para tocarlo con el dedo. */
+  .bloques .btn { min-height: 2.5rem; }
+}
 .ficha { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1.25rem; margin: 1rem 0 1.5rem; font-size: .9rem; }
 .ficha dt { color: var(--tinta-suave); }
 .ficha dd { margin: 0; }
