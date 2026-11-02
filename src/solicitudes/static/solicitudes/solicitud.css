@@ -556,7 +556,8 @@ a.btn-accion:focus-visible { outline: 2px solid var(--acento); outline-offset: 2
 .estado-aceptada      { border-left-color: var(--exito-suave); }
 .estado-confirmada    { border-left-color: var(--exito); }
 .estado-rechazada,
-.estado-cancelada     { border-left-color: var(--alerta); }
+.estado-cancelada,
+.estado-no-confirmada { border-left-color: var(--alerta); }
 /* La retiró quien la pidió: no es un problema, así que va sin color. */
 .estado-retirada      { border-left-color: var(--borde); color: var(--tinta-suave); }
 
@@ -584,6 +585,9 @@ a.btn-accion:focus-visible { outline: 2px solid var(--acento); outline-offset: 2
 .hoja .btn-confirmar:hover { background: var(--tinta); }
 .hoja .btn-confirmar:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 
+/* Cancelar se ve como Retirar, pero es un enlace a la página que pregunta. */
+.hoja .btn-cancelar { display: block; width: fit-content; margin: .4rem 0 0; text-decoration: none; }
+
 /* En pantallas angostas cada solicitud pasa a ser una ficha. */
 @media (max-width: 36rem) {
   .historial thead { display: none; }
@@ -596,6 +600,8 @@ a.btn-accion:focus-visible { outline: 2px solid var(--acento); outline-offset: 2
   /* Sin esto la etiqueta se estira a todo el ancho de la celda. */
   .historial .estado { justify-self: start; }
   .historial .form-retirar { grid-column: 2; margin: 0; }
+  .historial .btn-cancelar,
+  .historial .pista { grid-column: 2; }
   /* Más alto para tocarlo con el dedo sin acertarle al estado. */
   .hoja .btn-retirar { padding: .6rem 1rem; font-size: .85rem; }
 }
@@ -672,13 +678,17 @@ a.btn-accion:focus-visible { outline: 2px solid var(--acento); outline-offset: 2
 
 
 /* --- US-10: franja de sanción bajo el encabezado --- */
-/* Avisa un impedimento, no un error: precaución y no alerta. */
-.franja-sancion {
+/* Avisa un impedimento, no un error: precaución y no alerta. US-03 AC4 usa la
+ * misma para las reservas por confirmar. */
+.franja-sancion,
+.franja-confirmar {
   border-bottom: 1px solid var(--borde); border-left: 4px solid var(--precaucion);
   background: var(--superficie);
 }
-.franja-sancion p {
+.franja-sancion p,
+.franja-confirmar p {
   max-width: 74rem; margin: 0 auto; padding: .7rem 1.5rem;
   font-size: .88rem; line-height: 1.5;
 }
-.franja-sancion a { color: var(--accion); white-space: nowrap; }
+.franja-sancion a,
+.franja-confirmar a { color: var(--accion); white-space: nowrap; }
