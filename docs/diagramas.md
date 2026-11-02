@@ -292,6 +292,32 @@ rápido: el servidor lo vuelve a revisar.
 
 ![Resolver una solicitud sin tope](diagramas/us-07/resolver-sin-tope.png)
 
+### Consultar el historial de resoluciones (US-11)
+
+«Resueltas hoy» (US-07 AC5) muestra solo el día; el historial muestra todo lo
+que se aprobó o rechazó, de cualquier validador o del administrador.
+`Solicitud.objects.resueltas()` es lo que tiene `resuelta_en`, y ese campo lo
+escriben `resolver()` y `liberar()`, que rechaza a nombre del administrador la
+pendiente que pierde su horario. Las pendientes y las retiradas quedan fuera
+sin preguntar por su estado. Los filtros llegan por GET en
+`HistorialValidacionForm`: la dirección se puede compartir y los enlaces de
+página los repiten. La fecha se compara en America/Santiago
+(`resuelta_en__date`), así una resolución de las 22:30 cuenta para ese día y no
+para el siguiente, como diría UTC. La página se arma con un número fijo de
+consultas, tenga las filas que tenga.
+
+![Consultar el historial](diagramas/us-11/ver-historial.png)
+
+Es la misma vista para el validador y el administrador: `_envoltorio_validacion`
+elige `panel.html`, con la pestaña Validación, o `_base_validador.html`, que
+tienen los mismos bloques. Como Mis solicitudes (US-09), htmx pide solo la tabla
+y el botón Atrás del navegador pide la página entera.
+
+Lo resuelto es de solo lectura también en `/admin/`: `SolicitudAdmin` niega
+cambiar y borrar una solicitud con `resuelta_en`, y lo mismo sus bloques y
+acompañantes, en línea y en sus propias páginas. El borrado en lote pregunta
+fila por fila, así que una resuelta tampoco cae entre otras.
+
 ### Guardar los parámetros del sistema (US-04)
 
 La bitácora de quién cambió qué es el AC4, y es lo que obliga a que el guardado

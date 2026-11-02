@@ -1,9 +1,11 @@
 from django import forms
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.forms import formset_factory
 
 from personas.models import Area
 
+from .models import Solicitud
 from .services import obtener_bloques_dia_para_usuario
 from .wizard import obtener_limites_reserva
 
@@ -206,3 +208,70 @@ AcompananteFormSet = formset_factory(
     max_num=MAXIMO_ACOMPANANTES,
     validate_max=True,
 )
+
+
+class ValidadorChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, usuario):
+        return usuario.get_full_name() or usuario.email
+
+
+class HistorialValidacionForm(forms.Form):
+    """US-11 T3: los filtros del historial de resoluciones.
+
+    Llega por GET, así la dirección con los filtros se puede compartir y la
+    paginación los conserva. Todos son opcionales: sin ninguno se ve todo.
+    """
+
+    DECISIONES = {
+        "aprobada": Solicitud.EstadoValidacion.ACEPTADA,
+        "rechazada": Solicitud.EstadoValidacion.RECHAZADA,
+    }
+
+    desde = forms.DateField(
+        label="Resuelta desde", required=False, input_formats=["%Y-%m-%d"],
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+    )
+    hasta = forms.DateField(
+        label="Hasta", required=False, input_formats=["%Y-%m-%d"],
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+    )
+    # Las inactivas también: su historial sigue ahí (US-05 AC3).
+    area = forms.ModelChoiceField(queryset=Area.objects.all(), label="Área", required=False, empty_label="Todas")
+    decision = forms.ChoiceField(
+        label="Decisión", required=False,
+        choices=[("", "Todas"), ("aprobada", "Aprobada"), ("rechazada", "Rechazada")],
+    )
+    validador = ValidadorChoiceField(queryset=get_user_model().objects.none(), label="Validador",
+                                     required=False, empty_label="Todos")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Solo quien ha resuelto algo: filtrar por alguien más daría siempre vacío.
+        self.fields["validador"].queryset = get_user_model().objects.filter(
+            pk__in=Solicitud.objects.filter(resuelta_por__isnull=False).values("resuelta_por"),
+        ).order_by("first_name", "last_name", "email")
+
+    def clean(self):
+        datos = super().clean()
+        desde, hasta = datos.get("desde"), datos.get("hasta")
+        if desde and hasta and desde > hasta:
+            self.add_error("hasta", "Tiene que ser igual o posterior a «Resuelta desde».")
+        return datos
+
+    def filtrar(self, resoluciones):
+        """Aplica los filtros válidos; uno mal escrito se ignora y el formulario
+        lo marca, en vez de dejar la tabla vacía."""
+        self.is_valid()
+        datos = self.cleaned_data
+        # La fecha de la resolución en America/Santiago, no en UTC.
+        if datos.get("desde"):
+            resoluciones = resoluciones.filter(resuelta_en__date__gte=datos["desde"])
+        if datos.get("hasta"):
+            resoluciones = resoluciones.filter(resuelta_en__date__lte=datos["hasta"])
+        if datos.get("area"):
+            resoluciones = resoluciones.filter(area=datos["area"])
+        if datos.get("decision"):
+            resoluciones = resoluciones.filter(estado_validacion=self.DECISIONES[datos["decision"]])
+        if datos.get("validador"):
+            resoluciones = resoluciones.filter(resuelta_por=datos["validador"])
+        return resoluciones

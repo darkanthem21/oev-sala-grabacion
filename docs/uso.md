@@ -420,6 +420,37 @@ quién se le asignó el bloque. Queda guardado: recargar la página no lo borra.
 
 ![Resueltas hoy](uso/us-07/resueltas.png)
 
+### Historial
+
+**Historial**, arriba del panel, abre todo lo resuelto hasta hoy en
+`/validacion/historial/`, de lo más reciente a lo más antiguo: la solicitud,
+sus bloques, la decisión, el motivo, quién la resolvió y cuándo. Una que perdió
+un tope dice **asignada a #N**, con el número de la que se quedó con el bloque.
+Una aprobada sin tope no lleva motivo y muestra **—**. El administrador lo abre
+desde su pestaña **Validación** y lo ve con las pestañas de su panel.
+
+Para acotar la lista:
+
+1. Elige cualquiera de los filtros: **Resuelta desde**, **Hasta**, **Área**,
+   **Decisión** y **Validador**. **Validador** ofrece solo a quienes han resuelto
+   algo.
+2. Pulsa **Filtrar**. La dirección de la página queda con los filtros: se puede
+   guardar o enviar a otra persona que valide.
+3. **Quitar filtros** vuelve a la lista completa.
+
+![Historial filtrado por rechazadas](uso/us-11/historial.png)
+
+Si **Hasta** es anterior a **Resuelta desde**, el campo lo avisa y esa fecha no
+se aplica. Un clic en **#N** abre la solicitud como se envió (solicitante, área,
+fecha, bloques, motivo, observaciones, personas, acompañantes y cuándo se envió)
+junto con su resolución. **Volver al historial** regresa a la misma página con
+los mismos filtros.
+
+![Detalle de una solicitud resuelta](uso/us-11/detalle.png)
+
+El historial es solo para consultar: desde ahí no se cambia nada, y en `/admin/`
+una solicitud resuelta tampoco se puede editar ni borrar.
+
 | Aviso | Cuándo |
 |---|---|
 | Escribe el motivo del rechazo (mínimo 10 caracteres). | Se rechaza, o se aprueba en un tope, sin motivo o con uno muy corto |

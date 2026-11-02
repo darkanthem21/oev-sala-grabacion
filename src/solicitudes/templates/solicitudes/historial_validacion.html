@@ -1,0 +1,24 @@
+{% extends envoltorio %}
+{% load static %}
+{% comment %}
+  US-11. Una sola página para el validador y el administrador: la vista elige
+  el envoltorio (panel.html o _base_validador.html), que tienen los mismos
+  bloques. Es de solo lectura: no hay ningún formulario que envíe por POST.
+{% endcomment %}
+{% block titulo %}Historial de resoluciones{% endblock %}
+{% block estilos_seccion %}
+  <link rel="stylesheet" href="{% static 'solicitudes/validador.css' %}">
+  <link rel="stylesheet" href="{% static 'solicitudes/historial_validacion.css' %}">
+{% endblock %}
+
+{% block seccion %}
+<div class="cabeza-historial">
+  <div>
+    <h2>Historial de resoluciones</h2>
+    <p class="suave">Lo que aprobaron o rechazaron todos los validadores y el administrador, de lo más reciente a lo más antiguo.</p>
+  </div>
+  <a class="btn" href="{{ panel }}">Volver al panel</a>
+</div>
+
+{% include "solicitudes/_tabla_resoluciones.html" %}
+{% endblock %}

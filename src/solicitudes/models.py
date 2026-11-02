@@ -38,6 +38,16 @@ class SolicitudQuerySet(models.QuerySet):
         confirmar. Sin argumentos para que la plantilla la llame desde el usuario."""
         return self.filter(estado_confirmacion=Solicitud.EstadoConfirmacion.PENDIENTE, fecha__gt=timezone.localdate())
 
+    def resueltas(self):
+        """US-11: lo que alguien aprobó o rechazó, sea validador o administrador.
+
+        `resuelta_en` lo escriben services.resolver y, cuando el administrador
+        saca horario, services.liberar, que rechaza la pendiente a su nombre.
+        Las pendientes y las retiradas quedan fuera. La más reciente primero,
+        con el id de desempate para que la paginación no repita filas.
+        """
+        return self.filter(resuelta_en__isnull=False).order_by("-resuelta_en", "-id")
+
     def con_detalle(self):
         """Con lo que dibuja la tabla: el área y los bloques con su hora, en
         dos consultas para toda la página."""

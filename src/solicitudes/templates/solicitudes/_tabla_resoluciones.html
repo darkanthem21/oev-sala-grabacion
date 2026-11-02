@@ -1,0 +1,107 @@
+{% comment %}
+  US-11. Filtros, tabla y páginas del historial de resoluciones. htmx reemplaza
+  este bloque entero al filtrar o cambiar de página, con los errores del
+  formulario incluidos; sin htmx, el mismo formulario y los mismos enlaces
+  cargan la página completa. Todo va por GET: la dirección se puede compartir.
+{% endcomment %}
+{% url 'historial_validacion' as url_historial %}
+<div id="resoluciones" class="resoluciones">
+  <form class="filtros" method="get" action="{{ url_historial }}"
+        hx-get="{{ url_historial }}" hx-target="#resoluciones" hx-swap="outerHTML"
+        hx-push-url="true" hx-indicator="#resoluciones">
+    {% for campo in filtros %}
+      <div class="filtro{% if campo.errors %} con-error{% endif %}">
+        <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+        {{ campo }}
+        {% for error in campo.errors %}<p class="error">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+    <div class="acciones">
+      <button class="btn activa" type="submit">Filtrar</button>
+      {% if filtrado %}
+        <a class="btn" href="{{ url_historial }}" hx-get="{{ url_historial }}">Quitar filtros</a>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if pagina.object_list %}
+    <div class="marco">
+      <table class="tabla historial-resoluciones">
+        <thead>
+          <tr>
+            <th scope="col">Solicitud</th>
+            <th scope="col">Bloques</th>
+            <th scope="col">Decisión</th>
+            <th scope="col">Motivo</th>
+            <th scope="col">Validador</th>
+            <th scope="col">Resuelta</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in pagina.object_list %}
+            <tr>
+              <td data-titulo="Solicitud">
+                <a href="{% url 'historial_resolucion' s.id %}{% if consulta_completa %}?{{ consulta_completa }}{% endif %}">#{{ s.id }}</a>
+                {{ s.solicitante.get_full_name|default:s.solicitante.email }}<br>
+                <span class="suave">{{ s.area.nombre }} · {{ s.fecha|date:"D d/m/Y"|capfirst }}</span>
+              </td>
+              <td data-titulo="Bloques">
+                <ul class="bloques">
+                  {% for sb in s.solicitudes_bloques.all %}
+                    <li>{{ sb.inicio|time:"H:i" }}–{{ sb.termino|time:"H:i" }}</li>
+                  {% empty %}<li>—</li>{% endfor %}
+                </ul>
+              </td>
+              <td data-titulo="Decisión">
+                {% if s.estado_validacion == "ACEPTADA" %}
+                  <span class="estado aprobada">Aprobada</span>
+                {% else %}
+                  <span class="estado rechazada">Rechazada</span>
+                  {% if s.asignada_a_id %}
+                    <br><span class="suave">asignada a
+                      <a href="{% url 'historial_resolucion' s.asignada_a_id %}{% if consulta_completa %}?{{ consulta_completa }}{% endif %}">#{{ s.asignada_a_id }}</a></span>
+                  {% endif %}
+                {% endif %}
+              </td>
+              {# T6: una aprobada sin rivales no lleva motivo (US-07); se muestra la raya. #}
+              <td data-titulo="Motivo">{{ s.motivo_resolucion|default:"—" }}</td>
+              <td data-titulo="Validador">{{ s.resuelta_por.get_full_name|default:s.resuelta_por.email }}</td>
+              <td data-titulo="Resuelta" class="cifra">
+                <time datetime="{{ s.resuelta_en|date:'c' }}">{{ s.resuelta_en|date:"d/m/Y H:i" }}</time>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if pagina.has_other_pages %}
+      <nav class="paginas" aria-label="Páginas del historial"
+           hx-target="#resoluciones" hx-swap="outerHTML show:#resoluciones:top" hx-push-url="true"
+           hx-indicator="#resoluciones">
+        {% if pagina.has_previous %}
+          <a class="btn" rel="prev" href="{{ url_pagina }}{{ pagina.previous_page_number }}"
+             hx-get="{{ url_pagina }}{{ pagina.previous_page_number }}">&larr; Anterior</a>
+        {% else %}
+          <span class="btn deshabilitado" aria-disabled="true">&larr; Anterior</span>
+        {% endif %}
+
+        <span class="suave" aria-live="polite">
+          Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}
+          · {{ pagina.paginator.count }} resolucion{{ pagina.paginator.count|pluralize:"es" }}
+        </span>
+
+        {% if pagina.has_next %}
+          <a class="btn" rel="next" href="{{ url_pagina }}{{ pagina.next_page_number }}"
+             hx-get="{{ url_pagina }}{{ pagina.next_page_number }}">Siguiente &rarr;</a>
+        {% else %}
+          <span class="btn deshabilitado" aria-disabled="true">Siguiente &rarr;</span>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <p class="vacio" role="status">
+      {% if filtrado %}Ninguna resolución coincide con estos filtros.{% else %}Todavía no se ha resuelto ninguna solicitud.{% endif %}
+    </p>
+  {% endif %}
+</div>

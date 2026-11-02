@@ -16,6 +16,10 @@ urlpatterns = [
     path("solicitar/", include("solicitudes.urls")),
     path("validador/", solicitudes.panel_validador, name="panel_validador"),
     path("validador/resolver/", solicitudes.resolver_solicitud, name="resolver_solicitud"),
+    # US-11: el validador y el administrador comparten historial, así que no
+    # cuelga de /validador/ ni de /configuracion/.
+    path("validacion/historial/", solicitudes.historial_validacion, name="historial_validacion"),
+    path("validacion/historial/<int:solicitud_id>/", solicitudes.resolucion, name="historial_resolucion"),
     # La puerta del solicitante vivió acá; se redirige para no romper enlaces.
     path("login/", RedirectView.as_view(pattern_name="login_solicitante", permanent=True)),
     path("logout/", auth.LogoutView.as_view(next_page="login_solicitante"), name="logout"),
