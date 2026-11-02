@@ -14,7 +14,8 @@
 .marca { display: inline-block; font-size: .75rem; font-weight: 500; padding: .1rem .45rem; border: 1px solid var(--borde); }
 .marca.confirmada, .marca.completado { border-color: var(--exito); }
 .marca.pendiente { border-color: var(--precaucion); }
-.marca.cancelada { border-color: var(--alerta); color: var(--alerta); }
+.marca.cancelada,
+.marca.no-confirmada { border-color: var(--alerta); color: var(--alerta); }
 .cancelada td:not(:nth-child(5)) { text-decoration: line-through; color: var(--tinta-suave); }
 .nada { color: var(--tinta-suave); }
 

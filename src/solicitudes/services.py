@@ -1,8 +1,9 @@
 import calendar
+import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import partial
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from typing import Any, Dict, List, Tuple
 
 from django.core.exceptions import ValidationError
@@ -11,11 +12,14 @@ from django.utils import timezone
 
 from agenda.models import Bloque, disponibilidad, impedimento
 from agenda.signals import Pedido
+from configuracion.models import Parametros
 from notificaciones.services import avisar
 from personas.models import Area
 from django.urls import reverse
 
 from .models import Acompanante, Solicitud, SolicitudBloque
+
+logger = logging.getLogger(__name__)
 
 
 def revisar_acompanantes(formset, esperados: int, correo_solicitante: str) -> Tuple[List[Any], List[str]]:
@@ -369,6 +373,13 @@ def resolver(solicitud_id, aprobar, motivo, quien, url_base=""):
     motivo = (motivo or "").strip()
 
     if aprobar:
+        # Se aprueba hasta el día anterior, porque hasta entonces se confirma
+        # (US-03): aprobada el mismo día, el solicitante ya no podría confirmar.
+        if solicitud.fecha <= timezone.localdate():
+            raise ValidationError(
+                "La reserva es para hoy o ya pasó: ya no se puede aprobar, porque no alcanzaría "
+                "a confirmarse. Recházala."
+            )
         pedidos = list(solicitud.solicitudes_bloques.select_related("bloque"))
         for pedido in pedidos:
             # Quitado, bloqueado (US-17 AC3) o ajeno a la fecha: no se aprueba.
@@ -425,3 +436,101 @@ def confirmar_solicitud(usuario, solicitud_id):
         estado_confirmacion=Solicitud.EstadoConfirmacion.CONFIRMADA,
         actualizado_en=timezone.now(),
     ) == 1
+
+
+def _avisar_cancelacion(solicitud):
+    """AC6: el correo a quien aprobó la reserva, cuando la cancelación se
+    confirma."""
+    validador = solicitud.resuelta_por
+    # Las aceptadas antes de la migración 0004 no guardan quién las aprobó.
+    if validador is None:
+        return
+    solicitante = solicitud.solicitante
+    transaction.on_commit(
+        partial(
+            avisar,
+            validador.email,
+            f"Se canceló la reserva #{solicitud.pk} de la sala de grabación",
+            "notificaciones/cancelacion.txt",
+            {
+                "nombre": validador.get_full_name() or validador.email,
+                "solicitante": solicitante.get_full_name() or solicitante.email,
+                "solicitud": solicitud,
+                "bloques": [
+                    sb.bloque for sb in
+                    solicitud.solicitudes_bloques.select_related("bloque").order_by("bloque__inicio")
+                ],
+            },
+        ),
+        robust=True,
+    )
+
+
+@transaction.atomic
+def cancelar_solicitud(usuario, solicitud_id):
+    """US-03 AC6: quien pidió cancela una reserva aceptada (ver
+    Solicitud.puede_cancelarse). La regla del primer bloque no cabe en un
+    UPDATE condicionado, así que la fila se bloquea y se revisa: si en otra
+    pestaña confirma al mismo tiempo, una de las dos espera a la otra.
+    Devuelve si se canceló."""
+    solicitud = Solicitud.objects.select_for_update().filter(pk=solicitud_id, solicitante=usuario).first()
+    if solicitud is None or not solicitud.puede_cancelarse:
+        return False
+    solicitud.estado_confirmacion = Solicitud.EstadoConfirmacion.CANCELADA
+    solicitud.cancelada_en = timezone.now()
+    solicitud.save(update_fields=["estado_confirmacion", "cancelada_en", "actualizado_en"])
+    _avisar_cancelacion(solicitud)
+    return True
+
+
+def recordar_confirmaciones(url_base):
+    """US-03 AC1 a AC3: un recordatorio por cada reserva aceptada que entró al
+    plazo de confirmación (`plazo_confirmacion_dias` antes de su fecha) sin
+    confirmar, cancelar ni recordatorio previo. La corre la tarea cada hora.
+
+    Se puede repetir: la marca es el paso a PENDIENTE con su
+    `recordatorio_enviado_en`, así que nadie recibe dos. Si la tarea estuvo
+    detenida, al volver avisa las que siguen a tiempo y no las que ya pasaron.
+    La marca va después del correo: si el envío falla, queda sin marca y la
+    vuelta siguiente lo reintenta. Devuelve cuántas avisó.
+    """
+    hoy = timezone.localdate()
+    plazo = Parametros.cargar().plazo_confirmacion_dias
+    por_avisar = Solicitud.objects.filter(
+        estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
+        estado_confirmacion=Solicitud.EstadoConfirmacion.NO_HABILITADA,
+        recordatorio_enviado_en__isnull=True,
+        fecha__gt=hoy,
+        fecha__lte=hoy + timedelta(days=plazo),
+    ).con_detalle().select_related("solicitante")
+
+    avisadas = 0
+    for solicitud in por_avisar:
+        persona = solicitud.solicitante
+        try:
+            avisar(
+                persona.email,
+                f"Confirma tu reserva de la sala de grabación del {solicitud.fecha:%d/%m}",
+                "notificaciones/recordatorio.txt",
+                {
+                    "nombre": persona.get_full_name() or persona.email,
+                    "solicitud": solicitud,
+                    "bloques": [sb.bloque for sb in solicitud.solicitudes_bloques.all()],
+                    "url_confirmar": url_base + reverse("confirmar_solicitud", args=[solicitud.pk]),
+                    "url_cancelar": url_base + reverse("cancelar_solicitud", args=[solicitud.pk]),
+                },
+            )
+        except Exception:
+            logger.exception("No salió el recordatorio de la reserva #%s: se reintenta en la vuelta siguiente.", solicitud.pk)
+            continue
+        # Condicionado, como confirmar: si confirmó o canceló mientras salía el
+        # correo, no se pisa.
+        ahora = timezone.now()
+        avisadas += Solicitud.objects.filter(
+            pk=solicitud.pk, estado_confirmacion=Solicitud.EstadoConfirmacion.NO_HABILITADA,
+        ).update(
+            estado_confirmacion=Solicitud.EstadoConfirmacion.PENDIENTE,
+            recordatorio_enviado_en=ahora,
+            actualizado_en=ahora,
+        )
+    return avisadas

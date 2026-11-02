@@ -31,12 +31,12 @@
       </thead>
       <tbody>
         {% for b in bloques %}
-        <tr class="{% if b.estado == 'cancelada' %}cancelada{% endif %}">
+        <tr class="{% if b.estado == 'cancelada' or b.estado == 'no confirmada' %}cancelada{% endif %}">
           <td class="num">{{ b.inicio|time:"H:i" }}–{{ b.termino|time:"H:i" }}</td>
           <td>{{ b.solicitante }}</td>
           <td>{{ b.area }}</td>
           <td class="num">{{ b.personas }}</td>
-          <td><span class="marca {{ b.estado }}">{{ b.estado|capfirst }}</span>
+          <td><span class="marca {{ b.estado|slugify }}">{{ b.estado|capfirst }}</span>
             {% if b.bloqueo %}<span class="marca bloqueada" title="{{ b.bloqueo.razon }}">Sala bloqueada</span>{% endif %}</td>
           <td>
             {% if b.checkout == "completado" %}<a class="marca completado" href="{% url 'checkout_apoyo' b.ticket %}">Completado</a>

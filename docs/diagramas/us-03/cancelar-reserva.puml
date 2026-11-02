@@ -1,0 +1,89 @@
+@startuml cancelar-reserva
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Cancelar la reserva (US-03)
+
+actor "Solicitante" as S
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>solicitudes.models</b>\n<size:11>solicitudes/models.py</size>\n<size:11>Solicitud</size>" as M <<dominio>>
+participant "<b>notificaciones</b>\n<size:11>notificaciones/services.py</size>" as A <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+== Abrir el enlace ==
+S -> N ++ : $comentario("«Cancelar reserva» en Mis solicitudes o el enlace del recordatorio")\nGET /solicitar/mis-solicitudes/<id>/cancelar/ → cancelar(request, solicitud_id)
+N -> M ++ : $comentario("solo entre las del usuario, con el área y los bloques")\nget_object_or_404(Solicitud.objects.de(request.user).con_detalle(), pk=solicitud_id)
+M -> D ++ : SELECT solicitudes_solicitud ⋈ personas_area
+return fila
+break ajena o inexistente
+  M --> N : Http404
+  N --> S : 404
+end
+M -> D ++ : SELECT solicitudes_solicitudbloque ⋈ agenda_bloque
+return filas
+return solicitud
+N -> N ++ : render(request, "solicitudes/cancelar.html", {"solicitud": solicitud})
+N -> M ++ : solicitud.puede_cancelarse
+M -> M : $comentario("aceptada, sin cancelar y antes de que empiece su primer bloque")\nACEPTADA and estado_confirmacion != CANCELADA and ahora < inicio
+return puede
+N -> M ++ : solicitud.cancelar_cuenta_inasistencia
+M -> M : $comentario("desde el lunes de la semana de la reserva")\nahora >= lunes 00:00
+return cuenta
+return respuesta
+alt puede cancelarse
+  N --> S : 200 · solicitudes/cancelar.html con la reserva, «Sí, cancelar la reserva» y, si cuenta, el aviso de inasistencia
+else ya cancelada o ya empezó
+  N --> S : 200 · solicitudes/cancelar.html con «ya no se puede cancelar: está …» y sin botón
+end
+note right of S
+  La página es la segunda confirmación:
+  abrirla no cancela, lo hace el botón (POST).
+end note
+deactivate N
+
+== Cancelar ==
+S -> N ++ : clic «Sí, cancelar la reserva»\nPOST /solicitar/mis-solicitudes/<id>/cancelar/ → cancelar(request, solicitud_id)
+N -> M ++ : get_object_or_404(Solicitud.objects.de(request.user).con_detalle(), pk=solicitud_id)
+M -> D ++ : SELECT solicitudes_solicitud ⋈ personas_area
+return fila
+M -> D ++ : SELECT solicitudes_solicitudbloque ⋈ agenda_bloque
+return filas
+return solicitud
+N -> V ++ : cancelar_solicitud(request.user, solicitud_id)
+group @transaction.atomic
+  V -> D ++ : $comentario("la fila queda bloqueada hasta el final: confirmar en otra pestaña espera")\nSELECT solicitudes_solicitud WHERE id, solicitante FOR UPDATE
+  return fila
+  V -> M ++ : solicitud.puede_cancelarse
+  M -> D ++ : $comentario("la hora del primer bloque")\nSELECT solicitudes_solicitudbloque, agenda_bloque
+  return filas
+  return puede
+  break ajena, ya cancelada o ya empezó
+    V --> N : False
+    N -> N : messages.error(request, "La reserva #… ya no se puede cancelar.")
+    N --> S : 302 · /solicitar/mis-solicitudes/?vista=proximas
+  end
+  V -> V : estado_confirmacion = CANCELADA; cancelada_en = ahora
+  V -> D ++ : UPDATE solicitudes_solicitud
+  deactivate D
+  V -> V ++ : _avisar_cancelacion(solicitud)
+  V -> D ++ : $comentario("quien la aprobó (resuelta_por) y quien la pidió")\nSELECT personas_usuario
+  return filas
+  opt la aprobó alguien registrado
+    V -> V : $comentario("el correo sale solo si la cancelación quedó guardada")\ntransaction.on_commit(partial(avisar, validador.email, …), robust=True)
+  end
+  deactivate V
+end
+V -> A ++ : avisar(validador.email, asunto, "notificaciones/cancelacion.txt", contexto)
+A -> A : send_mail(asunto, render_to_string(plantilla, contexto), …)
+deactivate A
+V --> N -- : True
+N -> N : messages.success(request, "Cancelaste la reserva #… Su horario queda libre …")
+N --> S : 302 · /solicitar/mis-solicitudes/?vista=proximas
+deactivate N
+note right of D
+  Cancelada, deja de ocupar sus bloques: el
+  calendario vuelve a ofrecerlos y el personal
+  de apoyo la ve «cancelada», sin check-out.
+end note
+@enduml

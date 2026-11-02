@@ -30,6 +30,7 @@ from .forms import (
 )
 from .models import Solicitud
 from .services import (
+    cancelar_solicitud,
     confirmar_solicitud,
     guardar_solicitud_completa,
     obtener_bloques_dia_para_usuario,
@@ -174,6 +175,21 @@ def confirmar(request, solicitud_id):
             messages.error(request, f"La reserva #{solicitud_id} ya no se puede confirmar.")
         return redirect(f"{reverse('mis_solicitudes')}?vista=proximas")
     return render(request, "solicitudes/confirmar.html", {"solicitud": solicitud})
+
+
+@user_passes_test(es_solicitante, login_url="login_solicitante")
+def cancelar(request, solicitud_id):
+    """US-03 AC6: la página del enlace para cancelar, de Mis solicitudes y del
+    recordatorio. Como en confirmar, el GET solo muestra la reserva: su pregunta
+    es la segunda confirmación, y cancela el POST."""
+    solicitud = get_object_or_404(Solicitud.objects.de(request.user).con_detalle(), pk=solicitud_id)
+    if request.method == "POST":
+        if cancelar_solicitud(request.user, solicitud_id):
+            messages.success(request, f"Cancelaste la reserva #{solicitud_id}. Su horario queda libre y la Oficina ya está avisada.")
+        else:
+            messages.error(request, f"La reserva #{solicitud_id} ya no se puede cancelar.")
+        return redirect(f"{reverse('mis_solicitudes')}?vista=proximas")
+    return render(request, "solicitudes/cancelar.html", {"solicitud": solicitud})
 
 
 def calendario(request):
