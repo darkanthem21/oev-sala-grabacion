@@ -585,8 +585,12 @@ a.btn-accion:focus-visible { outline: 2px solid var(--acento); outline-offset: 2
 .hoja .btn-confirmar:hover { background: var(--tinta); }
 .hoja .btn-confirmar:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 
-/* Cancelar se ve como Retirar, pero es un enlace a la página que pregunta. */
-.hoja .btn-cancelar { display: block; width: fit-content; margin: .4rem 0 0; text-decoration: none; }
+/* Cancelar se ve como Retirar, pero es un enlace a la página que pregunta: la
+ * fuente y el peso que Retirar hereda de `.hoja button` van explícitos. */
+.hoja .btn-cancelar {
+  display: block; width: fit-content; margin: .4rem 0 0; text-decoration: none;
+  font-family: var(--fuente-titulo); font-weight: 700;
+}
 
 /* Lo que no se deshace no va en el azul de Confirmar. El naranja da 3.5:1, así
  * que marca el filete y el texto queda en tinta (marca.css). */
