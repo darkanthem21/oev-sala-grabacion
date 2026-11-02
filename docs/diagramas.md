@@ -356,8 +356,9 @@ es un error: se muestra hoy.
 ### Check-out de un bloque terminado (US-14)
 
 El botón solo aparece cuando el bloque terminó y no se canceló, y la vista
-repite esa revisión. El formulario es US-15; mientras tanto, el envío se simula
-y queda en la sesión.
+repite esa revisión. Los diagramas de esta subsección documentan el simulador
+original de US-14; el registro actual se realiza en base de datos mediante el
+[flujo integrado de US-20](#editar-el-listado-y-registrar-un-check-out-us-20).
 
 ![Entrar al check-out](diagramas/us-14/checkout-entrar.png)
 
@@ -367,8 +368,8 @@ Si registra, la vuelta es por redirección, a la lista del día del bloque.
 
 ### Completar el checklist de cierre de la sala (US-15)
 
-Este diagrama es la excepción a la regla de arriba: dibuja el prototipo de la
-rama `feat/us-15-checkout-de-constancia`, que todavía no está en `main`. Ahí,
+Este diagrama es una referencia histórica del prototipo de la
+rama `feat/us-15-checkout-de-constancia`. En ese prototipo,
 `/checklist/` solo entrega la plantilla y todo lo demás corre en
 `static/js/checklist.js`: cuatro pasos de preguntas Sí o No, y un No exige una
 observación de al menos 10 caracteres y una foto de integridad. El último paso
@@ -378,8 +379,8 @@ pide además la hora efectiva de salida.
 
 Ningún paso llama al servidor. La reserva está escrita en la plantilla, el
 reporte queda en el `localStorage` del navegador y de las fotos solo se guarda
-cuáles había. Todavía no reemplaza el check-out simulado de US-14: cuando se
-integre con él, este diagrama se tiene que rehacer.
+cuáles había. Este comportamiento histórico queda reemplazado por el flujo
+integrado de US-20, descrito más abajo y persistido en la base de datos.
 
 ### Bloquear la sala en unas fechas (US-17)
 
@@ -419,6 +420,68 @@ con la misma regla `cubre()` que usa el resto del sistema.
 
 Un sábado o domingo, sin fecha en la dirección, la vista abre la semana que
 viene, porque la rejilla es de lunes a viernes.
+
+### Editar el listado y registrar un check-out (US-20)
+
+El código de esta funcionalidad está agrupado en `src/uso/checkout/`, con sus
+plantillas en `src/uso/templates/uso/checkout/` y los recursos visuales en
+`src/uso/static/uso/checkout/`.
+
+El administrador prepara secciones y preguntas en el editor visual y las publica
+con una revisión interna que no se muestra como número de versión. El servidor valida la estructura y bloquea la configuración
+durante la publicación; una edición desactualizada no sobrescribe cambios ajenos.
+
+El check-out usa ese listado y valida en el servidor todas las respuestas, la hora
+de salida y las evidencias: cada **No** exige una observación de al menos 10
+caracteres y una foto válida de hasta 5 MB. Se bloquean el ticket y el listado
+durante el envío para evitar duplicados y comprobar la revisión vigente. Cada
+reporte guarda una copia del listado respondido para conservar el historial.
+
+Antes del listado se valida asistencia. Si no asistió, se crea un registro sin
+preguntas, fotografías ni hora de salida, y el reporte informa inasistencia en
+vez de afirmar que se revisó la integridad. Si asistió, se aplica la validación
+completa del formulario y sus evidencias.
+
+La pestaña Check-out se sitúa después de Validación. El editor distingue los
+controles de orden, la creación de preguntas dentro de una sección y la creación
+de nuevas secciones. La vista previa abre el borrador sin publicarlo y permite
+probar las validaciones sin guardar reportes ni fotografías.
+
+Cada incumplimiento recopila su observación y foto, sin recomendaciones por
+pregunta. `RespuestaCheckout` permite consultar únicamente `cumple=False`
+mediante `casos_falta_integridad()`. Las observaciones y fotografía final son
+obligatorias en reportes nuevos; las recomendaciones generales del cierre son
+opcionales. La revisión interna previene sobrescrituras y las descargas de
+imágenes requieren sesión autorizada.
+
+El autor puede modificar el registro hasta 10 minutos después de su creación.
+La vista y el servicio comprueban el plazo con bloqueo de fila; abrir el formulario
+antes no permite guardar después del límite. Se conservan el listado original,
+las fotos no reemplazadas y un historial de correcciones. La interfaz muestra
+Editado, autor y fecha. El plazo no se reinicia al modificar.
+
+[Secuencia de asistencia y edición](diagramas/us-20/asistencia-edicion.puml).
+
+Dentro de Configuración → Check-out, Formulario e Historial separan la edición
+del listado de la consulta de registros completados. El historial muestra dos
+meses calendario por fecha de registro, con semanas de lunes a domingo y días
+descendentes. Cada fila indica solicitante, fecha, bloque, autor y si tiene
+incumplimientos. Su PDF incluye el formulario completo y sus evidencias, y exige
+administración y pertenencia a la misma ventana de consulta. La generación es
+en memoria; no se borran registros ni se crea una copia pública del documento.
+
+[Secuencia del historial y PDF](diagramas/us-20/historial-pdf.puml).
+
+La preparación de preguntas y evidencias para pantalla y PDF se comparte en
+`resumen_respuestas()`. La condición de incumplimiento reside en
+`RespuestaCheckoutQuerySet.faltas_integridad()` y los permisos de consulta
+comunes en `puede_consultar()`. La [revisión técnica de US-20](revision-us-20.md)
+detalla las duplicaciones retiradas, las referencias verificadas y los elementos
+de compatibilidad que se conservan.
+
+[Diagrama de secuencia en PlantUML](diagramas/us-20/editar-checkout.puml).
+Este flujo reemplaza el registro simulado de US-14 y conecta las validaciones
+de integridad del prototipo de US-15 con la persistencia del check-out.
 
 ## Estructura
 

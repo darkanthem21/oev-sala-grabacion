@@ -1,0 +1,4 @@
+<nav class="checkout-subpestanas" aria-label="Opciones de Check-out">
+  <a href="{% url 'panel_checkout' %}" {% if checkout_pestana != 'historial' %}class="activa" aria-current="page"{% endif %}>Formulario</a>
+  <a href="{% url 'historial_checkout' %}" {% if checkout_pestana == 'historial' %}class="activa" aria-current="page"{% endif %}>Historial</a>
+</nav>

@@ -8,6 +8,38 @@ archivos de compose y un `.env`.
 Al arrancar, el contenedor aplica las migraciones y crea el superusuario si no
 existe. No hay pasos manuales de base de datos.
 
+El check-out configurable añade las migraciones `uso/0001_initial`,
+`0002_respuestas_y_evidencia_final`, `0003_normalizar_respuestas_existentes`
+y `0004_asistencia_y_edicion_checkout`, y requiere Pillow
+(incluido en `requirements.txt`). Fuera de Docker, instalar las dependencias y
+ejecutar `python src/manage.py migrate` antes de iniciar la aplicación.
+Las fotos se guardan en `MEDIA_ROOT` (por defecto `src/media`); Docker monta el
+volumen `checkoutmedia` en `/app/media` para conservarlas al recrear el contenedor.
+Respaldar ese volumen junto con la base. No se necesita publicar una ruta de medios:
+Django entrega las evidencias mediante una vista con control de acceso.
+La migración `0003` transforma las respuestas históricas guardadas en JSON en
+registros consultables por pregunta y enlaza las fotografías existentes. No
+exige fotografía final a los reportes anteriores ni modifica sus respuestas.
+La vista previa y los ajustes de interfaz posteriores (orden de pestañas,
+controles del editor, ocultación de la revisión y retiro de recomendaciones
+por evidencia) no añaden migraciones. Actualizar el código y los estáticos es
+suficiente en instalaciones que ya aplicaron `0001`, `0002` y `0003`.
+El campo histórico de recomendaciones por pregunta permanece en la base para
+conservar los registros anteriores, pero no se solicita ni se usa en reportes nuevos.
+El paso de asistencia y la ventana de modificación de 10 minutos requieren
+aplicar `0004`: permite una hora de salida vacía en inasistencias, conserva los
+check-outs existentes como asistencias y añade los datos e historial de edición.
+El respaldo debe incluir también las fotografías anteriores referenciadas en
+ese historial, además de las evidencias del reporte vigente.
+El historial administrativo y los PDF requieren además ReportLab (incluido en
+`requirements.txt`), las fuentes locales de `src/uso/checkout/fonts/` con sus
+licencias y la migración `0005_indice_historial_checkout`. Esta migración añade
+el índice para consultar las fechas del historial; no elimina registros.
+Si se usa Docker, reconstruir la imagen al cambiar las dependencias antes de
+levantar el servicio. El PDF se genera en memoria y no requiere un servicio externo
+ni una carpeta nueva de archivos públicos. Para ejecutar también las pruebas de
+PDF, instalar las dependencias de `requirements-dev.txt`.
+
 ## Servidor del curso
 
 | Dato | Valor |

@@ -9,6 +9,7 @@ from personas import views
 from personas.models import Rol
 from solicitudes import views as solicitudes
 from uso import views as uso
+from uso.checkout import views as checkout
 
 urlpatterns = [
     path("", views.panel, name="panel"),
@@ -69,7 +70,15 @@ urlpatterns = [
         name="login_apoyo",
     ),
     path("apoyo/", uso.bloques, name="panel_apoyo"),
-    path("apoyo/checkout/<str:codigo>/", uso.checkout, name="checkout_apoyo"),
+    path("apoyo/checkout/<str:codigo>/", checkout.checkout, name="checkout_apoyo"),
+    path("apoyo/checkout/<str:codigo>/editar/", checkout.editar_checkout, name="editar_checkout"),
+    path("apoyo/checkout/<str:codigo>/integridad/", checkout.reporte_integridad, name="reporte_integridad"),
+    path("apoyo/evidencia/<int:pk>/", checkout.foto_integridad, name="foto_integridad"),
+    path("apoyo/cierre/<int:pk>/foto/", checkout.foto_cierre, name="foto_cierre"),
+    path("configuracion/checkout/", checkout.editor_checkout, name="panel_checkout"),
+    path("configuracion/checkout/historial/", checkout.historial_checkout, name="historial_checkout"),
+    path("configuracion/checkout/historial/<int:pk>/pdf/", checkout.pdf_checkout, name="pdf_checkout"),
+    path("configuracion/checkout/preview/", checkout.preview_checkout, name="preview_checkout"),
     path("configuracion/", RedirectView.as_view(pattern_name="panel_bloques")),
     path("configuracion/bloques/", agenda.bloques, name="panel_bloques"),
     path("configuracion/bloques/editar/", agenda.editar_bloque, name="editar_bloque"),

@@ -1,0 +1,77 @@
+{% extends "uso/_base.html" %}
+{% load static %}
+{% block estilos %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'uso/checkout/checkout.css' %}">
+{% endblock %}
+
+{% block seccion %}
+<p><a href="{{ volver }}">‹ Volver a los bloques</a></p>
+
+<h2>Check-out · {{ bloque.fecha|date:"l j \d\e F" }}, <span class="num">{{ bloque.inicio|time:"H:i" }}–{{ bloque.termino|time:"H:i" }}</span></h2>
+<dl class="ficha">
+  <dt>Solicitante</dt><dd>{{ bloque.solicitante }}</dd>
+  <dt>Área</dt><dd>{{ bloque.area }}</dd>
+  <dt>Personas declaradas</dt><dd class="num">{{ bloque.personas }}</dd>
+</dl>
+
+{% if bloque.checkout == "completado" %}
+  <p class="marca completado">Check-out completado</p>
+  {% if registro.editado_en %}<p class="checkout-editado">Editado por {{ registro.editado_por|default:"Usuario eliminado" }} el {{ registro.editado_en|date:"j \d\e F \a \l\a\s H:i:s" }}.</p>{% endif %}
+  {% if puede_editar %}
+    <p><a class="btn" href="{% url 'editar_checkout' bloque.ticket %}">Modificar check-out</a></p>
+    <p class="checkout-ayuda">Puedes editar hasta las {{ registro.limite_edicion|date:"H:i:s" }}. El plazo es de 10 minutos desde el registro original.</p>
+  {% elif registro.registrado_por_id == user.pk %}
+    <p class="checkout-ayuda">El plazo de 10 minutos para modificar este check-out ha finalizado.</p>
+  {% endif %}
+  <p><a class="btn activa" href="{% url 'reporte_integridad' bloque.ticket %}">Ver reporte de faltas de integridad</a></p>
+  {% if registro %}
+    <p>Lo registró {{ registro.registrado_por|default:"Usuario eliminado" }} el {{ registro.registrado_en|date:"j \d\e F \a \l\a\s H:i" }}.</p>
+    {% if registro.asistio %}
+    <p>Asistencia: asistió.</p>
+    <p>Hora efectiva de salida: {{ registro.hora_salida|time:"H:i" }}</p>
+    {% for seccion in resumen %}
+      <section class="checkout-seccion">
+        <h3>{{ seccion.titulo }}</h3>
+        {% for pregunta in seccion.preguntas %}
+          <p><strong>{{ pregunta.texto }}</strong> · {% if not pregunta.respondida %}Sin respuesta registrada{% elif pregunta.cumple %}Sí{% else %}No{% endif %}</p>
+          {% if pregunta.respondida and not pregunta.cumple %}
+            <p>{{ pregunta.observacion|linebreaksbr }}</p>
+            {% if pregunta.foto %}<p><a href="{% url 'foto_integridad' pregunta.foto.pk %}">Descargar foto de integridad</a></p>{% endif %}
+          {% endif %}
+        {% endfor %}
+      </section>
+    {% endfor %}
+    <section class="checkout-seccion">
+      <h3>Fundamento y evidencia final</h3>
+      {% if registro.observaciones %}<p>{{ registro.observaciones|linebreaksbr }}</p>{% endif %}
+      {% if registro.foto_final %}<p><a href="{% url 'foto_cierre' registro.pk %}">Descargar fotografía final</a></p>{% else %}<p class="checkout-ayuda">Este reporte anterior no tiene fotografía final registrada.</p>{% endif %}
+      {% if registro.recomendaciones %}<p><strong>Recomendaciones:</strong> {{ registro.recomendaciones|linebreaksbr }}</p>{% endif %}
+    </section>
+    {% else %}
+      <p class="checkout-regla">Inasistencia registrada. No se realizó el formulario de revisión de la sala.</p>
+    {% endif %}
+  {% endif %}
+{% else %}
+  {% if mostrar_listado %}
+  <p>Asistencia: asistió. <a href="{% url 'checkout_apoyo' bloque.ticket %}">Cambiar asistencia</a></p>
+  <p>Responde todas las preguntas. Cada «No» exige una observación de al menos 10 caracteres y una foto de integridad (JPEG, PNG o WebP, máximo 5 MB).</p>
+  <form method="post" enctype="multipart/form-data" id="checkout-form">
+    {% csrf_token %}
+    <input type="hidden" name="asistencia" value="si">
+    {{ form.non_field_errors }}{{ form.revision }}{{ form.revision.errors }}
+    {% include "uso/checkout/_listado.html" %}
+    <button class="btn activa" type="submit">Finalizar y enviar reporte</button>
+  </form>
+  {% else %}
+  <form method="post" id="asistencia-form">
+    {% csrf_token %}
+    {% include "uso/checkout/_asistencia.html" %}
+    <button class="btn activa" type="submit" name="accion" value="asistencia" id="continuar-asistencia">Continuar</button>
+  </form>
+  {% endif %}
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script defer src="{% static 'uso/checkout/reporte.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% for seccion in form.secciones %}
+  <section class="checkout-seccion">
+    <h3>{{ forloop.counter }}. {{ seccion.titulo }}</h3>
+    {% for pregunta in seccion.preguntas %}
+      <fieldset class="checkout-pregunta">
+        <legend>{{ pregunta.respuesta.label }}</legend>
+        {{ pregunta.respuesta.errors }}{{ pregunta.respuesta }}
+        <div class="checkout-evidencia">
+          <p>{{ pregunta.observacion.label_tag }}{{ pregunta.observacion.errors }}{{ pregunta.observacion }}</p>
+          {% include "uso/checkout/_fotografia.html" with campo=pregunta.foto %}
+        </div>
+      </fieldset>
+    {% endfor %}
+  </section>
+{% endfor %}
+<section class="checkout-seccion">
+  <h3>Fundamento y evidencia final</h3>
+  <p>Describe el resultado del listado y adjunta una fotografía del estado de entrega. Estos antecedentes quedan asociados al check-out completo.</p>
+  {{ form.hora_salida.as_field_group }}
+  <p>{{ form.observaciones.as_field_group }}</p>
+  {% include "uso/checkout/_fotografia.html" with campo=form.foto_final %}
+  <p>{{ form.recomendaciones.as_field_group }}</p>
+</section>
