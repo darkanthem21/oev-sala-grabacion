@@ -7,7 +7,7 @@ from django.db import models
 from django.db.models import Prefetch
 from django.utils import timezone
 
-from agenda.models import primera_fecha_pedible
+from agenda.models import impedimento, primera_fecha_pedible
 from personas.models import Area
 
 
@@ -338,15 +338,10 @@ class SolicitudBloque(models.Model):
         if not self.pk and self.bloque_id and solicitud and solicitud.fecha:
             fecha = solicitud.fecha
 
-            if not self.bloque.activo:
-                raise ValidationError({
-                    "bloque": f"El bloque #{self.bloque_id} ya no se encuentra activo."
-                })
-
-            if self.bloque.dia != fecha.weekday():
-                raise ValidationError({
-                    "bloque": "El día de la semana no coincide con el turno configurado del bloque."
-                })
+            # Quitado, bloqueado o de otra fecha: lo mismo que mira el validador.
+            razon = impedimento(self.bloque, fecha)
+            if razon is not None:
+                raise ValidationError({"bloque": razon})
 
             ocupados = SolicitudBloque.objects.filter(
                 bloque_id=self.bloque_id,

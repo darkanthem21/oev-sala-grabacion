@@ -17,6 +17,14 @@ class BloqueForm(forms.ModelForm):
         fields = ["inicio", "termino"]
 
 
+class HorasForm(forms.Form):
+    """Las horas de un cambio de horario. El bloque nuevo lo valida
+    `services.cambiar`, después de sacar el viejo, porque antes chocaría con él."""
+
+    inicio = forms.TimeField()
+    termino = forms.TimeField()
+
+
 # US-17 AC1: un bloque, un día completo o un rango de fechas.
 MODOS = [("dia", "Todo el día"), ("bloque", "Un bloque"), ("rango", "Varios días")]
 
@@ -73,7 +81,7 @@ class BloqueoForm(forms.ModelForm):
         # también lo que frena un doble clic en «Bloquear».
         tentativo = Bloqueo(desde=desde, hasta=hasta, bloque=datos.get("bloque"))
         libres = disponibilidad(desde, hasta)
-        if not any(tentativo.cubre(f, b.inicio) for f, bloques in libres.items() for b in bloques):
+        if not any(tentativo.cubre(f, b.inicio, b.pk) for f, bloques in libres.items() for b in bloques):
             ya = next((x for xs in bloqueos_por_fecha(desde, hasta).values() for x in xs), None)
             if ya is None:
                 raise forms.ValidationError(

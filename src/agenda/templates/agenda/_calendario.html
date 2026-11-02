@@ -1,7 +1,7 @@
 {# htmx reemplaza este fragmento entero; Alpine reinicializa solo el x-data nuevo. #}
 <div id="calendario" class="calendario"
      x-data="{
-       elegido: {{ elegido.pk }}, dian: {{ elegido.dian }},
+       elegido: {{ elegido.pk }}, dian: {{ elegido.dian }}, propio: {{ elegido.propio }},
        dia: '{{ elegido.dia }}', ini: '{{ elegido.ini }}', fin: '{{ elegido.fin }}',
        min(t) { const p = t.split(':'); return +p[0] * 60 + +p[1] },
        hora(v) { return String(Math.floor(v / 60)).padStart(2, '0') + ':' + String(v % 60).padStart(2, '0') },
@@ -27,20 +27,28 @@
          if (!(b > a)) return ''
          return `display: block; top: ${this.porcentaje(a)}%; height: ${(b - a) / this.largo * 100}%`
        },
-       nuevoEn(e, dian, dia) {
+       nuevoEn(e, dian, dia, pasado) {
          const i = this.minutoDe(e)
-         this.agregar(dian, dia, this.hora(i), this.hora(Math.min(i + 90, this.desde + this.largo)))
+         this.agregar(dian, dia, this.hora(i), this.hora(Math.min(i + 90, this.desde + this.largo)), pasado)
        },
        /* `dian` también va con un bloque elegido: el editor de bloqueos lo usa
           para ofrecer solo las fechas de ese día de la semana. */
-       elegir(pk, dia, i, f, dian) {
+       elegir(pk, dia, i, f, dian, propio = false, omitido = null, pasado = false) {
          if (this.elegido === pk) { this.cerrar(); return }
          this.elegido = pk; this.dian = dian; this.dia = dia; this.ini = i; this.fin = f; this.bloqueando = false
+         this.propio = propio; this.omitido = omitido; this.semanaPasada(pasado)
        },
-       agregar(dian, dia, i, f) {
+       agregar(dian, dia, i, f, pasado = false) {
          this.elegido = null; this.dian = dian; this.dia = dia; this.ini = i; this.fin = f; this.bloqueando = false
+         this.propio = false; this.omitido = null; this.semanaPasada(pasado)
        },
-       cerrar() { this.elegido = null; this.dian = null; this.bloqueando = false },
+       cerrar() { this.elegido = null; this.dian = null; this.bloqueando = false; this.omitido = null; this.confirmando = '' },
+       /* Jornada por semana. `alcance` dice si el cambio es de todas las semanas o
+          solo de la que se mira; un día que ya pasó solo admite todas. La lista de
+          afectadas que dibujó el servidor es del bloque que estaba abierto: elegir
+          otro la esconde (`confirmando`). */
+       alcance: '{{ alcance }}', confirmando: '{{ confirmando }}', omitido: null, pasado: false,
+       semanaPasada(pasado) { this.pasado = pasado; this.confirmando = ''; if (pasado) this.alcance = 'todas' },
        /* US-17 en la vista semanal: bloquear el bloque elegido en una fecha. */
        bloqueando: false,
 
@@ -241,24 +249,7 @@
                  placeholder="Ej.: Fiestas Patrias, cambio de focos, ceremonia de titulación"></label>
       </div>
 
-      {% comment %}US-17 AC4: la primera vez que un bloqueo le quita la sala a
-      alguien no se guarda, vuelve con esta lista. Al confirmar se devuelven los
-      códigos mostrados, y si ya no son los mismos la lista se vuelve a mostrar.{% endcomment %}
-      {% if afectadas %}
-        <div class="afectadas" role="alert">
-          <p><strong>Este bloqueo deja sin sala {{ afectadas|length }}
-            reserva{{ afectadas|length|pluralize }} aprobada{{ afectadas|length|pluralize }}.</strong>
-            Si lo confirmas, cada solicitante recibirá un correo con el motivo.</p>
-          <ul>
-            {% for r in afectadas %}
-              <li><span class="folio">{{ r.codigo }}</span>
-                {{ r.fecha|date:"D j/m" }}, {{ r.inicio|time:"H:i" }}–{{ r.termino|time:"H:i" }}
-                · {{ r.solicitante }}</li>
-            {% endfor %}
-          </ul>
-          <input type="hidden" name="confirmadas" value="{{ confirmadas }}">
-        </div>
-      {% endif %}
+      {% if afectadas %}{% include "agenda/_afectadas.html" %}{% endif %}
 
       <div class="acciones">
         <button class="btn" type="button" @click="cerrarBq()">Cancelar</button>
@@ -374,13 +365,13 @@
               <span class="dsem">{{ dia.fecha|date:"l"|capfirst }}</span>
               <span class="dnum">{{ dia.fecha.day }}</span>
               <button type="button" class="mas"
-                      @click="agregar({{ dia.numero }}, '{{ dia.fecha|date:"l" }}', '{{ dia.proximo.inicio }}', '{{ dia.proximo.termino }}')"
+                      @click="agregar({{ dia.numero }}, '{{ dia.fecha|date:"l" }}', '{{ dia.proximo.inicio }}', '{{ dia.proximo.termino }}', {{ dia.pasado|yesno:'true,false' }})"
                       aria-label="Agregar un bloque los {{ dia.fecha|date:'l' }}">+</button>
             </div>
             {% comment %}Clic en el hueco crea el bloque a esa hora. `.self` deja fuera
             los clics sobre un bloque existente, que son para editarlo.{% endcomment %}
             <div class="rejilla"
-                 @click.self="nuevoEn($event, {{ dia.numero }}, '{{ dia.fecha|date:"l" }}')"
+                 @click.self="nuevoEn($event, {{ dia.numero }}, '{{ dia.fecha|date:"l" }}', {{ dia.pasado|yesno:'true,false' }})"
                  @mousemove.self="apuntar($event, {{ dia.numero }})"
                  @mouseleave="apunta = null">
               {% comment %}Alpine escribe el atributo style completo, así que `x-show`
@@ -401,13 +392,15 @@
                 <span x-text="ini && fin ? `${ini}–${fin}` : ''"></span>
               </div>
               {% for bloque in dia.bloques %}
-                <button type="button" class="bloque {% if bloque.pk == choca %}choca{% endif %} {% if bloque.pk in dia.bloqueados %}bloqueado{% endif %}"
+                <button type="button" class="bloque {% if bloque.pk == choca %}choca{% endif %} {% if bloque.pk in dia.bloqueados %}bloqueado{% endif %} {% if bloque.fecha %}propio{% endif %} {% if bloque.omitido %}omitido{% endif %}"
                         data-bloque="{{ bloque.pk }}"
                         style="top: {{ bloque.posicion }}%; height: {{ bloque.largo }}%"
-                        {% if bloque.pk in dia.bloqueados %}title="Bloqueado el {{ dia.fecha|date:'j \d\e F' }}: no se puede pedir"{% endif %}
+                        {% if bloque.omitido %}title="Sacado solo el {{ dia.fecha|date:'j \d\e F' }}"
+                        {% elif bloque.fecha %}title="Solo el {{ dia.fecha|date:'j \d\e F' }}"
+                        {% elif bloque.pk in dia.bloqueados %}title="Bloqueado el {{ dia.fecha|date:'j \d\e F' }}: no se puede pedir"{% endif %}
                         :class="elegido === {{ bloque.pk }} ? 'elegido' : ''"
                         :aria-pressed="elegido === {{ bloque.pk }}"
-                        @click="elegir({{ bloque.pk }}, '{{ dia.fecha|date:"l" }}', '{{ bloque.inicio|time:"H:i" }}', '{{ bloque.termino|time:"H:i" }}', {{ dia.numero }})"
+                        @click="elegir({{ bloque.pk }}, '{{ dia.fecha|date:"l" }}', '{{ bloque.inicio|time:"H:i" }}', '{{ bloque.termino|time:"H:i" }}', {{ dia.numero }}, {{ bloque.fecha|yesno:'true,false' }}, {{ bloque.omitido.pk|default:'null' }}, {{ dia.pasado|yesno:'true,false' }})"
                         {% comment %}`mouseleave` de la rejilla no se dispara al entrar
                         a un hijo, así que sin esto el aviso queda congelado al recorrer
                         los bloques.{% endcomment %}
@@ -427,42 +420,79 @@
     </div>
 
     {% comment %}El editor del bloque es un pop-up anclado a él, o al bloque que se
-    está creando, que se sigue dibujando en vivo mientras se ajustan las horas.{% endcomment %}
+    está creando, que se sigue dibujando en vivo mientras se ajustan las horas.
+    Cada cambio vale para las siguientes semanas o solo para la que se mira; uno que ya
+    es de una sola semana no tiene esa elección. Si el cambio le quita la sala a
+    alguien, el servidor vuelve con la lista y se confirma acá mismo.{% endcomment %}
     <form class="flotante" popover="manual" aria-label="Bloque de la jornada"
           x-effect="ini; fin; mostrar($el, abierto && !bloqueando, 'bloque')"
-          {% if error %}x-init="$nextTick(() => sacudir($el))"{% endif %}
+          {% if error or confirmando %}x-init="$nextTick(() => sacudir($el))"{% endif %}
           method="post" action="{% url 'editar_bloque' %}"
           hx-post="{% url 'editar_bloque' %}" hx-target="#calendario" hx-swap="outerHTML">
       {% csrf_token %}
       <input type="hidden" name="bloque" :value="elegido ?? ''">
       <input type="hidden" name="dia" :value="dian ?? ''">
+      <input type="hidden" name="bloqueo" :value="omitido ?? ''">
       <input type="hidden" name="vista" value="{{ vista }}">
       <input type="hidden" name="desde" value="{{ foco|date:'Y-m-d' }}">
 
-      {% comment %}Que vale para todas las semanas va acá, junto a lo que se edita:
-      sin eso, "5 al 9 de octubre" haría creer que cambia solo esos días.{% endcomment %}
-      <p class="que">
-        <span class="titulo-f"><span x-text="elegido === null ? 'Bloque nuevo los' : 'Bloque de los'"></span>
-          <span x-text="dia"></span></span>
-        El horario vale para todas las semanas; un bloqueo, solo para su fecha.
-      </p>
-      {% if error %}<p class="aviso" role="alert">{{ error }}</p>{% endif %}
-
-      <div class="campos">
-        <label>Inicio<input type="time" name="inicio" step="300" x-model="ini" required></label>
-        <label>Término<input type="time" name="termino" step="300" x-model="fin" required></label>
-        <label>Duración<span class="conunidad"><input type="number" min="5" max="600" step="5" x-model="duracion"><span class="unidad">min</span></span></label>
+      {# Uno de la plantilla que esta semana no va: lo único que se hace es reponerlo. #}
+      <div x-show="omitido !== null">
+        <p class="que"><span class="titulo-f">Bloque de los <span x-text="dia"></span></span>
+          Esta semana no va. Las demás semanas sigue en la jornada.</p>
+        <div class="acciones">
+          <button class="btn" type="button" @click="cerrar()">Cancelar</button>
+          <button class="btn activa" type="submit" name="accion" value="reponer_semana"
+                  hx-post="{% url 'editar_bloque' %}" hx-include="closest form"
+                  hx-vals='{"accion": "reponer_semana"}'>Reponer esta semana</button>
+        </div>
       </div>
-      <div class="acciones">
-        <button class="btn peligro" type="submit" name="accion" value="quitar" x-show="elegido !== null"
-                hx-post="{% url 'editar_bloque' %}" hx-include="closest form"
-                hx-vals='{"accion": "quitar"}'>Quitar de la jornada</button>
-        <button class="btn" type="button" x-show="elegido !== null"
-                @click="bloqueando = true">Bloquear una fecha</button>
-        <span class="separa"></span>
-        <button class="btn" type="button" @click="cerrar()">Cancelar</button>
-        <button class="btn activa" type="submit" name="accion" value="guardar"
-                x-text="elegido === null ? 'Agregar el bloque' : 'Guardar el bloque'"></button>
+
+      <div x-show="omitido === null">
+        <p class="que">
+          <span class="titulo-f"><span x-text="elegido === null ? 'Bloque nuevo los' : 'Bloque de los'"></span>
+            <span x-text="dia"></span></span>
+          <span x-text="propio ? 'Es solo de esta semana.'
+                        : alcance === 'semana' ? 'El cambio vale solo para esta semana; las demás siguen igual.'
+                        : 'El cambio vale para las siguientes semanas; un bloqueo, solo para su fecha.'"></span>
+        </p>
+        {% if error %}<p class="aviso" role="alert">{{ error }}</p>{% endif %}
+
+        <fieldset class="opciones" x-show="!propio && !pasado">
+          <legend>Vale para</legend>
+          <label><input type="radio" name="alcance" value="todas" x-model="alcance"> Siguientes semanas</label>
+          <label><input type="radio" name="alcance" value="semana" x-model="alcance"> Solo esta semana</label>
+        </fieldset>
+
+        <div class="campos">
+          <label>Inicio<input type="time" name="inicio" step="300" x-model="ini" required></label>
+          <label>Término<input type="time" name="termino" step="300" x-model="fin" required></label>
+          <label>Duración<span class="conunidad"><input type="number" min="5" max="600" step="5" x-model="duracion"><span class="unidad">min</span></span></label>
+        </div>
+
+        {% if confirmando %}
+          <div x-show="confirmando">
+            {% include "agenda/_afectadas.html" %}
+            <div class="acciones">
+              <button class="btn" type="button" @click="cerrar()">Cancelar</button>
+              <button class="btn activa" type="submit" name="accion" value="{{ confirmando }}"
+                      hx-post="{% url 'editar_bloque' %}" hx-include="closest form"
+                      hx-vals='{"accion": "{{ confirmando }}"}'>{% if confirmando == "quitar" %}Quitar y avisar{% else %}Cambiar y avisar{% endif %}</button>
+            </div>
+          </div>
+        {% endif %}
+        <div class="acciones" x-show="!confirmando">
+          <button class="btn peligro" type="submit" name="accion" value="quitar" x-show="elegido !== null"
+                  hx-post="{% url 'editar_bloque' %}" hx-include="closest form"
+                  hx-vals='{"accion": "quitar"}'
+                  x-text="propio || alcance === 'semana' ? 'Quitar esta semana' : 'Quitar de la jornada'"></button>
+          <button class="btn" type="button" x-show="elegido !== null && !propio"
+                  @click="bloqueando = true">Bloquear una fecha</button>
+          <span class="separa"></span>
+          <button class="btn" type="button" @click="cerrar()">Cancelar</button>
+          <button class="btn activa" type="submit" name="accion" value="guardar"
+                  x-text="elegido === null ? 'Agregar el bloque' : 'Guardar el bloque'"></button>
+        </div>
       </div>
     </form>
 
