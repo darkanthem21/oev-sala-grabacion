@@ -148,6 +148,28 @@ Para restaurar, sobre una base vacía:
 docker exec -i grupo6_db psql -U oev oev < respaldo-AAAA-MM-DD.sql
 ```
 
+### Exportar la estructura
+
+Para revisar las tablas, índices, restricciones y claves foráneas sin los datos,
+`pg_dump -s` exporta solo la estructura. `--no-owner --no-privileges` deja fuera
+los dueños y permisos, para que el archivo sirva en otra máquina.
+
+En el servidor:
+
+```sh
+docker exec grupo6_db pg_dump -U oev -s --no-owner --no-privileges oev > estructura-$(date +%F).sql
+```
+
+En desarrollo, con la base levantada y las migraciones aplicadas:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.desarrollo.yml exec -T db pg_dump -U oev -s --no-owner --no-privileges oev > estructura.sql
+```
+
+Ni el respaldo ni la estructura entran al repositorio (`CONTRIBUTING.md`). Las
+relaciones entre tablas también están dibujadas en `docs/diagramas.md`, en
+**Relaciones de la base de datos**.
+
 ## Solicitudes y panel del validador (US-02 y US-07)
 
 ### Antes de desplegar
@@ -232,6 +254,34 @@ baja la imagen de los dos.
 - Correr una vuelta a mano: `docker exec grupo6_tareas python manage.py recordar_confirmaciones`.
   Repetirla no manda nada nuevo.
 
+## Sanciones (US-10)
+
+### Antes de desplegar
+
+Esta versión trae la migración `personas.0003_sancion`, que crea la tabla de
+sanciones con sus tres claves foráneas a la persona: a quién se sanciona, quién
+la puso y quién la levantó. Hacer el respaldo de la base antes de bajar la
+imagen. No hay variables nuevas en el `.env` ni tareas programadas: la sanción
+deja de regir sola al día siguiente de su término.
+
+### Rutas nuevas
+
+| Ruta | Quién entra |
+|---|---|
+| `/solicitar/mis-sanciones/` | Pestaña **Mis sanciones** del solicitante. Cuentas del grupo **Solicitante** |
+| `/configuracion/sanciones/` | Pestaña **Sanciones** del administrador, para levantarlas. Cuentas con `is_staff` |
+| `/admin/personas/sancion/` | Crear y acortar sanciones. Solo el superusuario |
+
+### Verificar después de desplegar
+
+- En `/admin/` > **Personas › Sanciones**, crear una sanción de un día para una
+  cuenta de prueba.
+- Entrar con esa cuenta por `/solicitante/entrar/`: en vez del formulario sale
+  **No puedes solicitar por ahora**, y la franja de aviso aparece en **Mis
+  solicitudes**.
+- Levantarla en `/configuracion/sanciones/` con un motivo y ver que la cuenta
+  vuelve a ver el formulario.
+
 ## Áreas académicas (US-05)
 
 ### Antes de desplegar
@@ -251,6 +301,16 @@ bajar la imagen. No hay variables nuevas en el `.env`.
 Las áreas no vienen cargadas. En la pestaña **Áreas**, crear **Educación
 Continua Online** y **Decanatura** (minuta del 27/10) y desactivar las que ya no
 correspondan. Un solicitante sin un área activa no puede pedir la sala.
+
+## Diagramas de la documentación
+
+`docs/` no viaja en la imagen (`.dockerignore`), así que los diagramas no se
+despliegan: se compilan en la máquina de quien los cambia y se commitean con su
+fuente. Todos incluyen `docs/diagramas/estilo.iuml`, que fija la resolución, las
+fuentes y el color de cada capa. Para compilarlos hacen falta PlantUML y las
+fuentes **Noto Sans** y **JetBrainsMono NF** instaladas. El detalle está en
+`docs/diagramas.md`, en
+[Cómo se dibujan y se compilan](diagramas.md#cómo-se-dibujan-y-se-compilan).
 
 ## Problemas conocidos
 

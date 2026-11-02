@@ -37,6 +37,8 @@ note right of V
   y vigentes() ya no la cuenta. Las reservas no cambian,
   porque la sanción nunca las tocó (AC6).
 end note
+N -> D ++ : $comentario("sancion.usuario, para el nombre del aviso: refresh_from_db() soltó la relación")\nSELECT personas_usuario
+return fila
 N -> N : messages.success(request, "Levantaste la sanción de …. Ya puede solicitar la sala.")
 N --> A : 302 · /configuracion/sanciones/ con el aviso flotante
 deactivate N
