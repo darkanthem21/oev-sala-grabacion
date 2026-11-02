@@ -25,7 +25,11 @@
 
 /* --- Agenda y panel lado a lado --- */
 .con-panel { display: grid; grid-template-columns: minmax(0, 1fr) 22rem; gap: 1.25rem; align-items: start; }
-.izq { min-width: 0; }
+/* El mínimo de la grilla entera (calendario.css) es el de Configuración; acá, con
+ * el panel al lado, metía el viernes debajo del panel en un notebook. Cada
+ * columna conserva su propio mínimo, y si ni así cabe, la agenda se desplaza. */
+.izq { min-width: 0; overflow-x: auto; }
+.validacion .semana { min-width: 0; }
 .lado {
   position: sticky; top: 1rem; display: flex; flex-direction: column;
   max-height: calc(100vh - 2rem); overflow: auto;
