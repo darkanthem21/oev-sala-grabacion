@@ -1,0 +1,57 @@
+@startuml guardar-area
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Crear o editar un área (US-05)
+
+actor "Administrador" as A
+participant "<b>personas.views</b>\n<size:11>personas/views.py</size>" as N <<presentación>>
+participant "<b>personas.forms</b>\n<size:11>personas/forms.py</size>\n<size:11>AreaForm</size>" as F <<presentación>>
+participant "<b>personas.services</b>\n<size:11>personas/services.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : $comentario("«Crear el área» en Nueva área, o «Guardar» en Editar")\nPOST /configuracion/areas/ (accion=crear | editar) → areas(request)
+opt editar
+  N -> D ++ : $comentario("get_object_or_404(Area, pk=request.POST['area'])")\nSELECT personas_area
+  return fila
+end
+N -> F ++ : AreaForm(request.POST, instance=area)
+return formulario
+N -> F ++ : formulario.is_valid()
+F -> F : $comentario("el ModelForm recorta los espacios")\nnombre = "Decanatura"
+F -> D ++ : $comentario("clean_nombre: otra con el mismo nombre, sin distinguir mayúsculas")\nSELECT personas_area WHERE nombre ILIKE … AND id <> instance.pk
+return filas
+opt ya existe
+  F -> F : ValidationError("Ya existe un área con ese nombre.")
+end
+return valido
+break no es válido
+  N -> N : messages.error(request, "Ya existe un área con ese nombre. No se guardó nada.")
+  N --> A : 302 · /configuracion/areas/
+end
+break no cambió nada
+  N -> N : messages.info(request, "No había nada que cambiar.")
+  N --> A : 302 · /configuracion/areas/
+end
+N -> V ++ : guardar_area(formulario, request.user)
+group @transaction.atomic
+  V -> V : $comentario("campo por campo, solo lo que changed_data dice que cambió")\ncambios = cambios_de_area(form)
+  V -> F ++ : form.save()
+  F -> D ++ : INSERT personas_area (crear) o UPDATE personas_area (editar)
+  deactivate D
+  return area
+  V -> V ++ : registrar_cambios(area, cambios, quien)
+  V -> D ++ : $comentario("una fila por campo: de vacío a su valor si es nueva")\nINSERT personas_cambioarea
+  deactivate D
+  deactivate V
+end
+return area
+note right of V
+  Atómico: un área cambiada sin su
+  registro es lo que AC6 pide evitar.
+  /admin/ usa el mismo registro.
+end note
+N -> N : messages.success(request, "Creaste el área «…»." o "Guardaste «…».")
+N --> A : 302 · /configuracion/areas/
+deactivate N
+@enduml
