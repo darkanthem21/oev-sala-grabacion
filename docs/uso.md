@@ -222,7 +222,7 @@ estado. Se muestran de a 20; si hay más, abajo aparecen **Anterior** y
 | **Pendiente de confirmación** | Ya te llegó el recordatorio. Aparecen la fecha límite, **Confirmar asistencia** y **Cancelar reserva** |
 | **Confirmada** | Confirmaste que vas a usar la sala. Todavía se puede **Cancelar reserva** |
 | **Rechazada** | La Oficina la rechazó. Debajo va el motivo que escribió |
-| **Cancelada** | La cancelaste después de aceptada. Si fue en la semana de la reserva, dice que cuenta como inasistencia |
+| **Cancelada** | Se canceló después de aceptada: la cancelaste tú o la Oficina le quitó el horario, con un correo que dice por qué. Si la cancelaste en la semana de la reserva, dice que cuenta como inasistencia |
 | **No confirmada (inasistencia)** | Llegó su día sin confirmar: el horario se liberó y queda como inasistencia |
 | **Retirada** | La retiraste antes de que la Oficina la revisara |
 
