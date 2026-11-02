@@ -235,6 +235,7 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
 .afectadas p { margin: 0 0 .35rem; }
 .afectadas ul { margin: 0; padding-left: 1.1rem; }
 .afectadas .folio { font-variant-numeric: tabular-nums; font-weight: 500; }
+.afectadas .grupo { margin: .5rem 0 .2rem; font-weight: 500; }
 
 /* AC6. El registro se abre en un diálogo desde la barra. */
 .historial { max-height: 60vh; overflow: auto; margin-bottom: 1rem; }
@@ -279,5 +280,9 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
  * vista mensual. Sigue siendo clicable: la jornada se edita igual. */
 .semana { --rayado-bloqueo: repeating-linear-gradient(135deg, var(--alerta-suave) 0 4px, var(--superficie) 4px 11px); }
 .bloque.bloqueado { background: var(--rayado-bloqueo); border-color: var(--alerta); }
+/* Jornada por semana: uno que es solo de esta semana lleva el filete de acento;
+ * uno de la plantilla que esta semana no va queda punteado y apagado. */
+.bloque.propio { border-left-color: var(--acento); }
+.bloque.omitido { border-style: dashed; background: transparent; color: var(--tinta-suave); }
 .columna.bloqueada .rejilla { background: var(--rayado-bloqueo); }
 .mini .btn.ico { min-width: 1.6rem; width: 1.6rem; height: 1.6rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
