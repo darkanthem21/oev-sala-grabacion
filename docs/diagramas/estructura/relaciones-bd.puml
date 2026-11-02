@@ -1,0 +1,281 @@
+@startuml relaciones-bd
+!include ../estilo.iuml
+' Generado por generar_relaciones.sh desde la base de desarrollo: no editar a mano.
+hide circle
+hide empty members
+left to right direction
+title Relaciones de la base de datos
+
+package "personas" {
+  entity "personas_area" as personas_area {
+    * <b>id</b> : bigint
+    --
+    * nombre : varchar(120)
+    * prioridad : smallint
+    * activa : boolean
+    * nota : text
+  }
+  entity "personas_cambioarea" as personas_cambioarea {
+    * <b>id</b> : bigint
+    --
+    * campo : varchar(50)
+    * antes : text
+    * despues : text
+    * cuando : timestamptz
+    * area_id : bigint → personas_area
+    quien_id : bigint → personas_usuario
+  }
+  entity "personas_sancion" as personas_sancion {
+    * <b>id</b> : bigint
+    --
+    * motivo : varchar(300)
+    * inicio : date
+    * termino : date
+    * creada_en : timestamptz
+    levantada_en : timestamptz
+    * motivo_levantamiento : varchar(200)
+    creada_por_id : bigint → personas_usuario
+    levantada_por_id : bigint → personas_usuario
+    * usuario_id : bigint → personas_usuario
+  }
+  entity "personas_usuario" as personas_usuario {
+    * <b>id</b> : bigint
+    --
+    * password : varchar(128)
+    last_login : timestamptz
+    * is_superuser : boolean
+    * first_name : varchar(150)
+    * last_name : varchar(150)
+    * is_staff : boolean
+    * is_active : boolean
+    * date_joined : timestamptz
+    * email : varchar(254)
+    * intentos_fallidos : smallint
+    bloqueado_hasta : timestamptz
+  }
+  entity "personas_usuario_areas" as personas_usuario_areas {
+    * <b>id</b> : bigint
+    --
+    * usuario_id : bigint → personas_usuario
+    * area_id : bigint → personas_area
+  }
+  entity "personas_usuario_groups" as personas_usuario_groups {
+    * <b>id</b> : bigint
+    --
+    * usuario_id : bigint → personas_usuario
+    * group_id : integer → auth_group
+  }
+  entity "personas_usuario_user_permissions" as personas_usuario_user_permissions {
+    * <b>id</b> : bigint
+    --
+    * usuario_id : bigint → personas_usuario
+    * permission_id : integer → auth_permission
+  }
+}
+
+package "agenda" {
+  entity "agenda_bloque" as agenda_bloque {
+    * <b>id</b> : bigint
+    --
+    * dia : smallint
+    * inicio : time
+    * termino : time
+    * activo : boolean
+    fecha : date
+  }
+  entity "agenda_bloqueo" as agenda_bloqueo {
+    * <b>id</b> : bigint
+    --
+    * desde : date
+    * hasta : date
+    * motivo : varchar(10)
+    * detalle : varchar(120)
+    * bloqueado_en : timestamptz
+    levantado_en : timestamptz
+    * motivo_levantamiento : varchar(200)
+    bloque_id : bigint → agenda_bloque
+    bloqueado_por_id : bigint → personas_usuario
+    levantado_por_id : bigint → personas_usuario
+  }
+}
+
+package "solicitudes" {
+  entity "solicitudes_acompanante" as solicitudes_acompanante {
+    * <b>id</b> : bigint
+    --
+    * nombre : varchar(120)
+    * correo : varchar(254)
+    * solicitud_id : bigint → solicitudes_solicitud
+  }
+  entity "solicitudes_solicitud" as solicitudes_solicitud {
+    * <b>id</b> : bigint
+    --
+    * motivo : varchar(300)
+    * observaciones : text
+    * personas : smallint
+    * estado_validacion : varchar(20)
+    * estado_confirmacion : varchar(20)
+    * creado_en : timestamptz
+    * actualizado_en : timestamptz
+    * area_id : bigint → personas_area
+    * solicitante_id : bigint → personas_usuario
+    * fecha : date
+    * motivo_resolucion : text
+    resuelta_en : timestamptz
+    resuelta_por_id : bigint → personas_usuario
+    asignada_a_id : bigint → solicitudes_solicitud
+    cancelada_en : timestamptz
+    recordatorio_enviado_en : timestamptz
+  }
+  entity "solicitudes_solicitudbloque" as solicitudes_solicitudbloque {
+    * <b>id</b> : bigint
+    --
+    * bloque_id : bigint → agenda_bloque
+    * solicitud_id : bigint → solicitudes_solicitud
+  }
+}
+
+package "uso" {
+  entity "uso_checkout" as uso_checkout {
+    * <b>id</b> : bigint
+    --
+    * formulario : jsonb
+    * revision : integer
+    * respuestas : jsonb
+    * hora_salida : time
+    * observaciones : text
+    * registrado_en : timestamptz
+    registrado_por_id : bigint → personas_usuario
+    * ticket_id : bigint → solicitudes_solicitudbloque
+  }
+  entity "uso_formulariocheckout" as uso_formulariocheckout {
+    * <b>id</b> : bigint
+    --
+    * secciones : jsonb
+    * revision : integer
+    * actualizado_en : timestamptz
+    actualizado_por_id : bigint → personas_usuario
+  }
+  entity "uso_fotointegridad" as uso_fotointegridad {
+    * <b>id</b> : bigint
+    --
+    * pregunta : varchar(64)
+    * archivo : varchar(100)
+    * checkout_id : bigint → uso_checkout
+  }
+}
+
+package "configuracion" {
+  entity "configuracion_cambioparametro" as configuracion_cambioparametro {
+    * <b>id</b> : bigint
+    --
+    * campo : varchar(50)
+    * antes : text
+    * despues : text
+    * cuando : timestamptz
+    quien_id : bigint → personas_usuario
+  }
+  entity "configuracion_parametros" as configuracion_parametros {
+    * <b>id</b> : bigint
+    --
+    * pedir_dia : smallint
+    * pedir_hora : time
+    * plazo_confirmacion_dias : smallint
+    * tope_mensual : smallint
+    * max_bloques_solicitud : smallint
+    * inasistencias_para_sancion : smallint
+    * dias_sancion : smallint
+    * intentos_maximos : smallint
+    * minutos_bloqueo : smallint
+    * terminos : text
+    * semanas_desfase : smallint
+  }
+}
+
+package "Django (auth, admin, sesiones)" {
+  entity "auth_group" as auth_group {
+    * <b>id</b> : integer
+    --
+    * name : varchar(150)
+  }
+  entity "auth_group_permissions" as auth_group_permissions {
+    * <b>id</b> : bigint
+    --
+    * group_id : integer → auth_group
+    * permission_id : integer → auth_permission
+  }
+  entity "auth_permission" as auth_permission {
+    * <b>id</b> : integer
+    --
+    * name : varchar(255)
+    * content_type_id : integer → django_content_type
+    * codename : varchar(100)
+  }
+  entity "django_admin_log" as django_admin_log {
+    * <b>id</b> : integer
+    --
+    * action_time : timestamptz
+    object_id : text
+    * object_repr : varchar(200)
+    * action_flag : smallint
+    * change_message : text
+    content_type_id : integer → django_content_type
+    * user_id : bigint → personas_usuario
+  }
+  entity "django_content_type" as django_content_type {
+    * <b>id</b> : integer
+    --
+    * app_label : varchar(100)
+    * model : varchar(100)
+  }
+  entity "django_migrations" as django_migrations {
+    * <b>id</b> : bigint
+    --
+    * app : varchar(255)
+    * name : varchar(255)
+    * applied : timestamptz
+  }
+  entity "django_session" as django_session {
+    * <b>session_key</b> : varchar(40)
+    --
+    * session_data : text
+    * expire_date : timestamptz
+  }
+}
+
+agenda_bloque |o--o{ agenda_bloqueo : bloque_id
+personas_usuario |o--o{ agenda_bloqueo : bloqueado_por_id
+personas_usuario |o--o{ agenda_bloqueo : levantado_por_id
+auth_group ||--o{ auth_group_permissions : group_id
+auth_permission ||--o{ auth_group_permissions : permission_id
+django_content_type ||--o{ auth_permission : content_type_id
+personas_usuario |o--o{ configuracion_cambioparametro : quien_id
+django_content_type |o--o{ django_admin_log : content_type_id
+personas_usuario ||--o{ django_admin_log : user_id
+personas_area ||--o{ personas_cambioarea : area_id
+personas_usuario |o--o{ personas_cambioarea : quien_id
+personas_usuario |o--o{ personas_sancion : creada_por_id
+personas_usuario |o--o{ personas_sancion : levantada_por_id
+personas_usuario ||--o{ personas_sancion : usuario_id
+personas_area ||--o{ personas_usuario_areas : area_id
+personas_usuario ||--o{ personas_usuario_areas : usuario_id
+auth_group ||--o{ personas_usuario_groups : group_id
+personas_usuario ||--o{ personas_usuario_groups : usuario_id
+auth_permission ||--o{ personas_usuario_user_permissions : permission_id
+personas_usuario ||--o{ personas_usuario_user_permissions : usuario_id
+solicitudes_solicitud ||--o{ solicitudes_acompanante : solicitud_id
+personas_area ||--o{ solicitudes_solicitud : area_id
+solicitudes_solicitud |o--o{ solicitudes_solicitud : asignada_a_id
+personas_usuario |o--o{ solicitudes_solicitud : resuelta_por_id
+personas_usuario ||--o{ solicitudes_solicitud : solicitante_id
+agenda_bloque ||--o{ solicitudes_solicitudbloque : bloque_id
+solicitudes_solicitud ||--o{ solicitudes_solicitudbloque : solicitud_id
+personas_usuario |o--o{ uso_checkout : registrado_por_id
+solicitudes_solicitudbloque ||--o| uso_checkout : ticket_id
+personas_usuario |o--o{ uso_formulariocheckout : actualizado_por_id
+uso_checkout ||--o{ uso_fotointegridad : checkout_id
+
+legend right
+  <b>negrita</b>: clave primaria · <b>*</b>: NOT NULL · <b>→</b>: clave foránea
+endlegend
+@enduml

@@ -1,5 +1,78 @@
 # Diagramas
 
+## Cómo se dibujan y se compilan
+
+Cada diagrama es un archivo PlantUML (`.puml`) en `docs/diagramas/<historia>/`,
+con su imagen (`.png`) al lado y el mismo nombre. Este documento muestra la
+imagen; el `.puml` es la fuente y se edita a mano, salvo el de relaciones de la
+base, que lo escribe un script (ver [Relaciones de la base de datos](#relaciones-de-la-base-de-datos)).
+
+### El estilo común: `estilo.iuml`
+
+Todos empiezan con `!include ../estilo.iuml`, así se ven iguales y nadie repite
+el estilo en cada archivo. `docs/diagramas/estilo.iuml` define:
+
+| Qué | Cómo |
+|---|---|
+| Resolución | `skinparam dpi 200`, para que el texto se lea al ampliar |
+| Fuentes | **Noto Sans** para todo y **JetBrainsMono NF** para el código de las flechas y los encabezados de `alt`, `opt` y `loop` |
+| Color por capa | Los estereotipos `<<presentación>>` (azul), `<<dominio>>` (morado) y `<<persistencia>>` (verde) colorean al participante. `hide stereotype` los oculta: se ve el color, no la palabra |
+| Comentarios | `$comentario("texto")` antepone `# texto` en gris a una línea de código larga, separado con `\n` |
+| Lo demás | Sin sombras, mensajes alineados a la izquierda, retornos bajo la flecha y notas en amarillo claro |
+
+Un diagrama de secuencia nuevo parte así:
+
+```plantuml
+@startuml nombre-del-archivo
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Lo que hace el escenario (US-XX)
+
+actor "Solicitante" as S
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+S -> N ++ : GET /ruta/ → vista(request)
+N -> D ++ : $comentario("qué busca, en palabras")\nSELECT tabla
+return fila
+N --> S : 200 · app/plantilla.html
+deactivate N
+@enduml
+```
+
+El nombre después de `@startuml` es el del archivo, sin extensión: PlantUML lo
+usa para nombrar la imagen.
+
+### Compilar las imágenes
+
+Se necesita PlantUML y las dos fuentes de `estilo.iuml` instaladas. PlantUML las
+busca por el nombre de familia exacto, `Noto Sans` y `JetBrainsMono NF`: si no
+las encuentra usa otras, sin avisar, y la imagen sale distinta a las demás. En
+macOS:
+
+```sh
+brew install plantuml
+brew install --cask font-noto-sans font-jetbrains-mono-nerd-font
+```
+
+Las Nerd Fonts actuales instalan la familia como `JetBrainsMono Nerd Font`. Si
+en el Catálogo Tipográfico no aparece `JetBrainsMono NF`, el código de las
+flechas sale con otra fuente monoespaciada: hay que instalar una versión que
+traiga ese nombre antes de compilar.
+
+Desde la raíz del repositorio, la imagen queda al lado de su `.puml`:
+
+```sh
+plantuml -tpng docs/diagramas/us-10/*.puml
+```
+
+`!include ../estilo.iuml` es relativo al `.puml`, así que funciona desde
+cualquier carpeta. Se commitean juntos el `.puml` y su `.png`. Un `.puml`
+cambiado con su `.png` viejo deja la documentación diciendo otra cosa que el
+código.
+
 ## Comportamiento
 
 Hay un diagrama de secuencia por escenario de cada historia. Están dibujados
@@ -542,3 +615,38 @@ saber qué reservas pierde un bloqueo le pregunta por la señal
 `reservas_aprobadas` (ver Bloquear la sala en unas fechas). Las FK a
 `personas_usuario` desde `agenda` y `configuracion` no se dibujan, porque se
 escriben como texto (`settings.AUTH_USER_MODEL`) y no importan el modelo.
+
+### Relaciones de la base de datos
+
+Todas las tablas del esquema `public`, agrupadas por la app que las crea, con
+sus columnas y una línea por clave foránea, rotulada con la columna que la
+guarda. Las de Django (`auth_*`, `django_*`) también van, porque `personas_usuario`
+se une a ellas por los grupos y los permisos. Este sí muestra las FK a
+`personas_usuario` que el de arquitectura no dibuja.
+
+![Relaciones de la base de datos](diagramas/estructura/relaciones-bd.png)
+
+| Marca | Qué dice |
+|---|---|
+| Nombre en negrita | La clave primaria |
+| `*` antes de la columna | `NOT NULL` |
+| `→ tabla` después del tipo | Clave foránea hacia esa tabla |
+| Dos rayas junto a la tabla referenciada | La FK es obligatoria. Con una raya y un círculo, puede quedar vacía |
+| Pata de gallo junto a la otra tabla | Muchas filas pueden apuntar a la misma. Con una raya y un círculo, a lo más una: la columna es única, como el check-out de cada bloque reservado |
+
+El `.puml` no se escribe a mano: lo genera
+`docs/diagramas/estructura/generar_relaciones.sh` leyendo la base de desarrollo.
+Cuando una historia agrega o cambia una migración, se corre el script con la
+base al día y se compila la imagen como las demás:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.desarrollo.yml up -d db
+docker compose -f docker-compose.yml -f docker-compose.desarrollo.yml run --rm web python manage.py migrate
+docs/diagramas/estructura/generar_relaciones.sh
+plantuml -tpng docs/diagramas/estructura/relaciones-bd.puml
+```
+
+El diagrama muestra la base y no los modelos: lo que Django valida y la base no
+(como que una sanción no empiece en el futuro) no aparece. Las reglas que sí
+están en la base, como `sancion_termina_despues_de_empezar`, se ven en la
+estructura exportada (ver "Exportar la estructura" en `docs/despliegue.md`).
