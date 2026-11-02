@@ -258,6 +258,8 @@ function panelValidador(datos, validador, urlResolver) {
   <h2 class="periodo" x-text="periodo"></h2>
   <div class="mandos">
     <button type="button" class="btn" data-abre="resueltas" x-text="'Resueltas (' + resueltas.length + ')'"></button>
+    {# US-11: lo resuelto de todos los días. Una sola vista para el validador y el administrador. #}
+    <a class="btn" href="{% url 'historial_validacion' %}">Historial</a>
     <div class="grupo">
       <button type="button" class="btn ico" :disabled="semana === 0" @click="semana--" aria-label="Semana anterior">&larr;</button>
       <button type="button" class="btn" @click="semana = 0">Hoy</button>

@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.cache import patch_vary_headers
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_safe
 
 from agenda.models import Bloqueo, primera_fecha_pedible
 from configuracion.models import Parametros
@@ -23,6 +23,7 @@ from .forms import (
     MAXIMO_PERSONAS,
     AcompananteFormSet,
     FechaReservaForm,
+    HistorialValidacionForm,
     SeleccionAreaForm,
     SeleccionHorarioForm,
     SolicitudForm,
@@ -92,6 +93,81 @@ def resolver_solicitud(request):
     except ValidationError as error:
         return JsonResponse({"error": " ".join(error.messages)}, status=400)
     return JsonResponse({"ok": True})
+
+
+RESOLUCIONES_POR_PAGINA = 20
+
+
+def _envoltorio_validacion(usuario):
+    """El administrador ve el historial dentro de su pestaña Validación; el
+    validador, con el encabezado de su panel. Con los dos roles manda el de
+    administrador, como en destino_tras_login."""
+    if usuario.is_staff:
+        return {"envoltorio": "panel.html", "pestana": "validacion", "panel": reverse("panel_validacion")}
+    return {"envoltorio": "solicitudes/_base_validador.html", "panel": reverse("panel_validador")}
+
+
+@user_passes_test(puede_validar, login_url="login_validacion")
+@require_safe
+def historial_validacion(request):
+    """US-11: lo que aprobaron o rechazaron todos los validadores y el
+    administrador, filtrado por GET y de RESOLUCIONES_POR_PAGINA por página.
+
+    Es solo lectura (T5): solo responde a GET, y no hay nada que enviar por POST.
+    """
+    filtros = HistorialValidacionForm(request.GET)
+    resoluciones = (
+        filtros.filtrar(Solicitud.objects.resueltas())
+        .con_detalle()
+        .select_related("solicitante", "resuelta_por")
+    )
+    # Los filtros con la página al final y vacía: los enlaces de página los
+    # repiten, y filtrar de nuevo vuelve a la primera.
+    consulta = request.GET.copy()
+    consulta.pop("pagina", None)
+    consulta["pagina"] = ""
+    contexto = {
+        **_envoltorio_validacion(request.user),
+        "filtros": filtros,
+        "filtrado": any(v for k, v in consulta.items() if k != "pagina"),
+        # Los enlaces de página le agregan el número al final.
+        "url_pagina": f"{reverse('historial_validacion')}?{consulta.urlencode()}",
+        # El detalle vuelve a esta misma página con estos mismos filtros.
+        "consulta_completa": request.GET.urlencode(),
+        "pagina": Paginator(resoluciones, RESOLUCIONES_POR_PAGINA).get_page(request.GET.get("pagina")),
+    }
+    # Igual que Mis solicitudes: htmx pide solo la tabla, salvo al restaurar
+    # el historial del navegador.
+    if request.headers.get("HX-Request") and not request.headers.get("HX-History-Restore-Request"):
+        respuesta = render(request, "solicitudes/_tabla_resoluciones.html", contexto)
+    else:
+        respuesta = render(request, "solicitudes/historial_validacion.html", contexto)
+    patch_vary_headers(respuesta, ["HX-Request"])
+    return respuesta
+
+
+@user_passes_test(puede_validar, login_url="login_validacion")
+@require_safe
+def resolucion(request, solicitud_id):
+    """US-11 T4: la solicitud tal como se envió, junto a su resolución. Solo de
+    las resueltas, igual que el historial."""
+    solicitud = get_object_or_404(
+        Solicitud.objects.resueltas().con_detalle()
+        .select_related("solicitante", "resuelta_por", "asignada_a__solicitante")
+        .prefetch_related("acompanantes"),
+        pk=solicitud_id,
+    )
+    # Lo que llega por GET son los filtros del historial, y solo se usan para
+    # volver a él: el destino es siempre esta misma ruta.
+    volver = reverse("historial_validacion")
+    if request.GET:
+        volver += f"?{request.GET.urlencode()}"
+    return render(request, "solicitudes/resolucion.html", {
+        **_envoltorio_validacion(request.user),
+        "solicitud": solicitud,
+        "volver": volver,
+        "consulta_completa": request.GET.urlencode(),
+    })
 
 
 SOLICITUDES_POR_PAGINA = 20
