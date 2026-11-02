@@ -1,0 +1,47 @@
+{% extends "solicitudes/_base.html" %}
+{% block titulo %}Cancelar reserva{% endblock %}
+
+{% block hoja %}
+<main class="hoja">
+  {% comment %}
+  US-03 AC6. Es la página del enlace de Mis solicitudes y del recordatorio.
+  Mostrarla no cancela: su pregunta es la segunda confirmación, y cancela el
+  botón (POST).
+  {% endcomment %}
+  <h1>Cancelar reserva</h1>
+
+  {% if solicitud.puede_cancelarse %}
+    <p class="sub">¿Seguro que no vas a usar la sala en esta reserva? Su horario queda libre y le avisamos a la Oficina. No se puede deshacer.</p>
+    {% if solicitud.cancelar_cuenta_inasistencia %}
+      <div class="aviso" role="status">
+        Ya es la semana de la reserva: si la cancelas ahora, queda registrada como <strong>inasistencia</strong>.
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="aviso" role="status">
+      La reserva <strong>#{{ solicitud.id }}</strong> ya no se puede cancelar: está
+      {{ solicitud.estado_general|lower }}.
+    </div>
+  {% endif %}
+
+  <dl class="ficha">
+    <dt>Reserva</dt><dd>#{{ solicitud.id }}</dd>
+    <dt>Fecha</dt><dd><strong>{{ solicitud.fecha|date:"l d/m/Y"|capfirst }}</strong></dd>
+    <dt>Horario</dt>
+    <dd><strong>{% for sb in solicitud.solicitudes_bloques.all %}{{ sb.inicio|time:"H:i" }} – {{ sb.termino|time:"H:i" }}{% if not forloop.last %}, {% endif %}{% endfor %}</strong></dd>
+    <dt>Área académica</dt><dd>{{ solicitud.area }}</dd>
+    <dt>Motivo</dt><dd>{{ solicitud.motivo }}</dd>
+    <dt>Estado</dt><dd>{{ solicitud.estado_general }}</dd>
+  </dl>
+
+  <div class="acciones-paso">
+    <a href="{% url 'mis_solicitudes' %}?vista=proximas" class="btn-secundario"><span>Volver a mis solicitudes</span></a>
+    {% if solicitud.puede_cancelarse %}
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="peligro">Sí, cancelar la reserva</button>
+      </form>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

@@ -5,12 +5,11 @@ espera el componente de Alpine (`_validacion.html`), así la plantilla no sabe
 de modelos. La agenda es la Jornada semanal de Configuración: cada día con sus
 propios bloques, y las solicitudes dentro de ellos.
 """
-from collections import defaultdict
 from datetime import timedelta
 
 from django.utils import timezone
 
-from agenda.models import JORNADA_MINIMA, Bloque, bloqueos_por_fecha
+from agenda.models import JORNADA_MINIMA, Bloque, bloqueos_por_fecha, disponibilidad
 from personas.models import Area
 
 from .models import Solicitud
@@ -24,22 +23,14 @@ def _nombre(usuario):
     return usuario.get_full_name() or usuario.email
 
 
-def _bloqueos(bloques, desde, hasta):
-    """US-17 AC2 y AC3: qué bloques están bloqueados en qué fecha, con la razón.
-
-    Pregunta por la hora del bloque (`Bloqueo.cubre`), igual que al aprobar, así
-    un bloqueo de día entero alcanza a todos los de esa fecha.
-    """
-    por_dia = defaultdict(list)
-    for bloque in bloques:
-        por_dia[bloque.dia].append(bloque)
-    marcados = []
-    for fecha, del_dia in bloqueos_por_fecha(desde, hasta).items():
-        for bloque in por_dia[fecha.weekday()]:
-            bloqueo = next((b for b in del_dia if b.cubre(fecha, bloque.inicio)), None)
-            if bloqueo is not None:
-                marcados.append({"fecha": f"{fecha:%Y-%m-%d}", "bloque": bloque.pk, "razon": bloqueo.razon})
-    return marcados
+def _dias_bloqueados(desde, hasta):
+    """Las fechas bloqueadas enteras, con su razón: la cabecera de esa columna
+    lo dice, para que no parezca un día sin jornada (US-17)."""
+    return {
+        f"{fecha:%Y-%m-%d}": entero.razon
+        for fecha, bloqueos in bloqueos_por_fecha(desde, hasta).items()
+        if (entero := next((b for b in bloqueos if b.bloque_id is None), None))
+    }
 
 
 def cargar(hoy=None):
@@ -47,10 +38,10 @@ def cargar(hoy=None):
     lo resuelto hoy (AC5).
 
     Las semanas van de la actual a la última con pendientes. Un tope es la misma
-    fecha y el mismo bloque, por id y no por hora, porque cada día tiene su
-    jornada. Van también los bloques quitados: una solicitud puede apuntar a uno
-    que el administrador sacó después, y la pantalla lo dibuja solo si esa fecha
-    tiene algo. Una pendiente sin bloques no se muestra: no hay nada que resolver.
+    fecha y el mismo bloque, por id y no por hora, porque cada fecha tiene su
+    jornada. Lo quitado o bloqueado no se dibuja: al sacarlo, sus pendientes se
+    rechazaron y sus aprobadas se cancelaron. Una pendiente sin bloques no se
+    muestra: no hay nada que resolver.
     """
     hoy = hoy or timezone.localdate()
     # Sábado y domingo no tienen jornada: la agenda parte en la semana que viene.
@@ -82,14 +73,20 @@ def cargar(hoy=None):
         .select_related("solicitante", "resuelta_por", "asignada_a__solicitante")
         .order_by("resuelta_en", "id")
     )
-    bloques = list(Bloque.objects.order_by("dia", "inicio"))
+    # Lo que se puede pedir cada fecha, como lo ve el asistente: sin lo quitado
+    # ni lo bloqueado, con lo que es solo de esa semana.
+    libres = disponibilidad(primera, hasta)
     return {
         "ventana": list(JORNADA_MINIMA),
         "semanas": [f"{lunes:%Y-%m-%d}" for lunes in semanas],
+        "dias": {f"{fecha:%Y-%m-%d}": [b.pk for b in bloques] for fecha, bloques in libres.items()},
+        "dias_bloqueados": _dias_bloqueados(primera, hasta),
+        # Todos, también los quitados: las resueltas de hoy pueden apuntar a uno.
+        # ponytail: crece con cada bloque que se agrega o mueve; filtrar por los
+        # que se nombran si algún día pesa.
         "bloques": [
-            {"id": b.pk, "dia": b.dia, "inicio": f"{b.inicio:%H:%M}", "termino": f"{b.termino:%H:%M}",
-             "activo": b.activo}
-            for b in bloques
+            {"id": b.pk, "inicio": f"{b.inicio:%H:%M}", "termino": f"{b.termino:%H:%M}"}
+            for b in Bloque.objects.all()
         ],
         "areas": [
             {"id": a.pk, "nombre": a.nombre, "prioridad": a.prioridad, "nota": a.nota} for a in Area.objects.all()
@@ -114,7 +111,6 @@ def cargar(hoy=None):
              "bloques": [sb.bloque_id for sb in s.solicitudes_bloques.all()]}
             for s in reservadas
         ],
-        "bloqueos": _bloqueos(bloques, primera, hasta),
         # AC5: lo resuelto hoy por cualquiera que valide, con la forma que usa
         # la pantalla para lo que se resuelve en la sesión.
         "resueltas": [

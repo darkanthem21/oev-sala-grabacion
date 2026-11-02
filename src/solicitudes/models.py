@@ -1,3 +1,5 @@
+from datetime import datetime, time, timedelta
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -5,7 +7,7 @@ from django.db import models
 from django.db.models import Prefetch
 from django.utils import timezone
 
-from agenda.models import primera_fecha_pedible
+from agenda.models import impedimento, primera_fecha_pedible
 from personas.models import Area
 
 
@@ -30,6 +32,11 @@ class SolicitudQuerySet(models.QuerySet):
     def anteriores(self, hoy):
         """Las de días que ya pasaron. La más reciente primero."""
         return self.filter(fecha__lt=hoy).order_by("-fecha", "-id")
+
+    def por_confirmar(self):
+        """US-03 AC4: las que ya recibieron el recordatorio y todavía se pueden
+        confirmar. Sin argumentos para que la plantilla la llame desde el usuario."""
+        return self.filter(estado_confirmacion=Solicitud.EstadoConfirmacion.PENDIENTE, fecha__gt=timezone.localdate())
 
     def con_detalle(self):
         """Con lo que dibuja la tabla: el área y los bloques con su hora, en
@@ -97,6 +104,12 @@ class Solicitud(models.Model):
         default=EstadoConfirmacion.NO_HABILITADA,
         verbose_name="estado de confirmación",
     )
+    # US-03 AC1: cuándo salió el recordatorio. Lo escribe solo la tarea, junto
+    # con el paso a PENDIENTE; responde un reclamo de "nunca me avisaron".
+    recordatorio_enviado_en = models.DateTimeField(null=True, blank=True, verbose_name="recordatorio enviado el")
+    # US-03 AC6: cuándo la canceló quien la pidió. Decide si la cancelación
+    # cuenta como inasistencia (ver cancelar_cuenta_inasistencia).
+    cancelada_en = models.DateTimeField(null=True, blank=True, verbose_name="cancelada el")
     # US-07 AC5: quién resolvió, cuándo y por qué. Los escribe solo
     # services.resolver; en /admin/ son de solo lectura.
     motivo_resolucion = models.TextField(blank=True, verbose_name="motivo de la resolución")
@@ -153,6 +166,7 @@ class Solicitud(models.Model):
         "confirmada": "Confirmada",
         "cancelada": "Cancelada",
         "por-confirmar": "Pendiente de confirmación",
+        "no-confirmada": "No confirmada (inasistencia)",
         "aceptada": "Aceptada",
     }
 
@@ -169,6 +183,10 @@ class Solicitud(models.Model):
             return "confirmada"
         if self.estado_confirmacion == self.EstadoConfirmacion.CANCELADA:
             return "cancelada"
+        # US-03: llegó su día sin confirmar. Se calcula, nadie cambia la fila:
+        # el bloque ya no se espera y queda como inasistencia.
+        if self.fecha <= timezone.localdate():
+            return "no-confirmada"
         if self.estado_confirmacion == self.EstadoConfirmacion.PENDIENTE:
             return "por-confirmar"
         return "aceptada"
@@ -187,6 +205,42 @@ class Solicitud(models.Model):
             and self.estado_confirmacion in (self.EstadoConfirmacion.NO_HABILITADA, self.EstadoConfirmacion.PENDIENTE)
             and self.fecha > timezone.localdate()
         )
+
+    @property
+    def confirmar_hasta(self):
+        """US-03: el último día para confirmar, el anterior a la reserva."""
+        return self.fecha - timedelta(days=1)
+
+    @property
+    def inicio(self):
+        """Cuándo empieza su primer bloque, con fecha y zona horaria."""
+        primero = min((sb.bloque.inicio for sb in self.solicitudes_bloques.all()), default=time.min)
+        return timezone.make_aware(datetime.combine(self.fecha, primero))
+
+    @property
+    def puede_cancelarse(self):
+        """US-03 AC6: aceptada, confirmada o no, hasta que empieza su primer
+        bloque (ver services.cancelar_solicitud)."""
+        return (
+            self.estado_validacion == self.EstadoValidacion.ACEPTADA
+            and self.estado_confirmacion != self.EstadoConfirmacion.CANCELADA
+            and timezone.now() < self.inicio
+        )
+
+    @property
+    def lunes(self):
+        """El lunes de la semana de la reserva: desde ahí su horario está comprometido."""
+        return self.fecha - timedelta(days=self.fecha.weekday())
+
+    @property
+    def cancelar_cuenta_inasistencia(self):
+        """US-03 AC6: desde el lunes de la semana de la reserva, cancelar cuenta
+        como inasistencia; antes, no, confirmada o no. Sin cancelar, responde
+        por cancelar ahora; cancelada, por cuándo se canceló (sin esa fecha, no
+        cuenta)."""
+        cancelada = self.estado_confirmacion == self.EstadoConfirmacion.CANCELADA
+        cuando = self.cancelada_en if cancelada else timezone.now()
+        return cuando is not None and cuando >= timezone.make_aware(datetime.combine(self.lunes, time.min))
 
     @property
     def estado_general(self):
@@ -284,15 +338,10 @@ class SolicitudBloque(models.Model):
         if not self.pk and self.bloque_id and solicitud and solicitud.fecha:
             fecha = solicitud.fecha
 
-            if not self.bloque.activo:
-                raise ValidationError({
-                    "bloque": f"El bloque #{self.bloque_id} ya no se encuentra activo."
-                })
-
-            if self.bloque.dia != fecha.weekday():
-                raise ValidationError({
-                    "bloque": "El día de la semana no coincide con el turno configurado del bloque."
-                })
+            # Quitado, bloqueado o de otra fecha: lo mismo que mira el validador.
+            razon = impedimento(self.bloque, fecha)
+            if razon is not None:
+                raise ValidationError({"bloque": razon})
 
             ocupados = SolicitudBloque.objects.filter(
                 bloque_id=self.bloque_id,

@@ -27,6 +27,14 @@ ESTADOS = {
 }
 
 
+def _estado(solicitud):
+    # US-03: la que llegó a su día sin confirmar tampoco se espera. Lo calcula
+    # estado_clave por la fecha; la fila sigue aceptada.
+    if solicitud.estado_clave == "no-confirmada":
+        return "no confirmada"
+    return ESTADOS[solicitud.estado_confirmacion]
+
+
 def _tickets(**filtro):
     filas = SolicitudBloque.objects.filter(
         solicitud__estado_validacion=Solicitud.EstadoValidacion.ACEPTADA, **filtro
@@ -34,13 +42,14 @@ def _tickets(**filtro):
     return [
         {
             "ticket": f.ticket,
+            "bloque_id": f.bloque_id,
             "fecha": f.fecha,
             "inicio": f.inicio,
             "termino": f.termino,
             "solicitante": f.solicitud.solicitante.get_full_name() or f.solicitud.solicitante.email,
             "area": f.solicitud.area.nombre,
             "personas": f.solicitud.personas,
-            "estado": ESTADOS[f.solicitud.estado_confirmacion],
+            "estado": _estado(f.solicitud),
         }
         for f in filas
     ]
@@ -50,13 +59,13 @@ def _armar(t, enviados, ahora):
     """El ticket con su estado de check-out resuelto (AC6).
 
     `checkout` es "completado", "pendiente" si el bloque ya terminó y le falta, o
-    None si todavía no termina o se canceló: en esos dos casos no hay nada que
-    revisar en la sala.
+    None si todavía no termina, se canceló o no se confirmó: en esos casos no
+    hay nada que revisar en la sala.
     """
     termino_en = timezone.make_aware(datetime.combine(t["fecha"], t["termino"]))
     if t["ticket"] in enviados:
         checkout = "completado"
-    elif t["estado"] != "cancelada" and termino_en <= ahora:
+    elif t["estado"] not in ("cancelada", "no confirmada") and termino_en <= ahora:
         checkout = "pendiente"
     else:
         checkout = None
@@ -76,7 +85,7 @@ def bloques_del_dia(fecha, enviados=None, ahora=None):
     bloqueos = bloqueos_por_fecha(fecha, fecha).get(fecha, [])
     bloques = [_armar(t, enviados, ahora) for t in _tickets(solicitud__fecha=fecha)]
     for bloque in bloques:
-        bloque["bloqueo"] = next((b for b in bloqueos if b.cubre(fecha, bloque["inicio"])), None)
+        bloque["bloqueo"] = next((b for b in bloqueos if b.cubre(fecha, bloque["inicio"], bloque["bloque_id"])), None)
     # AC1: en el orden en que van a llegar.
     return sorted(bloques, key=lambda b: b["inicio"])
 

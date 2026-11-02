@@ -32,6 +32,7 @@ class CheckoutTests(TestCase):
         self.solicitud = Solicitud.objects.create(
             solicitante=self.persona, area=Area.objects.create(nombre="Pruebas"),
             fecha=date(2020, 1, 6), motivo="Grabación", estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
+            estado_confirmacion=Solicitud.EstadoConfirmacion.CONFIRMADA,
         )
         bloque = Bloque.objects.create(dia=0, inicio=time(9), termino=time(10))
         self.ticket = SolicitudBloque.objects.create(solicitud=self.solicitud, bloque=bloque)

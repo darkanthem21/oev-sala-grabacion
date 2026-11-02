@@ -1,0 +1,27 @@
+{% comment %}US-17 AC4 y jornada por semana: quienes pierden el horario si se
+confirma. La primera vez no se guarda nada; al confirmar se devuelven los
+códigos mostrados y, si cambiaron, la lista se vuelve a mostrar.{% endcomment %}
+<div class="afectadas" role="alert">
+  <p><strong>Esto deja sin sala a lo que ya se pidió.</strong> Si lo confirmas, las
+    pendientes se rechazan, las aprobadas se cancelan y a cada persona le llega un
+    correo con el motivo.</p>
+  {% if se_rechazan %}
+    <p class="grupo">Se rechazan</p>
+    <ul>
+      {% for r in se_rechazan %}
+        <li><span class="folio">{{ r.codigo }}</span> {{ r.fecha|date:"D j/m" }},
+          {{ r.inicio|time:"H:i" }}–{{ r.termino|time:"H:i" }} · {{ r.solicitante }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if se_cancelan %}
+    <p class="grupo">Se cancelan</p>
+    <ul>
+      {% for r in se_cancelan %}
+        <li><span class="folio">{{ r.codigo }}</span> {{ r.fecha|date:"D j/m" }},
+          {{ r.inicio|time:"H:i" }}–{{ r.termino|time:"H:i" }} · {{ r.solicitante }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  <input type="hidden" name="confirmadas" value="{{ confirmadas }}">
+</div>

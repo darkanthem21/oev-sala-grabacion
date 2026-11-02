@@ -1,20 +1,25 @@
 import calendar
+import logging
+from collections import defaultdict
 from dataclasses import dataclass
 from functools import partial
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from typing import Any, Dict, List, Tuple
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from agenda.models import Bloque, bloqueo_de, disponibilidad
-from agenda.signals import Reserva
+from agenda.models import Bloque, disponibilidad, impedimento
+from agenda.signals import Pedido
+from configuracion.models import Parametros
 from notificaciones.services import avisar
 from personas.models import Area
 from django.urls import reverse
 
 from .models import Acompanante, Solicitud, SolicitudBloque
+
+logger = logging.getLogger(__name__)
 
 
 def revisar_acompanantes(formset, esperados: int, correo_solicitante: str) -> Tuple[List[Any], List[str]]:
@@ -185,7 +190,9 @@ def guardar_solicitud_completa(
         solicitud.save()
 
         bloques_ids = datos_reserva.get("bloques_ids", [])
-        bloques_db = Bloque.objects.filter(id__in=bloques_ids, activo=True)
+        # Si un bloque ya no se puede pedir esa fecha, lo dice el full_clean de
+        # cada SolicitudBloque (`impedimento`).
+        bloques_db = Bloque.objects.filter(id__in=bloques_ids)
         if len(bloques_db) != len(bloques_ids):
             raise ValidationError("Uno o más bloques seleccionados no son válidos o ya no están activos.")
 
@@ -226,26 +233,77 @@ def retirar_solicitud(usuario, solicitud_id: int) -> bool:
     ) == 1
 
 
-def reservas_aprobadas(sender, desde, hasta, **kwargs):
-    """US-17 AC4: las reservas aceptadas y no canceladas de esas fechas, para que
-    agenda sepa a quién le quita la sala un bloqueo. Se conecta en `apps.py`."""
+def pedidos_vivos(sender, desde, hasta=None, bloque=None, **kwargs):
+    """Los bloques que piden las solicitudes pendientes y las aprobadas sin
+    cancelar desde `desde`, para que agenda sepa a quién le quita la sala cuando
+    saca horario. Se conecta en `apps.py`."""
     filas = SolicitudBloque.objects.filter(
-        solicitud__fecha__range=(desde, hasta),
-        solicitud__estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
+        solicitud__fecha__gte=desde,
+        solicitud__estado_validacion__in=[
+            Solicitud.EstadoValidacion.PENDIENTE, Solicitud.EstadoValidacion.ACEPTADA,
+        ],
     ).exclude(
         solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA,
     ).select_related("bloque", "solicitud__solicitante")
+    if hasta is not None:
+        filas = filas.filter(solicitud__fecha__lte=hasta)
+    if bloque is not None:
+        filas = filas.filter(bloque_id=bloque)
     return [
-        Reserva(
+        Pedido(
+            solicitud=f.solicitud_id,
             codigo=f.ticket,
             fecha=f.fecha,
+            bloque=f.bloque_id,
             inicio=f.inicio,
             termino=f.termino,
+            pendiente=f.solicitud.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE,
             solicitante=f.solicitud.solicitante.get_full_name() or f.solicitud.solicitante.email,
             correo=f.solicitud.solicitante.email,
         )
         for f in filas
     ]
+
+
+def liberar(sender, afectadas, razon, quien, **kwargs):
+    """Lo que les pasa a las solicitudes que pierden su horario: la pendiente
+    se rechaza con la razón y la aprobada se cancela, cada una con su correo.
+    Se afecta la solicitud entera, como al validar.
+
+    Corre dentro de la transacción que guarda el corte. Las filas se bloquean en
+    orden de id, igual que en `resolver`, y lo que alguien resolvió entremedio
+    se salta.
+    """
+    ids = sorted({p.solicitud for p in afectadas})
+    filas = Solicitud.objects.select_for_update(of=("self",)).filter(pk__in=ids).order_by("pk")
+    ahora = timezone.now()
+    canceladas = defaultdict(list)
+    for s in filas.select_related("solicitante"):
+        if s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE:
+            s.estado_validacion = Solicitud.EstadoValidacion.RECHAZADA
+            s.motivo_resolucion = razon
+            s.resuelta_por, s.resuelta_en = quien, ahora
+            s.save(update_fields=[
+                "estado_validacion", "motivo_resolucion", "resuelta_por", "resuelta_en", "actualizado_en",
+            ])
+            _avisar_resolucion(s)
+        elif (s.estado_validacion == Solicitud.EstadoValidacion.ACEPTADA
+              and s.estado_confirmacion != Solicitud.EstadoConfirmacion.CANCELADA):
+            s.estado_confirmacion = Solicitud.EstadoConfirmacion.CANCELADA
+            s.save(update_fields=["estado_confirmacion", "actualizado_en"])
+            canceladas[s.solicitante].append(s)
+    # Uno por persona, con todas sus reservas; si uno falla, los demás igual salen.
+    for persona, solicitudes in canceladas.items():
+        transaction.on_commit(
+            partial(
+                avisar,
+                persona.email,
+                "Tu reserva de la sala de grabación se canceló",
+                "notificaciones/bloqueo.txt",
+                {"nombre": persona.get_full_name() or persona.email, "razon": razon, "solicitudes": solicitudes},
+            ),
+            robust=True,
+        )
 
 
 # US-07 AC4: el motivo le llega al solicitante, así que tiene que decir algo.
@@ -315,22 +373,19 @@ def resolver(solicitud_id, aprobar, motivo, quien, url_base=""):
     motivo = (motivo or "").strip()
 
     if aprobar:
+        # Se aprueba hasta el día anterior, porque hasta entonces se confirma
+        # (US-03): aprobada el mismo día, el solicitante ya no podría confirmar.
+        if solicitud.fecha <= timezone.localdate():
+            raise ValidationError(
+                "La reserva es para hoy o ya pasó: ya no se puede aprobar, porque no alcanzaría "
+                "a confirmarse. Recházala."
+            )
         pedidos = list(solicitud.solicitudes_bloques.select_related("bloque"))
         for pedido in pedidos:
-            # Lo que el administrador quitó de la jornada ya no se da. Rige
-            # mientras la jornada sea una plantilla para todas las semanas.
-            if not pedido.bloque.activo:
-                raise ValidationError(
-                    f"El bloque de las {pedido.bloque.inicio:%H:%M} ya no está en la jornada: "
-                    "no se puede aprobar. Recházala."
-                )
-            # US-17 AC3: lo bloqueado no se aprueba; se rechaza con ese motivo.
-            bloqueo = bloqueo_de(solicitud.fecha, pedido.bloque.inicio)
-            if bloqueo is not None:
-                raise ValidationError(
-                    f"La sala está bloqueada a las {pedido.bloque.inicio:%H:%M} ({bloqueo.razon}): "
-                    "no se puede aprobar. Recházala con ese motivo."
-                )
+            # Quitado, bloqueado (US-17 AC3) o ajeno a la fecha: no se aprueba.
+            razon = impedimento(pedido.bloque, solicitud.fecha)
+            if razon is not None:
+                raise ValidationError(f"{razon} No se puede aprobar: recházala.")
         ocupada = Solicitud.objects.filter(
             fecha=solicitud.fecha,
             estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
@@ -381,3 +436,101 @@ def confirmar_solicitud(usuario, solicitud_id):
         estado_confirmacion=Solicitud.EstadoConfirmacion.CONFIRMADA,
         actualizado_en=timezone.now(),
     ) == 1
+
+
+def _avisar_cancelacion(solicitud):
+    """AC6: el correo a quien aprobó la reserva, cuando la cancelación se
+    confirma."""
+    validador = solicitud.resuelta_por
+    # Las aceptadas antes de la migración 0004 no guardan quién las aprobó.
+    if validador is None:
+        return
+    solicitante = solicitud.solicitante
+    transaction.on_commit(
+        partial(
+            avisar,
+            validador.email,
+            f"Se canceló la reserva #{solicitud.pk} de la sala de grabación",
+            "notificaciones/cancelacion.txt",
+            {
+                "nombre": validador.get_full_name() or validador.email,
+                "solicitante": solicitante.get_full_name() or solicitante.email,
+                "solicitud": solicitud,
+                "bloques": [
+                    sb.bloque for sb in
+                    solicitud.solicitudes_bloques.select_related("bloque").order_by("bloque__inicio")
+                ],
+            },
+        ),
+        robust=True,
+    )
+
+
+@transaction.atomic
+def cancelar_solicitud(usuario, solicitud_id):
+    """US-03 AC6: quien pidió cancela una reserva aceptada (ver
+    Solicitud.puede_cancelarse). La regla del primer bloque no cabe en un
+    UPDATE condicionado, así que la fila se bloquea y se revisa: si en otra
+    pestaña confirma al mismo tiempo, una de las dos espera a la otra.
+    Devuelve si se canceló."""
+    solicitud = Solicitud.objects.select_for_update().filter(pk=solicitud_id, solicitante=usuario).first()
+    if solicitud is None or not solicitud.puede_cancelarse:
+        return False
+    solicitud.estado_confirmacion = Solicitud.EstadoConfirmacion.CANCELADA
+    solicitud.cancelada_en = timezone.now()
+    solicitud.save(update_fields=["estado_confirmacion", "cancelada_en", "actualizado_en"])
+    _avisar_cancelacion(solicitud)
+    return True
+
+
+def recordar_confirmaciones(url_base):
+    """US-03 AC1 a AC3: un recordatorio por cada reserva aceptada que entró al
+    plazo de confirmación (`plazo_confirmacion_dias` antes de su fecha) sin
+    confirmar, cancelar ni recordatorio previo. La corre la tarea cada hora.
+
+    Se puede repetir: la marca es el paso a PENDIENTE con su
+    `recordatorio_enviado_en`, así que nadie recibe dos. Si la tarea estuvo
+    detenida, al volver avisa las que siguen a tiempo y no las que ya pasaron.
+    La marca va después del correo: si el envío falla, queda sin marca y la
+    vuelta siguiente lo reintenta. Devuelve cuántas avisó.
+    """
+    hoy = timezone.localdate()
+    plazo = Parametros.cargar().plazo_confirmacion_dias
+    por_avisar = Solicitud.objects.filter(
+        estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
+        estado_confirmacion=Solicitud.EstadoConfirmacion.NO_HABILITADA,
+        recordatorio_enviado_en__isnull=True,
+        fecha__gt=hoy,
+        fecha__lte=hoy + timedelta(days=plazo),
+    ).con_detalle().select_related("solicitante")
+
+    avisadas = 0
+    for solicitud in por_avisar:
+        persona = solicitud.solicitante
+        try:
+            avisar(
+                persona.email,
+                f"Confirma tu reserva de la sala de grabación del {solicitud.fecha:%d/%m}",
+                "notificaciones/recordatorio.txt",
+                {
+                    "nombre": persona.get_full_name() or persona.email,
+                    "solicitud": solicitud,
+                    "bloques": [sb.bloque for sb in solicitud.solicitudes_bloques.all()],
+                    "url_confirmar": url_base + reverse("confirmar_solicitud", args=[solicitud.pk]),
+                    "url_cancelar": url_base + reverse("cancelar_solicitud", args=[solicitud.pk]),
+                },
+            )
+        except Exception:
+            logger.exception("No salió el recordatorio de la reserva #%s: se reintenta en la vuelta siguiente.", solicitud.pk)
+            continue
+        # Condicionado, como confirmar: si confirmó o canceló mientras salía el
+        # correo, no se pisa.
+        ahora = timezone.now()
+        avisadas += Solicitud.objects.filter(
+            pk=solicitud.pk, estado_confirmacion=Solicitud.EstadoConfirmacion.NO_HABILITADA,
+        ).update(
+            estado_confirmacion=Solicitud.EstadoConfirmacion.PENDIENTE,
+            recordatorio_enviado_en=ahora,
+            actualizado_en=ahora,
+        )
+    return avisadas

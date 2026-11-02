@@ -1,9 +1,9 @@
 {% autoescape off %}Hola, {{ nombre }}:
 
-La sala de grabación estará bloqueada {{ bloqueo.periodo }}, {{ bloqueo.alcance }}, por {{ bloqueo.get_motivo_display }}{% if bloqueo.detalle %} ({{ bloqueo.detalle }}){% endif %}.
+{{ razon }}
 
-Por eso no se podrá{{ reservas|length|pluralize:"n" }} realizar {{ reservas|length|pluralize:"tu reserva,tus reservas" }}:
-{% for r in reservas %}  - {{ r.codigo }}: {{ r.fecha|date:"l j \d\e F" }}, de {{ r.inicio|time:"H:i" }} a {{ r.termino|time:"H:i" }}
+Por eso se cancel{{ solicitudes|length|pluralize:"ó,aron" }} {{ solicitudes|length|pluralize:"tu reserva,tus reservas" }}:
+{% for s in solicitudes %}  - #{{ s.pk }}, {{ s.fecha|date:"l j \d\e F" }}:{% for b in s.bloques.all %} {{ b.inicio|time:"H:i" }}–{{ b.termino|time:"H:i" }}{% if not forloop.last %},{% endif %}{% endfor %}
 {% endfor %}
 Si todavía necesitas grabar, puedes pedir otro horario en el sistema.
 

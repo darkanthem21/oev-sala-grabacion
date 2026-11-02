@@ -62,9 +62,12 @@ Ese archivo vive solo en el servidor y nunca entra a git.
 | `SECRET_KEY` | Aleatoria y larga: `python3 -c 'import secrets; print(secrets.token_urlsafe(50))'` |
 | `DJANGO_SUPERUSER_EMAIL` | Correo del administrador inicial |
 | `DJANGO_SUPERUSER_PASSWORD` | Su clave. Si el usuario ya existe, no se modifica |
-| `EMAIL_BACKEND` | Opcional. Sin él, los correos (recuperar clave) se escriben en el log del contenedor |
-| `DEFAULT_FROM_EMAIL` | Opcional. Remitente de los correos; por defecto `no-responder@uach.cl` |
+| `EMAIL_BACKEND` | Opcional. Sin él, los correos (recuperar clave) se escriben en el log del contenedor. Para enviarlos: `django.core.mail.backends.smtp.EmailBackend` |
+| `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | Solo con el backend SMTP: servidor, usuario y clave de la cuenta que envía |
+| `EMAIL_PORT`, `EMAIL_USE_TLS` | Opcionales; por defecto `587` y `1` (STARTTLS), lo que usan Gmail, Brevo y Ethereal |
+| `DEFAULT_FROM_EMAIL` | Opcional. Remitente de los correos; por defecto `no-responder@uach.cl`. Con una cuenta externa tiene que ser la dirección de esa cuenta, o el correo cae en spam |
 | `CSRF_ORIGINS` | Solo si el sitio pasa a servirse por HTTPS: `https://<dominio>` |
+| `URL_BASE` | Dominio de los enlaces del recordatorio de US-03: `https://oev.inf.uach.cl`. Por defecto `http://localhost:8000` |
 
 Compose lee el mismo `.env` dos veces: para elegir la imagen (`TAG`, `PUERTO`) y
 para pasarle las variables a los contenedores.
@@ -199,6 +202,35 @@ No hay variables nuevas en el `.env`. Los correos de resolución salen por el
 - Entrar como el solicitante y ver el estado y el motivo en **Mis solicitudes**.
 - `docker logs grupo6_frontend` muestra el correo de la resolución si el
   backend de correo es la consola.
+
+## Recordatorio y cancelación (US-03)
+
+### Antes de desplegar
+
+Esta versión trae la migración `solicitudes.0006_solicitud_recordatorio_y_cancelacion`,
+que agrega a la solicitud cuándo salió su recordatorio y cuándo se canceló. Hacer el
+respaldo de la base antes de bajar la imagen.
+
+Agregar `URL_BASE` al `.env`. Sin ella, los enlaces del recordatorio apuntan a
+`localhost`.
+
+El stack suma un contenedor, `grupo6_tareas`: la misma imagen que
+`grupo6_frontend`, con un bucle que manda los recordatorios cada hora. `dc pull web`
+baja la imagen de los dos.
+
+### Rutas nuevas
+
+| Ruta | Quién entra |
+|---|---|
+| `/solicitar/mis-solicitudes/<id>/cancelar/` | El solicitante de esa reserva. El enlace llega en el recordatorio y en **Mis solicitudes** |
+
+### Verificar después de desplegar
+
+- `docker ps --filter name=grupo6` muestra `grupo6_tareas` corriendo.
+- Un minuto después de levantar, `docker logs grupo6_tareas` muestra
+  `recordatorios enviados: N`, y luego una línea por hora.
+- Correr una vuelta a mano: `docker exec grupo6_tareas python manage.py recordar_confirmaciones`.
+  Repetirla no manda nada nuevo.
 
 ## Áreas académicas (US-05)
 
