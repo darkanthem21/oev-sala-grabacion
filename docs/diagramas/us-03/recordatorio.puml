@@ -1,0 +1,58 @@
+@startuml recordatorio
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Recordar la confirmación (US-03)
+
+actor "Servicio tareas" as T
+participant "<b>recordar_confirmaciones</b>\n<size:11>solicitudes/management/commands/</size>\n<size:11>recordar_confirmaciones.py</size>" as C <<presentación>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>configuracion.models</b>\n<size:11>configuracion/models.py</size>\n<size:11>Parametros</size>" as P <<dominio>>
+participant "<b>notificaciones</b>\n<size:11>notificaciones/services.py</size>" as M <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+note over T
+  Contenedor del stack con la misma imagen
+  que web: un bucle que corre el comando y
+  duerme una hora. El servidor no tiene cron.
+end note
+T -> C ++ : $comentario("cada hora, sin que nadie lo active (AC1)")\npython manage.py recordar_confirmaciones
+C -> V ++ : recordar_confirmaciones(settings.URL_BASE)
+V -> P ++ : Parametros.cargar()
+P -> D ++ : SELECT configuracion_parametros
+return fila
+return parametros
+V -> V : plazo = parametros.plazo_confirmacion_dias
+V -> D ++ : $comentario("aceptadas, sin confirmar ni cancelar, sin recordatorio y con fecha entre mañana y hoy + plazo")\nSELECT solicitudes_solicitud ⋈ personas_area ⋈ personas_usuario
+return filas
+V -> D ++ : $comentario("los bloques con su hora (prefetch)")\nSELECT solicitudes_solicitudbloque ⋈ agenda_bloque
+return filas
+note right of V
+  Quien ya confirmó no entra (AC2). Si la
+  tarea estuvo detenida, al volver avisa las
+  que siguen a tiempo, no las que ya pasaron.
+end note
+loop cada solicitud por avisar
+  V -> M ++ : $comentario("resumen, enlace para confirmar y enlace para cancelar (AC3)")\navisar(correo, asunto, "notificaciones/recordatorio.txt", contexto)
+  M -> M : send_mail(asunto, render_to_string(plantilla, contexto), …)
+  alt el correo salió
+    M --> V -- : None
+    V -> D ++ : $comentario("SET estado_confirmacion = PENDIENTE, recordatorio_enviado_en = ahora WHERE id y NO_HABILITADA")\nUPDATE solicitudes_solicitud
+    return filas
+  else falla el envío
+    M --> V : excepción
+    V -> V : logger.exception("No salió el recordatorio …"); continue
+    note right of V : Sin la marca, la vuelta\nsiguiente lo reintenta.
+  end
+end
+note right of V
+  La marca va después del correo y es un UPDATE
+  condicionado: si confirmó o canceló mientras salía
+  el correo, no se pisa. Correr el comando dos veces
+  no manda dos recordatorios.
+end note
+return avisadas
+C -> C : self.stdout.write("… recordatorios enviados: N")
+C --> T : 0
+deactivate C
+@enduml

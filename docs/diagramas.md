@@ -339,6 +339,38 @@ página muestra el botón, y el `UPDATE` condicionado de `confirmar_solicitud` e
 el que vale, como al retirar. Si entre abrir la página y el clic la reserva
 cambió o llegó el día, no se confirma y vuelve a Mis solicitudes con el aviso.
 
+### Recordar la confirmación (US-03)
+
+El servidor no tiene cron, así que el stack suma el servicio `tareas`: la misma
+imagen que `web`, con un bucle que corre `recordar_confirmaciones` cada hora. El
+comando avisa a cada reserva aceptada que entró al plazo de confirmación
+(`plazo_confirmacion_dias`) sin confirmar, cancelar ni recordatorio previo. La
+marca es el paso a `PENDIENTE` con `recordatorio_enviado_en`, y va después del
+correo: si el envío falla, la vuelta siguiente lo reintenta, y correrlo dos
+veces no repite avisos.
+
+![Recordar la confirmación](diagramas/us-03/recordatorio.png)
+
+Una aceptada que llega a su día sin confirmar no cambia de fila: `estado_clave`
+la calcula como **no confirmada** por la fecha, y el personal de apoyo la ve sin
+check-out pendiente.
+
+### Cancelar la reserva (US-03)
+
+`/solicitar/mis-solicitudes/<id>/cancelar/` es el enlace del recordatorio y de
+**Cancelar reserva** en Mis solicitudes. Como al confirmar, el `GET` solo
+muestra la reserva y es la segunda confirmación; cancela el `POST`. Se puede
+cancelar una aceptada, confirmada o no, hasta que empiece su primer bloque.
+
+![Cancelar la reserva](diagramas/us-03/cancelar-reserva.png)
+
+La regla del primer bloque no cabe en un `UPDATE` condicionado, así que
+`cancelar_solicitud` bloquea la fila (`select_for_update`) y la revisa: si en
+otra pestaña confirma al mismo tiempo, una espera a la otra. Desde el lunes de
+la semana de la reserva, cancelar cuenta como inasistencia
+(`cancelar_cuenta_inasistencia`, calculado con `cancelada_en`). El correo a
+quien la aprobó sale solo si la cancelación quedó guardada.
+
 ### Ver los bloques del día (US-14)
 
 Cada ticket es un bloque de una solicitud aceptada en una fecha

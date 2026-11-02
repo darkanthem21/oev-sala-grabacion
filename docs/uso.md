@@ -219,10 +219,11 @@ estado. Se muestran de a 20; si hay más, abajo aparecen **Anterior** y
 |---|---|
 | **En revisión por la Oficina** | La Oficina todavía no la revisa. Se puede **Retirar** |
 | **Aceptada** | La Oficina la aceptó. Falta confirmar la asistencia: aparece **Confirmar asistencia** |
-| **Pendiente de confirmación** | Aceptada y esperando que confirmes. También aparece **Confirmar asistencia** |
-| **Confirmada** | Confirmaste que vas a usar la sala |
+| **Pendiente de confirmación** | Ya te llegó el recordatorio. Aparecen la fecha límite, **Confirmar asistencia** y **Cancelar reserva** |
+| **Confirmada** | Confirmaste que vas a usar la sala. Todavía se puede **Cancelar reserva** |
 | **Rechazada** | La Oficina la rechazó. Debajo va el motivo que escribió |
-| **Cancelada** | Se canceló después de aceptada |
+| **Cancelada** | La cancelaste después de aceptada. Si fue en la semana de la reserva, dice que cuenta como inasistencia |
+| **No confirmada (inasistencia)** | Llegó su día sin confirmar: el horario se liberó y queda como inasistencia |
 | **Retirada** | La retiraste antes de que la Oficina la revisara |
 
 **Retirar una solicitud**
@@ -266,6 +267,41 @@ Se puede confirmar hasta el día anterior a la reserva. Si ya está confirmada,
 cancelada o es el mismo día, la página lo dice y no muestra el botón.
 
 ![Reserva que ya no se puede confirmar](uso/us-03/confirmacion-no-disponible.png)
+
+**El recordatorio**
+
+Cuando falta el plazo de confirmación que fija la Oficina (hoy, dos días), llega
+un segundo correo con el resumen de la reserva y dos enlaces: uno para confirmar
+y otro para cancelar. Llega una sola vez, y no llega si ya confirmaste.
+
+Desde ese momento, al entrar al sistema aparece una franja bajo el encabezado:
+**Tienes N reservas por confirmar**, con un enlace a Mis solicitudes. En la
+fila, la reserva queda **Pendiente de confirmación** con la fecha límite.
+
+![Reserva por confirmar](uso/us-03/por-confirmar.png)
+
+Si llega el día de la reserva sin confirmar, su horario se libera y queda
+**No confirmada (inasistencia)**.
+
+**Cancelar una reserva**
+
+Una reserva aceptada, confirmada o no, se puede cancelar hasta que empiece su
+primer bloque.
+
+| Paso | Qué pasa |
+|---|---|
+| **Cancelar reserva** | En la fila de Mis solicitudes o desde el enlace del recordatorio. Abre una página con la reserva; abrirla no cancela nada |
+| **Sí, cancelar la reserva** | La reserva queda **Cancelada**, su horario vuelve a ofrecerse y la Oficina recibe un correo |
+
+Cancelar antes de la semana de la reserva no tiene consecuencias. Desde el lunes
+de esa semana, la página avisa que cancelar cuenta como **inasistencia**.
+
+![Cancelar una reserva en la semana de la reserva](uso/us-03/cancelar-reserva.png)
+
+Al cancelar, vuelves a **Mis solicitudes** con el aviso **Cancelaste la reserva
+#…** y la fila queda **Cancelada**.
+
+![Reserva cancelada](uso/us-03/reserva-cancelada.png)
 
 ### Mis sanciones
 
@@ -577,8 +613,8 @@ hoy, ordenadas por hora de inicio.
 | Solicitante | Quién pidió la sala |
 | Área | El área académica de la reserva |
 | Personas | Cuántas personas declaró el solicitante |
-| Estado | **Aprobada** o **Confirmada**. Una **Cancelada** aparece tachada: ya no hay que esperar a nadie |
-| Check-out | **Completado** si ya se registró, **Hacer check-out** si el bloque terminó y falta, o **—** si el bloque aún no termina o se canceló |
+| Estado | **Aprobada** o **Confirmada**. Una **Cancelada** o **No confirmada** aparece tachada: ya no hay que esperar a nadie |
+| Check-out | **Completado** si ya se registró, **Hacer check-out** si el bloque terminó y falta, o **—** si el bloque aún no termina, se canceló o no se confirmó |
 
 Las reservas pendientes de aprobación no aparecen, porque todavía pueden
 rechazarse. Todo el personal de apoyo ve todos los bloques; no se asignan a una
