@@ -588,6 +588,11 @@ a.btn-accion:focus-visible { outline: 2px solid var(--acento); outline-offset: 2
 /* Cancelar se ve como Retirar, pero es un enlace a la página que pregunta. */
 .hoja .btn-cancelar { display: block; width: fit-content; margin: .4rem 0 0; text-decoration: none; }
 
+/* Lo que no se deshace no va en el azul de Confirmar. El naranja da 3.5:1, así
+ * que marca el filete y el texto queda en tinta (marca.css). */
+.hoja button.peligro { background: var(--superficie); color: var(--tinta); border: 1px solid var(--alerta); }
+.hoja button.peligro:hover:not(:disabled) { background: var(--alerta-suave); }
+
 /* En pantallas angostas cada solicitud pasa a ser una ficha. */
 @media (max-width: 36rem) {
   .historial thead { display: none; }

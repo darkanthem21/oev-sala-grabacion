@@ -26,7 +26,9 @@
     <div id="avisos" hx-swap-oob="beforeend">{% include "_avisos.html" %}</div>
   {% endif %}
 
-  {% if vista == "proximas" %}
+  {% comment %}Con reservas por confirmar ya está la franja de arriba (US-03 AC4);
+  repetirlo empuja la lista hacia abajo, sobre todo en el celular.{% endcomment %}
+  {% if vista == "proximas" and not user.solicitudes.por_confirmar %}
     <p class="nota-confirmacion">
       <strong>Confirma tu asistencia.</strong>
       Cuando la Oficina acepte tu reserva te llegará un correo con el enlace para

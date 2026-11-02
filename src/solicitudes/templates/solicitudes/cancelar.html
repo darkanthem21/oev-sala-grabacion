@@ -39,7 +39,7 @@
     {% if solicitud.puede_cancelarse %}
       <form method="post">
         {% csrf_token %}
-        <button type="submit">Sí, cancelar la reserva</button>
+        <button type="submit" class="peligro">Sí, cancelar la reserva</button>
       </form>
     {% endif %}
   </div>
