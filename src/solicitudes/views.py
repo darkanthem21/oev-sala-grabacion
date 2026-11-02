@@ -14,7 +14,7 @@ from django.views.decorators.http import require_POST
 
 from agenda.models import Bloqueo, primera_fecha_pedible
 from configuracion.models import Parametros
-from personas.models import Rol, Sancion
+from personas.models import Area, Rol, Sancion
 
 from . import validacion
 from .calendar import construir_calendario_contexto
@@ -353,6 +353,8 @@ def _manejar_paso_horario(request, wizard: SolicitudWizard, puede_cambiar_area: 
         "error_paso": error_bloques,
         "reserva": wizard.obtener_resumen(),
         "puede_cambiar_area": puede_cambiar_area,
+        # US-05: la nota del área se lee antes de elegir bloques, no solo al validar.
+        "area": Area.objects.filter(pk=wizard.area_id).first(),
         # US-17 AC7: qué no se puede pedir y por qué. Desde la primera fecha
         # pedible, porque lo anterior tampoco se podría pedir sin bloqueo.
         "bloqueos": Bloqueo.objects.vigentes()

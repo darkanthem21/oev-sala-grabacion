@@ -12,15 +12,16 @@
 <section class="marco areas">
   <h2>Áreas académicas</h2>
   <p class="detalle">
-    Cada solicitud queda ligada a un área. La nota la ve el validador junto a
-    cada solicitud de esa área. Un área desactivada deja de ofrecerse al pedir;
-    las solicitudes que ya la usan no cambian.
+    Cada solicitud queda ligada a un área. La nota la ve quien pide con esa área,
+    antes de elegir bloques, y el validador junto a cada solicitud. Un área
+    desactivada deja de ofrecerse al pedir; las solicitudes que ya la usan no
+    cambian.
   </p>
 
   {% if areas %}
     <table>
       <thead>
-        <tr><th>Área</th><th>Nota para el validador</th><th>Personas</th><th>Estado</th><th>Acciones</th></tr>
+        <tr><th>Área</th><th>Nota</th><th>Personas</th><th>Estado</th><th>Acciones</th></tr>
       </thead>
       <tbody>
         {% for area in areas %}
@@ -61,7 +62,7 @@
     {% csrf_token %}
     <input type="hidden" name="accion" value="crear">
     <label>Nombre<input type="text" name="nombre" maxlength="120" required></label>
-    <label>Nota para el validador<textarea name="nota" rows="3"
+    <label>Nota del área (la ven quien pide y el validador)<textarea name="nota" rows="3"
       placeholder="Por ejemplo: no graba en horario laboral."></textarea></label>
     <div class="dialogo-acciones">
       <button class="btn" type="submit" formmethod="dialog" formnovalidate>Cancelar</button>
@@ -78,7 +79,7 @@
       <input type="hidden" name="accion" value="editar">
       <input type="hidden" name="area" value="{{ area.pk }}">
       <label>Nombre<input type="text" name="nombre" maxlength="120" required value="{{ area.nombre }}"></label>
-      <label>Nota para el validador<textarea name="nota" rows="3">{{ area.nota }}</textarea></label>
+      <label>Nota del área (la ven quien pide y el validador)<textarea name="nota" rows="3">{{ area.nota }}</textarea></label>
       <div class="dialogo-acciones">
         <button class="btn" type="submit" formmethod="dialog" formnovalidate>Cancelar</button>
         <button class="btn activa" type="submit">Guardar</button>
