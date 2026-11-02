@@ -122,6 +122,9 @@ borra el día y los bloques que ya habías marcado.
 
 **Paso 1: elegir el día y los bloques**
 
+Si el área tiene una nota de la Oficina (por ejemplo, que no graba en horario
+laboral), aparece arriba del calendario.
+
 1. En el calendario, los días que se pueden pedir aparecen destacados y con un
    punto. Arriba se indica desde qué fecha se puede solicitar: entre la
    solicitud y la grabación tienen que pasar las semanas de desfase que fija el
@@ -525,9 +528,9 @@ su nota, cuántas personas tiene y si está activa.
 ![Nueva área](uso/us-05/nueva-area.png)
 
 Las áreas no se borran: una desactivada sigue en la lista, atenuada. La **nota**
-es lo que el validador tiene que tener en cuenta de esa área, por ejemplo que
-Educación Continua no graba en horario laboral; aparece en la ficha de cada
-solicitud del área, como **Nota del área**.
+es lo que hay que tener en cuenta de esa área, por ejemplo que Educación Continua
+no graba en horario laboral. La ve quien pide con esa área, arriba del calendario,
+y el validador en la ficha de cada solicitud, como **Nota del área**.
 
 ![Nota del área en el panel del validador](uso/us-05/nota-validador.png)
 
