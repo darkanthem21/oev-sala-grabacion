@@ -1,13 +1,45 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.db import transaction
 
-from .models import Area, Sancion, Usuario
+from . import services
+from .models import Area, CambioArea, Sancion, Usuario
 
 
 @admin.register(Area)
 class AreaAdmin(admin.ModelAdmin):
+    """US-05: la operación diaria va por la pestaña Áreas. Acá queda para
+    arreglar una fila, sin borrar (AC3) y con el mismo registro (AC6)."""
+
     list_display = ["nombre", "prioridad", "activa"]
     list_filter = ["activa"]
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    @transaction.atomic
+    def save_model(self, request, obj, form, change):
+        cambios = services.cambios_de_area(form)
+        super().save_model(request, obj, form, change)
+        services.registrar_cambios(obj, cambios, request.user)
+
+
+@admin.register(CambioArea)
+class CambioAreaAdmin(admin.ModelAdmin):
+    """Solo lectura, porque un registro que se puede editar no registra nada."""
+
+    list_display = ["cuando", "area", "etiqueta", "antes", "despues", "quien"]
+    list_filter = ["area", "campo"]
+    date_hierarchy = "cuando"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Usuario)

@@ -14,6 +14,7 @@ Este manual cubre lo que hoy está disponible en el sistema, ordenado por rol:
 | US-07 Panel del validador | Validador y administrador | [Validador](#3-validador) |
 | US-04 Panel de administrador | Administrador | [Jornada semanal](#jornada-semanal) y [Reglas](#reglas-los-parámetros-del-sistema) |
 | US-17 Bloquear fechas de la sala | Administrador | [Bloquear fechas de la sala](#bloquear-fechas-de-la-sala) |
+| US-05 Áreas académicas | Administrador | [Áreas](#áreas) |
 | US-14 Bloques del personal de apoyo | Personal de apoyo | [Bloques del día](#bloques-del-día) |
 | US-15 Checklist de cierre (prototipo) | Personal de apoyo | [Checklist de cierre de la sala](#checklist-de-cierre-de-la-sala) |
 
@@ -32,12 +33,13 @@ por el panel de la izquierda, con el nombre y el color del rol.
 
 ### Dar un rol a alguien
 
-Mientras la pestaña **Áreas** no tenga contenido (US-05), los roles se asignan
-desde `/admin` con la cuenta de administrador: en **Usuarios**, abre la cuenta de
-la persona, agrégale el grupo de su rol (**Solicitante**, **Validador**,
-**Personal de apoyo** o **Administrador**) y guarda. Un solicitante necesita
-además al menos un área académica activa. Una persona puede tener más de un rol
-a la vez.
+Mientras no exista la pestaña **Usuarios** (US-08), los roles y las áreas de
+cada persona se asignan desde `/admin` con la cuenta de administrador: en
+**Usuarios**, abre la cuenta de la persona, agrégale el grupo de su rol
+(**Solicitante**, **Validador**, **Personal de apoyo** o **Administrador**) y
+sus áreas, y guarda. Un solicitante necesita al menos un área activa; las áreas
+se crean en la pestaña [Áreas](#áreas). Una persona puede tener más de un rol y
+más de un área a la vez.
 
 ---
 
@@ -119,6 +121,9 @@ Para cambiarla después, pulsa **Cambiar área** en el paso 1. Cambiar de área
 borra el día y los bloques que ya habías marcado.
 
 **Paso 1: elegir el día y los bloques**
+
+Si el área tiene una nota de la Oficina (por ejemplo, que no graba en horario
+laboral), aparece arriba del calendario.
 
 1. En el calendario, los días que se pueden pedir aparecen destacados y con un
    punto. Arriba se indica desde qué fecha se puede solicitar: entre la
@@ -428,14 +433,14 @@ quién se le asignó el bloque. Queda guardado: recargar la página no lo borra.
 
 ## 4. Administrador
 
-El panel del administrador tiene cinco pestañas: **Bloques**, **Áreas**,
-**Reglas**, **Validación** y **Sanciones**. Se entra por `/configuracion/entrar/`.
+El panel del administrador tiene seis pestañas: **Check-out**, **Bloques**,
+**Áreas**, **Reglas**, **Validación** y **Sanciones**. Se entra por
+`/configuracion/entrar/`.
 
 ![Puerta de la administración](uso/us-04/puerta-administracion.png)
 
 **Validación** es el panel del validador (ver [Validador](#3-validador)): el
-administrador también aprueba y rechaza, y la resolución queda a su nombre. La
-pestaña **Áreas** todavía no tiene contenido; llega con US-05.
+administrador también aprueba y rechaza, y la resolución queda a su nombre.
 
 ### Jornada semanal
 
@@ -540,6 +545,37 @@ bloqueos y levantamientos, con fecha, qué se bloqueó, motivo y responsable.
 > **Estado actual.** Las reservas que un bloqueo afecta son las solicitudes
 > aceptadas y no canceladas de esas fechas. En desarrollo, los correos de aviso
 > se escriben en el log del contenedor en vez de enviarse.
+
+### Áreas
+
+Cada solicitud queda ligada a un área académica o unidad, y un solicitante solo
+puede pedir la sala con un área activa. La pestaña **Áreas** lista cada una con
+su nota, cuántas personas tiene y si está activa.
+
+![Áreas](uso/us-05/areas.png)
+
+| Acción | Qué pasa |
+|---|---|
+| **Nueva área** | Pide el nombre y, si hace falta, una nota. No puede haber dos áreas con el mismo nombre, aunque cambien las mayúsculas |
+| **Editar** | Cambia el nombre o la nota. Las solicitudes que ya usan el área muestran el nombre nuevo |
+| **Desactivar** | El área deja de ofrecerse al pedir. Las solicitudes que ya la usan no cambian, y las pendientes se resuelven como siempre |
+| **Reactivar** | Vuelve a ofrecerse al pedir |
+
+![Nueva área](uso/us-05/nueva-area.png)
+
+Las áreas no se borran: una desactivada sigue en la lista, atenuada. La **nota**
+es lo que hay que tener en cuenta de esa área, por ejemplo que Educación Continua
+no graba en horario laboral. La ve quien pide con esa área, arriba del calendario,
+y el validador en la ficha de cada solicitud, como **Nota del área**.
+
+![Nota del área en el panel del validador](uso/us-05/nota-validador.png)
+
+**Últimos cambios (…)**, al pie, abre los últimos 15: qué área cambió, qué
+campo, de qué valor a cuál, quién y cuándo. Lo que se cambie desde `/admin`
+también queda ahí.
+
+Las personas se asignan a un área desde `/admin` (ver [Dar un rol a
+alguien](#dar-un-rol-a-alguien)).
 
 ### Reglas: los parámetros del sistema
 

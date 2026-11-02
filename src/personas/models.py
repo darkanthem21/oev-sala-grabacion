@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, UserManager
-from django.core.exceptions import ValidationError
+from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import models
 from django.db.models import F, Q
 from django.utils import timezone
@@ -20,12 +20,51 @@ class Area(models.Model):
     prioridad = models.PositiveSmallIntegerField(default=3)
     # US-05 AC3: desactivar la saca del formulario sin borrar su historial.
     activa = models.BooleanField(default=True)
+    # US-05 AC4: lo que el validador tiene que tener en cuenta, como que
+    # Educación Continua no graba en horario laboral (06/08, 03:48).
+    nota = models.TextField(blank=True)
 
     class Meta:
         ordering = ["nombre"]
 
     def __str__(self):
         return self.nombre
+
+
+class CambioArea(models.Model):
+    """US-05 AC6: quién cambió qué de un área, de cuánto a cuánto y cuándo.
+
+    Igual que `CambioParametro`. La creación queda como el paso de vacío al
+    nombre y la nota.
+    """
+
+    # PROTECT porque las áreas no se borran (AC3): si alguien lo intenta desde
+    # el shell, el registro lo frena en vez de desaparecer con ella.
+    area = models.ForeignKey(Area, on_delete=models.PROTECT, related_name="cambios")
+    campo = models.CharField(max_length=50)
+    antes = models.TextField()
+    despues = models.TextField()
+    quien = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="cambios_de_areas",
+    )
+    cuando = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-cuando", "-id"]
+        verbose_name = "cambio de área"
+        verbose_name_plural = "cambios de áreas"
+
+    def __str__(self):
+        return f"{self.area}: {self.etiqueta} {self.antes} → {self.despues}"
+
+    @property
+    def etiqueta(self):
+        try:
+            return Area._meta.get_field(self.campo).verbose_name
+        except FieldDoesNotExist:
+            # Un campo que se quitó del modelo sigue en el registro.
+            return self.campo
 
 
 class Rol(models.TextChoices):

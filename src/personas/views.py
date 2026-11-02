@@ -6,7 +6,8 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.contrib.auth.forms import AuthenticationForm
-from django.http import HttpResponse
+from django.db.models import Count
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -15,8 +16,11 @@ from django.utils import timezone
 from configuracion.models import Parametros
 
 from . import services
-from .forms import LevantarSancionForm
-from .models import Rol, Sancion, Usuario
+from .forms import AreaForm, LevantarSancionForm
+from .models import Area, CambioArea, Rol, Sancion, Usuario
+
+# Como en Reglas: el registro completo está en /admin/, y acá basta lo último.
+ULTIMOS_CAMBIOS = 15
 
 
 
@@ -158,4 +162,46 @@ def sanciones(request):
     return render(request, "personas/sanciones.html", {
         "pestana": "sanciones",
         "vigentes": Sancion.objects.vigentes().select_related("usuario", "creada_por").order_by("termino", "id"),
+    })
+
+
+@staff_member_required(login_url="login_gestion")
+def areas(request):
+    """US-05: las áreas con su nota y cuánta gente tiene cada una.
+
+    Crear, editar, desactivar y reactivar van por POST y vuelven con una
+    redirección, como Sanciones; lo que pasó llega como aviso flotante. Las
+    personas se asignan a un área desde /admin/ hasta US-08.
+    """
+    if request.method == "POST":
+        accion = request.POST.get("accion")
+        if accion not in ("crear", "editar", "desactivar", "reactivar"):
+            return HttpResponseBadRequest()
+        area = None if accion == "crear" else get_object_or_404(Area, pk=request.POST.get("area"))
+
+        if accion in ("desactivar", "reactivar"):
+            if not services.cambiar_estado(area, accion == "reactivar", request.user):
+                messages.info(request, f"«{area}» ya estaba {'activa' if accion == 'reactivar' else 'inactiva'}.")
+            elif accion == "desactivar":
+                messages.success(request, f"Desactivaste «{area}». Ya no se ofrece al pedir; las solicitudes "
+                                          "que la usan no cambian.")
+            else:
+                messages.success(request, f"Reactivaste «{area}». Vuelve a ofrecerse al pedir.")
+            return redirect("panel_areas")
+
+        formulario = AreaForm(request.POST, instance=area)
+        if not formulario.is_valid():
+            errores = " ".join(e for lista in formulario.errors.values() for e in lista)
+            messages.error(request, f"{errores} No se guardó nada.")
+        elif not formulario.has_changed():
+            messages.info(request, "No había nada que cambiar.")
+        else:
+            area = services.guardar_area(formulario, request.user)
+            messages.success(request, f"Creaste el área «{area}»." if accion == "crear" else f"Guardaste «{area}».")
+        return redirect("panel_areas")
+
+    return render(request, "personas/areas.html", {
+        "pestana": "areas",
+        "areas": Area.objects.annotate(cuantos=Count("usuarios")).order_by("-activa", "nombre"),
+        "historial": CambioArea.objects.select_related("area", "quien")[:ULTIMOS_CAMBIOS],
     })

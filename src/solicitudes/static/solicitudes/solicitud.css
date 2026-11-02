@@ -99,6 +99,12 @@
 .hoja .bloqueos h2 { margin: 0 0 .35rem; padding: 0; border: 0; font-size: .9rem; }
 .bloqueos ul { margin: 0; padding-left: 1.1rem; }
 
+/* US-05: la nota del área elegida, con el mismo recuadro y el filete de información. */
+.nota-area {
+  border-left: 3px solid var(--info); background: var(--fondo);
+  padding: .6rem .75rem; margin-bottom: 1.75rem; font-size: .9rem;
+}
+
 /* --- Envio --- */
 .hoja button {
   width: 100%; padding: .7rem; border: 0; border-radius: 3px; cursor: pointer;

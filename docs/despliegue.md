@@ -232,6 +232,26 @@ baja la imagen de los dos.
 - Correr una vuelta a mano: `docker exec grupo6_tareas python manage.py recordar_confirmaciones`.
   Repetirla no manda nada nuevo.
 
+## Áreas académicas (US-05)
+
+### Antes de desplegar
+
+Esta versión trae la migración `personas.0004_area_nota_y_cambios`, que agrega
+la nota del área y su registro de cambios. Hacer el respaldo de la base antes de
+bajar la imagen. No hay variables nuevas en el `.env`.
+
+### Rutas nuevas
+
+| Ruta | Quién entra |
+|---|---|
+| `/configuracion/areas/` | Pestaña **Áreas** del administrador. Cuentas con `is_staff` |
+
+### Después de desplegar
+
+Las áreas no vienen cargadas. En la pestaña **Áreas**, crear **Educación
+Continua Online** y **Decanatura** (minuta del 27/10) y desactivar las que ya no
+correspondan. Un solicitante sin un área activa no puede pedir la sala.
+
 ## Problemas conocidos
 
 | Síntoma | Causa | Solución |

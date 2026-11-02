@@ -340,6 +340,7 @@ function panelValidador(datos, validador, urlResolver) {
         <div class="trozo">
           <dl class="ficha">
             <dt>Motivo</dt><dd x-text="solicitud.motivo"></dd>
+            <template x-if="area(solicitud).nota"><div><dt>Nota del área</dt><dd x-text="area(solicitud).nota"></dd></div></template>
             <template x-if="solicitud.observaciones"><div><dt>Observaciones</dt><dd x-text="solicitud.observaciones"></dd></div></template>
             <dt>Personas</dt><dd x-text="personas(solicitud)"></dd>
             <dt>Enviada</dt><dd x-text="enviada(solicitud.enviada)"></dd>
@@ -395,6 +396,7 @@ function panelValidador(datos, validador, urlResolver) {
               <input type="radio" name="foco" :value="s.id" :checked="s.id === tope.foco.id" @change="sel = { ...sel, foco: s.id }">
               <b x-text="s.encargado.nombre"></b>
               <span class="suave" x-text="area(s).nombre + ', prioridad ' + area(s).prioridad"></span>
+              <span class="suave" x-show="area(s).nota" x-text="'Nota del área: ' + area(s).nota"></span>
               <span x-text="s.motivo"></span>
               <span class="suave" x-show="s.bloques.length > 1"
                     x-text="'También pide ' + s.bloques.filter(b => b.bloque !== tope.id).map(b => tramo(b.bloque)).join(' y ')"></span>

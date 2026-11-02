@@ -88,7 +88,9 @@ def cargar(hoy=None):
             {"id": b.pk, "inicio": f"{b.inicio:%H:%M}", "termino": f"{b.termino:%H:%M}"}
             for b in Bloque.objects.all()
         ],
-        "areas": [{"id": a.pk, "nombre": a.nombre, "prioridad": a.prioridad} for a in Area.objects.all()],
+        "areas": [
+            {"id": a.pk, "nombre": a.nombre, "prioridad": a.prioridad, "nota": a.nota} for a in Area.objects.all()
+        ],
         "solicitudes": [
             {
                 "id": s.pk,

@@ -32,6 +32,16 @@
     <p class="sub">Elige un día habilitado en el calendario y selecciona los bloques de tiempo requeridos para tu actividad.</p>
 
     {% comment %}
+    US-05: lo que la Oficina pide tener en cuenta del área, antes de elegir
+    bloques; por ejemplo, que Educación Continua no graba en horario laboral.
+    {% endcomment %}
+    {% if area.nota %}
+      <aside class="nota-area" aria-label="Nota del área">
+        <strong>{{ area.nombre }}:</strong> {{ area.nota }}
+      </aside>
+    {% endif %}
+
+    {% comment %}
     US-17 AC7: el calendario ya no ofrece los horarios bloqueados; esta lista
     dice por qué faltan, para que nadie crea que es un error.
     {% endcomment %}

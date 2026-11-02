@@ -245,6 +245,27 @@ crea con los valores del cliente si todavía no existe (AC2).
 Cuántos cambios quedaron, o que no había nada que cambiar, llega como mensaje
 de Django en la sesión, y `base.html` lo dibuja como aviso flotante.
 
+### Crear o editar un área (US-05)
+
+Nueva área y Editar son dos diálogos de la pestaña Áreas que envían al mismo
+`POST`, con `accion=crear` o `accion=editar`. `AreaForm.clean_nombre` busca otra
+con el mismo nombre sin distinguir mayúsculas, porque el índice único sí las
+distingue. Guardar y registrar van en una transacción, como en Reglas: un área
+cambiada sin su registro es lo que AC6 pide evitar.
+
+![Crear o editar un área](diagramas/us-05/guardar-area.png)
+
+La administración de Django usa el mismo registro: `AreaAdmin.save_model` llama
+a `cambios_de_area` y `registrar_cambios`, y no deja borrar áreas.
+
+### Desactivar o reactivar un área (US-05)
+
+Las áreas no se borran (AC3). Desactivar es un `UPDATE` condicionado al estado
+contrario, así un doble clic deja un solo registro. Al pedir, el solicitante
+solo ve sus áreas activas; las solicitudes que ya la usan no cambian.
+
+![Desactivar o reactivar un área](diagramas/us-05/desactivar-area.png)
+
 ### Editar la plantilla semanal de bloques (US-04)
 
 Un bloque es un tramo de la semana, no una fecha: el cambio vale para ese día
