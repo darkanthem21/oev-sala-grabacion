@@ -41,9 +41,3 @@ def reglas(request):
         "form": formulario,
         "historial": CambioParametro.objects.select_related("quien")[:ULTIMOS],
     })
-
-
-# Marcador de posición; Áreas es US-05.
-@staff_member_required(login_url="login_gestion")
-def seccion(request, pestana):
-    return render(request, "configuracion/seccion.html", {"pestana": pestana})
