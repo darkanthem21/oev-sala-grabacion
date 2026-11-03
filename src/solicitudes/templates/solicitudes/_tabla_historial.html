@@ -73,10 +73,10 @@
               {% endif %}
               {% if solicitud.puede_confirmarse %}
                 <span class="pista">Confírmala a más tardar el {{ solicitud.confirmar_hasta|date:"l d/m" }}.</span>
-                <a class="btn-confirmar" href="{% url 'confirmar_solicitud' solicitud.id %}">Confirmar asistencia</a>
+                <a class="btn lleno" href="{% url 'confirmar_solicitud' solicitud.id %}">Confirmar asistencia</a>
               {% endif %}
               {% if solicitud.puede_cancelarse %}
-                <a class="btn-retirar btn-cancelar" href="{% url 'cancelar_solicitud' solicitud.id %}">Cancelar reserva</a>
+                <a class="btn" href="{% url 'cancelar_solicitud' solicitud.id %}">Cancelar reserva</a>
               {% endif %}
               {% if solicitud.puede_retirarse %}
                 {% url 'retirar_solicitud' solicitud.id as url_retirar %}
@@ -88,7 +88,7 @@
                   {% csrf_token %}
                   <input type="hidden" name="vista" value="{{ vista }}">
                   <input type="hidden" name="pagina" value="{{ pagina.number }}">
-                  <button type="submit" class="btn-retirar"
+                  <button type="submit" class="btn"
                           aria-label="Retirar la solicitud #{{ solicitud.id }}">Retirar</button>
                 </form>
               {% endif %}
@@ -103,14 +103,14 @@
            hx-target="#historial" hx-swap="outerHTML show:#historial:top" hx-push-url="true"
            hx-indicator="#historial">
         {% if pagina.has_previous %}
-          <a class="btn-secundario paginacion-anterior" rel="prev"
+          <a class="btn paginacion-anterior" rel="prev"
              href="{{ url_historial }}?vista={{ vista }}&amp;pagina={{ pagina.previous_page_number }}"
              hx-get="{{ url_historial }}?vista={{ vista }}&amp;pagina={{ pagina.previous_page_number }}">
             <svg class="icono-btn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
             <span>Anterior</span>
           </a>
         {% else %}
-          <span class="btn-secundario paginacion-anterior deshabilitado" aria-disabled="true">
+          <span class="btn paginacion-anterior deshabilitado" aria-disabled="true">
             <svg class="icono-btn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
             <span>Anterior</span>
           </span>
@@ -122,14 +122,14 @@
         </span>
 
         {% if pagina.has_next %}
-          <a class="btn-secundario paginacion-siguiente" rel="next"
+          <a class="btn paginacion-siguiente" rel="next"
              href="{{ url_historial }}?vista={{ vista }}&amp;pagina={{ pagina.next_page_number }}"
              hx-get="{{ url_historial }}?vista={{ vista }}&amp;pagina={{ pagina.next_page_number }}">
             <span>Siguiente</span>
             <svg class="icono-btn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </a>
         {% else %}
-          <span class="btn-secundario paginacion-siguiente deshabilitado" aria-disabled="true">
+          <span class="btn paginacion-siguiente deshabilitado" aria-disabled="true">
             <span>Siguiente</span>
             <svg class="icono-btn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </span>

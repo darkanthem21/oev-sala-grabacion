@@ -29,11 +29,11 @@
   </dl>
 
   <div class="acciones-paso">
-    <a href="{% url 'mis_solicitudes' %}?vista=proximas" class="btn-secundario"><span>Volver a mis solicitudes</span></a>
+    <a href="{% url 'mis_solicitudes' %}?vista=proximas" class="btn"><span>Volver a mis solicitudes</span></a>
     {% if solicitud.puede_confirmarse %}
       <form method="post">
         {% csrf_token %}
-        <button type="submit">Confirmar asistencia</button>
+        <button type="submit" class="btn principal">Confirmar asistencia</button>
       </form>
     {% endif %}
   </div>

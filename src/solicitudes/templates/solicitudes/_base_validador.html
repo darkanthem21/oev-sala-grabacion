@@ -2,7 +2,7 @@
 {% load static %}
 {% comment %}
 US-07. El encabezado copia el de templates/panel.html en vez de extenderlo:
-ese cascaron tiene escritos el titulo "Configuracion" y sus pestañas, y el
+ese cascarón trae las pestañas de la configuración, y el
 validador no es una seccion de la configuracion. Los bloques se llaman igual que
 los de panel.html (estilos_seccion, seccion), así una pantalla que ven el
 validador y el administrador, como el historial (US-11), elige el envoltorio sin
@@ -15,17 +15,10 @@ cambiar nada más.
 
 {% block contenido %}
 <header class="techo">
-  <div class="dentro">
-    <div class="fila">
-      <img class="sello" src="{% static 'img/Facultad-color-negro.png' %}"
-           alt="Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile">
-      <h1>Panel del validador</h1>
-      <div class="quien">
-        <span class="correo">{{ user.get_full_name|default:user.email }}</span>
-        <form method="post" action="{% url 'logout' %}">
-          {% csrf_token %}<button class="btn" type="submit">Cerrar sesión</button>
-        </form>
-      </div>
+  {% include "_banda.html" %}
+  <div class="riel">
+    <div class="dentro">
+      {% include "_rol.html" with rol="validacion" nombre="Validador" %}
     </div>
   </div>
 </header>
