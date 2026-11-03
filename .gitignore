@@ -23,8 +23,5 @@ media/
 *.swp
 .DS_Store
 
-# El master del video queda fuera del repo: en static va solo la version web.
-src/static/video/loop-web.mp4
-
 # No queremos saber la estadistica personal de ejecución de nadie en particular
 src/pruebas.csv
