@@ -286,7 +286,7 @@ class SolicitudBloque(models.Model):
 
             if not self.bloque.activo:
                 raise ValidationError({
-                    "bloque": f"El bloque #{self.bloque_id} ya no se encuentra activo."
+                    "bloque": f"El bloque {self.inicio:%H:%M} - {self.termino:%H:%M} para la fecha {fecha:%d/%m/%Y} ya no se encuentra activo."
                 })
 
             if self.bloque.dia != fecha.weekday():
@@ -309,7 +309,7 @@ class SolicitudBloque(models.Model):
 
             if ocupados.exists():
                 raise ValidationError({
-                    "bloque": f"El bloque #{self.bloque_id} ya se encuentra reservado para la fecha {fecha}."
+                    "bloque": f"El bloque {self.inicio:%H:%M} - {self.termino:%H:%M} ya se encuentra reservado para la fecha {fecha:%d/%m/%Y}."
                 })
 
             propias_pendientes = SolicitudBloque.objects.filter(
@@ -323,7 +323,7 @@ class SolicitudBloque(models.Model):
 
             if propias_pendientes.exists():
                 raise ValidationError({
-                    "bloque": f"Ya tienes una solicitud pendiente para el bloque #{self.bloque_id} en la fecha {fecha}."
+                    "bloque": f"Ya tienes una solicitud pendiente para el bloque {self.inicio:%H:%M} - {self.termino:%H:%M} en la fecha {fecha:%d/%m/%Y}."
                 })
 
     def save(self, *args, **kwargs):

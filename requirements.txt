@@ -3,3 +3,4 @@ psycopg[binary]~=3.2
 pytest
 pandas
 matplotlib
+pytest-django

@@ -1,3 +1,4 @@
+from datetime import date
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -32,6 +33,7 @@ from .models import Solicitud
 from .services import (
     confirmar_solicitud,
     guardar_solicitud_completa,
+    motivo_horario_invalido,
     obtener_bloques_dia_para_usuario,
     resolver,
     retirar_solicitud,
@@ -309,6 +311,18 @@ def solicitar(request):
     if paso_actual != paso_solicitado and request.method == "GET":
         return redirect(f"{reverse('solicitar')}?paso={paso_actual.value}")
 
+    # Regresar al paso 1 si el horario seleccionado previamente dejó de ser válido
+    if paso_actual >= PasoSolicitud.DATOS:
+        fecha = date.fromisoformat(wizard.fecha_str)
+        motivo = motivo_horario_invalido(
+            request.user, fecha, wizard.bloques_ids, wizard.datos.get("bloques_texto", "")
+            )
+        if motivo:
+            wizard.limpiar_horario()
+            messages.error(request, f"{motivo} Elige otro horario.")
+            consulta = urlencode({"year": fecha.year, "month": fecha.month, "fecha": fecha.isoformat()})
+            return redirect(f"{reverse('solicitar')}?{consulta}")
+    
     manejar = {
         PasoSolicitud.HORARIO: _manejar_paso_horario,
         PasoSolicitud.DATOS: _manejar_paso_datos,

@@ -65,7 +65,7 @@ class BloqueVista:
 
     @property
     def texto(self) -> str:
-        return f"{self.inicio:%H:%M} – {self.termino:%H:%M}"
+        return f"{self.inicio:%H:%M} - {self.termino:%H:%M}"
 
     @property
     def otros_solicitantes(self) -> int:
@@ -189,6 +189,12 @@ def guardar_solicitud_completa(
         fecha_obj = datos_reserva.get("fecha")
         if isinstance(fecha_obj, str):
             fecha_obj = datetime.strptime(fecha_obj, "%Y-%m-%d").date()
+        motivo = motivo_horario_invalido(
+            usuario, fecha_obj, datos_reserva.get("bloques_ids", []), datos_reserva.get("bloques_texto", "")
+        )
+        if motivo:
+            raise ValidationError(f"{motivo} Elige otro horario.")
+
 
         solicitud = Solicitud(
             solicitante=usuario,
@@ -400,3 +406,32 @@ def confirmar_solicitud(usuario, solicitud_id):
         estado_confirmacion=Solicitud.EstadoConfirmacion.CONFIRMADA,
         actualizado_en=timezone.now(),
     ) == 1
+
+def motivo_horario_invalido(usuario, fecha, bloques_ids, bloques_texto=""):
+    """Por qué ese horario ya no se puede pedir, o None si sigue libre. El
+    asistente guarda el horario en la sesión, y mientras se completa la jornada
+    los bloqueos o las aprobaciones pueden cambiar."""
+    bloques = list(Bloque.objects.filter(id__in=bloques_ids).order_by("inicio"))
+    for bloque in bloques:
+        if not bloque.activo:
+            return f"El bloque de las {bloque.inicio:%H:%M} ya no está en la jornada."
+    actual = ", ".join(f"{b.inicio:%H:%M} - {b.termino:%H:%M}" for b in bloques)
+    if bloques_texto and actual != bloques_texto:
+        return f"El horario que marcaste ({bloques_texto}) ya no coincide con la jornada actual ({actual})."
+    for bloque in bloques:
+        bloqueo = bloqueo_de(fecha, bloque.inicio)
+        if bloqueo is not None:
+            return f"La sala está bloqueada a las {bloque.inicio:%H:%M} ({bloqueo.razon})."
+    pedidos = SolicitudBloque.objects.filter(solicitud__fecha=fecha, bloque_id__in=bloques_ids).select_related("bloque")
+    reservado = pedidos.filter(
+        solicitud__estado_validacion=Solicitud.EstadoValidacion.ACEPTADA
+    ).exclude(solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA).first()
+    if reservado:
+        return f"El bloque de las {reservado.bloque.inicio:%H:%M} ya está reservado."
+    propio = pedidos.filter(
+        solicitud__solicitante=usuario,
+        solicitud__estado_validacion=Solicitud.EstadoValidacion.PENDIENTE
+    ).first()
+    if propio:
+        return f"Ya tienes una solicitud pendiente para el bloque de las {propio.bloque.inicio:%H:%M}."
+    return None
