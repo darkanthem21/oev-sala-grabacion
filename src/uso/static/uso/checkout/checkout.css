@@ -1,12 +1,12 @@
-/* Estilos del editor y del reporte de check-out. */
-.checkout-seccion { border: 1px solid var(--borde); border-top: 4px solid var(--destacado); padding: 1.25rem; margin: 1.25rem 0; background: var(--superficie); border-radius: .4rem; }
+/* Editor y reporte del check-out. Solo variables de marca.css. */
+.checkout-seccion { border: 1px solid var(--borde); padding: var(--esp-5); margin: var(--esp-5) 0; background: var(--superficie); border-radius: var(--radio); }
 .checkout-seccion h3 { margin-top: 0; }
-.checkout-pregunta { border: 0; border-bottom: 1px solid var(--borde); padding: 1rem 0; margin: .75rem 0; min-width: 0; }
+.checkout-pregunta { border: 0; border-bottom: 1px solid var(--borde); padding: var(--esp-4) 0; margin: var(--esp-3) 0; min-width: 0; }
 .checkout-pregunta legend { font-weight: 600; }
-.checkout-seccion label { display: block; margin-bottom: .5rem; }
-.checkout-seccion input[type="text"], .checkout-seccion textarea { display: block; width: 100%; box-sizing: border-box; padding: .65rem; margin: .4rem 0; font: inherit; }
-.checkout-acciones { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0; }
-.checkout-regla { border-left: 3px solid var(--destacado); padding: .8rem; }
+.checkout-seccion label { display: block; margin-bottom: var(--esp-2); }
+.checkout-seccion input[type="text"], .checkout-seccion textarea { display: block; width: 100%; box-sizing: border-box; padding: var(--esp-3); margin: var(--esp-2) 0; font: inherit; }
+.checkout-acciones { display: flex; flex-wrap: wrap; gap: var(--esp-2); margin: var(--esp-3) 0; }
+.checkout-regla { border-left: 3px solid var(--info); padding: var(--esp-3); }
 .errorlist { color: var(--alerta); }
-.checkout-evidencia { border-left: 3px solid var(--precaucion); padding-left: 1rem; }
+.checkout-evidencia { border-left: 3px solid var(--precaucion); padding-left: var(--esp-4); }
 [hidden] { display: none !important; }

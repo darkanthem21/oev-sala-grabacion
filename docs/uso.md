@@ -22,13 +22,14 @@ Este manual cubre lo que hoy está disponible en el sistema, ordenado por rol:
 
 Cada rol entra por su propia dirección. Solo la del solicitante está enlazada
 desde el sitio; las otras tres las conoce quien las usa. Cada puerta se reconoce
-por el panel de la izquierda, con el nombre y el color del rol.
+por el panel de la izquierda, con el nombre, el ícono y el color del rol. Una vez
+adentro, el mismo ícono y color aparecen junto al nombre, bajo la banda naranja.
 
 | Rol | Dirección | Panel |
 |---|---|---|
-| Solicitante | `/solicitante/entrar/` | Azul, **Solicitantes** |
+| Solicitante | `/solicitante/entrar/` | Naranjo, **Solicitantes** |
 | Administrador | `/configuracion/entrar/` | Azul petróleo, **Administración** |
-| Validador | `/validacion/entrar/` | Vino, **Validación** |
+| Validador | `/validacion/entrar/` | Turquesa, **Validación** |
 | Personal de apoyo | `/apoyo/entrar/` | Gris azulado, **Personal de apoyo** |
 
 ### Dar un rol a alguien
@@ -357,8 +358,8 @@ por resolver; **←**, **Hoy** y **→** cambian de semana.
 | Bloque | Qué indica |
 |---|---|
 | Con un nombre | Una solicitud pendiente lo pide |
-| Borde rojo, con dos nombres o más | Tope: varias solicitudes piden ese bloque |
-| Celeste, con el nombre en gris | Reservado: ya está aprobado para esa persona |
+| Borde color vino, con dos nombres o más | Tope: varias solicitudes piden ese bloque |
+| Filete celeste, con el nombre en gris | Reservado: ya está aprobado para esa persona |
 | Rayado | Bloqueado por el administrador: no se puede aprobar |
 | Borde punteado | Quitado de la jornada, pero con pedidos de antes |
 

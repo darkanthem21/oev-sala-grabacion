@@ -4,12 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block titulo %}{% endblock %} · Sala de grabación OEV</title>
+<link rel="preload" href="{% static 'fonts/roboto-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{% static 'css/marca.css' %}">
+<link rel="stylesheet" href="{% static 'css/base.css' %}">
 <link rel="stylesheet" href="{% static 'css/flotantes.css' %}">
 {% block estilos %}{% endblock %}
-<script src="https://unpkg.com/htmx.org@2/dist/htmx.min.js"></script>
+{% comment %}Servidos por la app y con versión fija: el ingreso depende de htmx.{% endcomment %}
+<script src="{% static 'js/vendor/htmx-2.0.11.min.js' %}"></script>
 <script defer src="{% static 'js/flotantes.js' %}"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+<script defer src="{% static 'js/vendor/alpine-3.17.5.min.js' %}"></script>
 </head>
 <body>
 {% comment %}

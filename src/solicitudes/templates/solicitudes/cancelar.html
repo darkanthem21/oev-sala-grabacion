@@ -35,11 +35,11 @@
   </dl>
 
   <div class="acciones-paso">
-    <a href="{% url 'mis_solicitudes' %}?vista=proximas" class="btn-secundario"><span>Volver a mis solicitudes</span></a>
+    <a href="{% url 'mis_solicitudes' %}?vista=proximas" class="btn"><span>Volver a mis solicitudes</span></a>
     {% if solicitud.puede_cancelarse %}
       <form method="post">
         {% csrf_token %}
-        <button type="submit" class="peligro">Sí, cancelar la reserva</button>
+        <button type="submit" class="btn peligro">Sí, cancelar la reserva</button>
       </form>
     {% endif %}
   </div>

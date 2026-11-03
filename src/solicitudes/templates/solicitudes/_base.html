@@ -20,27 +20,19 @@
 {% block contenido %}
 {% with ruta=request.resolver_match.url_name %}
 <header class="techo">
-  <div class="dentro">
-    <div class="fila">
-      <img class="sello" src="{% static 'img/Facultad-color-negro.png' %}"
-           alt="Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile">
-      <h1>Sala de grabación</h1>
-      <div class="quien">
-        <span class="correo">{{ user.get_full_name|default:user.email }}</span>
-        <form method="post" action="{% url 'logout' %}">
-          {% csrf_token %}<button class="btn" type="submit">Cerrar sesión</button>
-        </form>
-      </div>
+  {% include "_banda.html" %}
+  <div class="riel">
+    <div class="dentro">
+      <nav class="pestanas" aria-label="Secciones del solicitante">
+        <a class="pestana {% if ruta != 'mis_solicitudes' and ruta != 'confirmar_solicitud' and ruta != 'cancelar_solicitud' and ruta != 'mis_sanciones' %}activa{% endif %}" href="{% url 'solicitar' %}"
+           {% if ruta != "mis_solicitudes" and ruta != "confirmar_solicitud" and ruta != "cancelar_solicitud" and ruta != "mis_sanciones" %}aria-current="page"{% endif %}>Solicitar reserva</a>
+        <a class="pestana {% if ruta == 'mis_solicitudes' or ruta == 'confirmar_solicitud' or ruta == 'cancelar_solicitud' %}activa{% endif %}" href="{% url 'mis_solicitudes' %}"
+           {% if ruta == "mis_solicitudes" or ruta == "confirmar_solicitud" or ruta == "cancelar_solicitud" %}aria-current="page"{% endif %}>Mis solicitudes</a>
+        <a class="pestana {% if ruta == 'mis_sanciones' %}activa{% endif %}" href="{% url 'mis_sanciones' %}"
+           {% if ruta == "mis_sanciones" %}aria-current="page"{% endif %}>Mis sanciones</a>
+      </nav>
+      {% include "_rol.html" with rol="solicitante" nombre="Solicitante" %}
     </div>
-
-    <nav class="pestanas" aria-label="Secciones del solicitante">
-      <a class="pestana {% if ruta != 'mis_solicitudes' and ruta != 'confirmar_solicitud' and ruta != 'cancelar_solicitud' and ruta != 'mis_sanciones' %}activa{% endif %}" href="{% url 'solicitar' %}"
-         {% if ruta != "mis_solicitudes" and ruta != "confirmar_solicitud" and ruta != "cancelar_solicitud" and ruta != "mis_sanciones" %}aria-current="page"{% endif %}>Solicitar reserva</a>
-      <a class="pestana {% if ruta == 'mis_solicitudes' or ruta == 'confirmar_solicitud' or ruta == 'cancelar_solicitud' %}activa{% endif %}" href="{% url 'mis_solicitudes' %}"
-         {% if ruta == "mis_solicitudes" or ruta == "confirmar_solicitud" or ruta == "cancelar_solicitud" %}aria-current="page"{% endif %}>Mis solicitudes</a>
-      <a class="pestana {% if ruta == 'mis_sanciones' %}activa{% endif %}" href="{% url 'mis_sanciones' %}"
-         {% if ruta == "mis_sanciones" %}aria-current="page"{% endif %}>Mis sanciones</a>
-    </nav>
   </div>
 </header>
 {% endwith %}
