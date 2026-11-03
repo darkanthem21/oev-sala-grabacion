@@ -316,6 +316,12 @@ def test_detalle_en_orden_cronologico(client, administrador, ana, informatica, b
     assert "Presentó certificado" in contenido
 
 
+def test_los_de_un_mismo_check_out_van_en_el_orden_del_listado(client, administrador, ana, informatica, bloque):
+    checkout(ana, informatica, date(2026, 10, 5), bloque, noes=["basura", "paredes"])
+    eventos = entrar(client, administrador).get(reverse("sanciones_de", args=[ana.pk])).context["eventos"]
+    assert [e["pregunta"] for e in eventos] == ["¿Las paredes están sin daños?", "¿La sala está sin basura?"]
+
+
 def test_detalle_con_un_numero_fijo_de_consultas(client, administrador, ana, informatica, bloque,
                                                  django_assert_max_num_queries):
     entrar(client, administrador)

@@ -85,7 +85,7 @@
   .tabla-personas thead { display: none; }
   .tabla-personas tr { display: block; padding: .6rem .9rem; border-bottom: 1px solid var(--borde); }
   .tabla-personas tr:last-child { border-bottom: 0; }
-  .tabla-personas td { display: block; padding: .2rem 0; border: 0; text-align: left; }
+  .tabla-personas td, .tabla-personas .numero { display: block; padding: .2rem 0; border: 0; text-align: left; }
   .tabla-personas td::before {
     content: attr(data-titulo); display: block;
     font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--tinta-suave);

@@ -203,6 +203,11 @@ def filtrar_personas(personas, area=None, estado=None, texto=""):
     return personas
 
 
+def _posicion(checkout, clave):
+    claves = [p["id"] for seccion in checkout.formulario for p in seccion["preguntas"]]
+    return claves.index(clave) if clave in claves else len(claves)
+
+
 def _pregunta(checkout, clave):
     """La sección y el texto de la pregunta, de la copia del listado que guardó
     ese check-out: si el administrador cambió el listado después, se ve lo que
@@ -223,7 +228,8 @@ def detalle_de(usuario, hoy=None):
     fotos = incidentes().filter(checkout__ticket__solicitud__solicitante=usuario).select_related(
         "checkout__ticket__solicitud", "checkout__ticket__bloque", "checkout__registrado_por",
     )
-    for foto in fotos:
+    # Las de un mismo check-out, en el orden del listado que se respondió.
+    for foto in sorted(fotos, key=lambda f: (f.checkout_id, _posicion(f.checkout, f.pregunta))):
         checkout = foto.checkout
         seccion, texto = _pregunta(checkout, foto.pregunta)
         eventos.append({
