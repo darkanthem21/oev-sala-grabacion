@@ -431,7 +431,7 @@
     border-radius: 4px;
     padding: 0.85rem 1rem;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.85rem;
     background: var(--superficie);
     transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -483,6 +483,7 @@
     flex-shrink: 0;
     box-sizing: border-box;
     transition: all 0.15s ease;
+    margin-top: 0.1rem;
 }
 
 .tarjeta-bloque.disponible:hover .checkbox-visual {
@@ -527,6 +528,29 @@
     align-items: center;
     gap: 0.45rem;
     white-space: nowrap;
+}
+
+.bloque-demanda {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    color: var(--tinta-suave);
+}
+
+.bloque-demanda strong {
+    color: var(--tinta);
+    font-weight: 600;
+}
+
+.icono-demanda {
+    flex-shrink: 0;
+    color: var(--tinta-suave);
+}
+
+.bloque-demanda-vacia .icono-demanda {
+    opacity: 0.6;
 }
 
 .icono-reloj {

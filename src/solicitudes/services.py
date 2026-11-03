@@ -57,6 +57,7 @@ class BloqueVista:
     inicio: time
     termino: time
     es_propio: bool = False
+    solicitantes: int = 0
 
     @property
     def disponible_para_reserva(self) -> bool:
@@ -65,6 +66,14 @@ class BloqueVista:
     @property
     def texto(self) -> str:
         return f"{self.inicio:%H:%M} – {self.termino:%H:%M}"
+
+    @property
+    def otros_solicitantes(self) -> int:
+        """Si el usuario ya solicitó el bloque, ¿cuántos otros lo están
+        pidiendo también?"""
+        if not self.es_propio:
+            return self.solicitantes
+        return self.solicitantes - 1
 
 
 def obtener_dias_con_disponibilidad(year: int, month: int) -> set:
@@ -107,6 +116,7 @@ def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List["BloqueV
     - Bloques con solicitud activa propia del usuario (marcado con es_propio=True).
     Excluye:
     - Bloques con reserva aceptada.
+    - Cuántos usuarios distintos están solicitando cada bloque (para mostrarlo al usuario).
     """
     bloques_plantilla = disponibilidad(fecha, fecha).get(fecha, [])
     if not bloques_plantilla:
@@ -125,7 +135,7 @@ def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List["BloqueV
             ],
         )
         .exclude(solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA)
-        .select_related("solicitud", "solicitud__solicitante")
+        .select_related("solicitud")
     )
 
     solicitudes_por_bloque = {}
@@ -136,18 +146,27 @@ def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List["BloqueV
 
     resultado = []
     for b in sorted(bloques_plantilla, key=lambda x: x.inicio):
-        sols = solicitudes_por_bloque.get(b.id, [])
+        solicitudes = solicitudes_por_bloque.get(b.id, [])
 
         # Si el bloque tiene una solicitud ACEPTADA, no se muestra
-        if any(s.estado_validacion == Solicitud.EstadoValidacion.ACEPTADA for s in sols):
+        if any(s.estado_validacion == Solicitud.EstadoValidacion.ACEPTADA for s in solicitudes):
             continue
+
+        # Personas distintas con una solicitud pendiente por este bloque
+        solicitantes = len({s.solicitante_id for s in solicitudes if s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE})
 
         # Si el usuario actual tiene una solicitud PENDIENTE para este bloque:
         es_propio = bool(usuario_id) and any(
             s.solicitante_id == usuario_id and s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE
-            for s in sols
+            for s in solicitudes
         )
-        resultado.append(BloqueVista(id=b.id, inicio=b.inicio, termino=b.termino, es_propio=es_propio))
+        resultado.append(BloqueVista(
+            id=b.id,
+            inicio=b.inicio, 
+            termino=b.termino, 
+            es_propio=es_propio, 
+            solicitantes=solicitantes)
+            )
 
     return resultado
 

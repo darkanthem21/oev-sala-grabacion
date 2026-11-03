@@ -27,6 +27,7 @@
 
 /* --- Campos --- */
 .hoja label { display: block; font-weight: 500; font-size: .85rem; margin-bottom: .35rem; }
+.hoja label.tarjeta-bloque { display: flex; margin-bottom: 0; }
 .hoja input[type=text], .hoja input[type=email], .hoja input[type=number],
 .hoja select, .hoja textarea {
   width: 100%; box-sizing: border-box; padding: .6rem .7rem; margin-bottom: 1.1rem;
