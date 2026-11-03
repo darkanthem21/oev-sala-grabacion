@@ -8,49 +8,28 @@ archivos de compose y un `.env`.
 Al arrancar, el contenedor aplica las migraciones y crea el superusuario si no
 existe. No hay pasos manuales de base de datos.
 
-El check-out configurable añade las migraciones `uso/0001_initial`,
-`0002_respuestas_y_evidencia_final`, `0003_normalizar_respuestas_existentes`
-y `0004_asistencia_y_edicion_checkout`, y requiere Pillow
-(incluido en `requirements.txt`). Fuera de Docker, instalar las dependencias y
-ejecutar `python src/manage.py migrate` antes de iniciar la aplicación.
-Las fotos se guardan en `MEDIA_ROOT` (por defecto `src/media`); Docker monta el
-volumen `checkoutmedia` en `/app/media` para conservarlas al recrear el contenedor.
-Respaldar ese volumen junto con la base. No se necesita publicar una ruta de medios:
-Django entrega las evidencias mediante una vista con control de acceso.
-La migración `0003` transforma las respuestas históricas guardadas en JSON en
-registros consultables por pregunta y enlaza las fotografías existentes. No
-exige fotografía final a los reportes anteriores ni modifica sus respuestas.
-La vista previa y los ajustes de interfaz posteriores (orden de pestañas,
-controles del editor, ocultación de la revisión y retiro de recomendaciones
-por evidencia) no añaden migraciones. Actualizar el código y los estáticos es
-suficiente en instalaciones que ya aplicaron `0001`, `0002` y `0003`.
-El campo histórico de recomendaciones por pregunta permanece en la base para
-conservar los registros anteriores, pero no se solicita ni se usa en reportes nuevos.
-El paso de asistencia y la ventana de modificación de 10 minutos requieren
-aplicar `0004`: permite una hora de salida vacía en inasistencias, conserva los
-check-outs existentes como asistencias y añade los datos e historial de edición.
-El respaldo debe incluir también las fotografías anteriores referenciadas en
-ese historial, además de las evidencias del reporte vigente.
-El historial administrativo y los PDF requieren además ReportLab (incluido en
-`requirements.txt`), las fuentes locales de `src/uso/checkout/fonts/` con sus
-licencias y la migración `0005_indice_historial_checkout`. Esta migración añade
-el índice para consultar las fechas del historial; no elimina registros.
-Si se usa Docker, reconstruir la imagen al cambiar las dependencias antes de
-levantar el servicio. El PDF se genera en memoria y no requiere un servicio externo
-ni una carpeta nueva de archivos públicos. Para ejecutar también las pruebas de
-PDF, instalar las dependencias de `requirements-dev.txt`.
-
 ## Servidor del curso
 
 | Dato | Valor |
 |---|---|
 | Máquina | `146.83.216.166`, usuario `grupo6` por SSH |
-| URL pública | <http://grupo6.146.83.216.166.nip.io> |
+| URL pública | <https://oev.inf.uach.cl> |
 | Carpeta de despliegue | `~/oev` |
 | Contenedor de la aplicación | `grupo6_frontend`, puerto interno `3006` |
+| Contenedor de los recordatorios | `grupo6_tareas`, la misma imagen con un bucle que corre cada hora |
 | Contenedor de la base | `grupo6_db` |
-| Volumen de datos | `grupo6_pgdata` |
+| Volúmenes | `grupo6_pgdata` (base) y `grupo6_checkoutmedia` (fotos del check-out) |
 | Red | `red_taller_software`, compartida por todos los grupos |
+
+## Imágenes publicadas
+
+| Cuándo | Etiquetas |
+|---|---|
+| Cada push a `main` | `main` y el SHA del commit |
+| A mano, desde *Actions* > **imagen** > *Run workflow* sobre una rama | La rama con `/` cambiado por `-` (`feat-us-14-bloques-apoyo`) y el SHA |
+
+El mismo workflow borra lo antiguo: quedan `main` y las 15 versiones más
+recientes.
 
 ## Primera instalación
 
@@ -79,19 +58,19 @@ Ese archivo vive solo en el servidor y nunca entra a git.
 
 | Variable | Valor |
 |---|---|
-| `TAG` | Qué imagen desplegar: `main`, una rama con `/` cambiado por `-` (`feat-us-14-bloques-apoyo`) o el SHA completo de un commit |
+| `TAG` | Qué imagen desplegar: `main`, el SHA completo de un commit o una rama publicada a mano |
 | `PUERTO` | `3006`. Tiene que coincidir con la regla del Caddy |
-| `ALLOWED_HOSTS` | `grupo6.146.83.216.166.nip.io` |
+| `ALLOWED_HOSTS` | `oev.inf.uach.cl` |
+| `CSRF_ORIGINS` | `https://oev.inf.uach.cl`. Caddy sirve el dominio por HTTPS |
+| `URL_BASE` | `https://oev.inf.uach.cl`. Dominio de los enlaces del recordatorio; por defecto `http://localhost:8000` |
 | `POSTGRES_PASSWORD` | Clave de la base. PostgreSQL la lee solo al crear el volumen: cambiarla después no cambia la de la base |
 | `SECRET_KEY` | Aleatoria y larga: `python3 -c 'import secrets; print(secrets.token_urlsafe(50))'` |
-| `DJANGO_SUPERUSER_EMAIL` | Correo del administrador inicial |
+| `DJANGO_SUPERUSER_EMAIL` | Correo del superusuario: la cuenta de soporte de la Oficina, la única que da y quita el rol **Administrador** |
 | `DJANGO_SUPERUSER_PASSWORD` | Su clave. Si el usuario ya existe, no se modifica |
-| `EMAIL_BACKEND` | Opcional. Sin él, los correos (recuperar clave) se escriben en el log del contenedor. Para enviarlos: `django.core.mail.backends.smtp.EmailBackend` |
+| `EMAIL_BACKEND` | Opcional. Sin él, los correos se escriben en el log del contenedor, también el enlace con que una cuenta nueva crea su contraseña. Para enviarlos: `django.core.mail.backends.smtp.EmailBackend` |
 | `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | Solo con el backend SMTP: servidor, usuario y clave de la cuenta que envía |
 | `EMAIL_PORT`, `EMAIL_USE_TLS` | Opcionales; por defecto `587` y `1` (STARTTLS), lo que usan Gmail, Brevo y Ethereal |
 | `DEFAULT_FROM_EMAIL` | Opcional. Remitente de los correos; por defecto `no-responder@uach.cl`. Con una cuenta externa tiene que ser la dirección de esa cuenta, o el correo cae en spam |
-| `CSRF_ORIGINS` | Solo si el sitio pasa a servirse por HTTPS: `https://<dominio>` |
-| `URL_BASE` | Dominio de los enlaces del recordatorio de US-03: `https://oev.inf.uach.cl`. Por defecto `http://localhost:8000` |
 
 Compose lee el mismo `.env` dos veces: para elegir la imagen (`TAG`, `PUERTO`) y
 para pasarle las variables a los contenedores.
@@ -113,15 +92,22 @@ El `-p grupo6` fija el nombre del proyecto, y de ahí sale el del volumen. Sin
 
 Se sigue con el paso 2 de la sección siguiente.
 
+### 5. Cargar las áreas
+
+Las áreas no vienen cargadas y un solicitante sin un área activa no puede pedir
+la sala. En la pestaña **Áreas**, crear **Educación Continua Online** y
+**Decanatura** (minuta del 27/10).
+
 ## Desplegar una versión
 
 ### 1. Esperar la imagen
 
-Después del push, esperar a que termine el workflow `imagen` en la pestaña
-*Actions* de GitHub. Hasta que termine, la imagen nueva no existe.
+Después del merge a `main`, esperar a que termine el workflow `imagen` en la
+pestaña *Actions* de GitHub. Hasta que termine, la imagen nueva no existe.
 
-Si el push cambió `docker-compose.yml` o `docker-compose.servidor.yml`, repetir
-antes el `scp` del paso 1 de la primera instalación, sin el `.env`.
+Si el cambio tocó `docker-compose.yml` o `docker-compose.servidor.yml`, repetir
+antes el `scp` del paso 1 de la primera instalación, sin el `.env`. Si la versión
+trae migraciones, hacer antes el [respaldo](#respaldo-de-la-base).
 
 ### 2. Bajar la imagen y reiniciar
 
@@ -132,6 +118,7 @@ cd ~/oev
 dc pull web
 dc down
 dc up -d
+docker images ghcr.io/darkanthem21/oev-sala-grabacion -f dangling=true -q | xargs -r docker rmi
 ```
 
 **Siempre `down` y después `up -d`, nunca `up -d` directamente.** El
@@ -141,6 +128,10 @@ por el workflow ya no traen. Crear los contenedores de cero no pasa por ese
 código. El `down` sin `-v` no borra el volumen: los datos se conservan.
 **Nunca `dc down -v`**: borra la base.
 
+La última línea borra la imagen que quedó sin etiqueta al bajar la nueva. Solo
+toca las de este repositorio: el servidor es compartido, así que nunca
+`docker image prune`.
+
 ### 3. Verificar
 
 ```sh
@@ -148,7 +139,8 @@ docker ps --filter name=grupo6
 docker logs --tail 50 grupo6_frontend
 ```
 
-El log tiene que mostrar las migraciones aplicadas y terminar en
+Tienen que estar arriba `grupo6_frontend`, `grupo6_tareas` y `grupo6_db`. El log
+tiene que mostrar las migraciones aplicadas y terminar en
 `Starting development server at http://0.0.0.0:3006/`. Después se entra a la URL
 pública y se inicia sesión.
 
@@ -164,7 +156,11 @@ Antes de desplegar una versión que traiga migraciones:
 
 ```sh
 docker exec grupo6_db pg_dump -U oev oev > respaldo-$(date +%F).sql
+docker cp grupo6_frontend:/app/media media-$(date +%F)
 ```
+
+La segunda línea copia las fotos del check-out, que viven en el volumen
+`grupo6_checkoutmedia` y no en la base.
 
 Para restaurar, sobre una base vacía:
 
@@ -194,148 +190,17 @@ Ni el respaldo ni la estructura entran al repositorio (`CONTRIBUTING.md`). Las
 relaciones entre tablas también están dibujadas en `docs/diagramas.md`, en
 **Relaciones de la base de datos**.
 
-## Solicitudes y panel del validador (US-02 y US-07)
+## Diagramas de la documentación
 
-### Antes de desplegar
+`docs/` no viaja en la imagen (`.dockerignore`), así que los diagramas no se
+despliegan: se compilan en la máquina de quien los cambia y se commitean con su
+fuente. Todos incluyen `docs/diagramas/estilo.iuml`, que fija la resolución, las
+fuentes y el color de cada capa. Para compilarlos hacen falta PlantUML y las
+fuentes **Noto Sans** y **JetBrainsMono NF** instaladas. El detalle está en
+`docs/diagramas.md`, en
+[Cómo se dibujan y se compilan](diagramas.md#cómo-se-dibujan-y-se-compilan).
 
-Esta versión trae la migración de `solicitudes`, que crea las tablas de la
-solicitud, sus bloques y sus acompañantes. Hacer el respaldo de la base (ver
-[Respaldo de la base](#respaldo-de-la-base)) antes de bajar la imagen.
-
-No hay variables nuevas en el `.env`. El texto de los términos y condiciones se
-edita en el panel de administración, en **Reglas**, y no por entorno.
-
-### Rutas nuevas
-
-| Ruta | Quién entra |
-|---|---|
-| `/solicitar/` | Formulario de solicitud. Cuentas del grupo **Solicitante** con al menos un área activa |
-| `/validacion/entrar/` | Puerta de los validadores |
-| `/validador/` | Panel del validador. Cuentas del grupo **Validador** |
-
-El grupo y las áreas de cada cuenta se asignan en `/admin/` > **Usuarios**.
-
-### Verificar después de desplegar
-
-- Entrar por `/solicitante/entrar/` con una cuenta que tenga área y ver el paso
-  1 del formulario en `/solicitar/`.
-- Entrar por `/validacion/entrar/` con una cuenta validadora y ver en
-  `/validador/` las solicitudes pendientes reales.
-
-## Validación conectada a la base (US-07)
-
-### Antes de desplegar
-
-Esta versión trae la migración `solicitudes.0004_solicitud_resolucion`, que
-agrega a la solicitud quién la resolvió, cuándo y con qué motivo. Hacer el
-respaldo de la base (ver [Respaldo de la base](#respaldo-de-la-base)) antes de
-bajar la imagen.
-
-No hay variables nuevas en el `.env`. Los correos de resolución salen por el
-`EMAIL_BACKEND` configurado, igual que los avisos de bloqueo.
-
-### Rutas nuevas
-
-| Ruta | Quién entra |
-|---|---|
-| `/configuracion/validacion/` | Pestaña **Validación** del administrador. Cuentas con `is_staff` |
-| `/validador/resolver/` | Lo llama el panel al aprobar o rechazar. Validadores y cuentas con `is_staff` |
-
-### Verificar después de desplegar
-
-- Aprobar o rechazar una solicitud en `/validador/`, recargar y ver que quedó
-  resuelta.
-- Entrar como el solicitante y ver el estado y el motivo en **Mis solicitudes**.
-- `docker logs grupo6_frontend` muestra el correo de la resolución si el
-  backend de correo es la consola.
-
-## Recordatorio y cancelación (US-03)
-
-### Antes de desplegar
-
-Esta versión trae la migración `solicitudes.0006_solicitud_recordatorio_y_cancelacion`,
-que agrega a la solicitud cuándo salió su recordatorio y cuándo se canceló. Hacer el
-respaldo de la base antes de bajar la imagen.
-
-Agregar `URL_BASE` al `.env`. Sin ella, los enlaces del recordatorio apuntan a
-`localhost`.
-
-El stack suma un contenedor, `grupo6_tareas`: la misma imagen que
-`grupo6_frontend`, con un bucle que manda los recordatorios cada hora. `dc pull web`
-baja la imagen de los dos.
-
-### Rutas nuevas
-
-| Ruta | Quién entra |
-|---|---|
-| `/solicitar/mis-solicitudes/<id>/cancelar/` | El solicitante de esa reserva. El enlace llega en el recordatorio y en **Mis solicitudes** |
-
-### Verificar después de desplegar
-
-- `docker ps --filter name=grupo6` muestra `grupo6_tareas` corriendo.
-- Un minuto después de levantar, `docker logs grupo6_tareas` muestra
-  `recordatorios enviados: N`, y luego una línea por hora.
-- Correr una vuelta a mano: `docker exec grupo6_tareas python manage.py recordar_confirmaciones`.
-  Repetirla no manda nada nuevo.
-
-## Sanciones (US-10)
-
-### Antes de desplegar
-
-Esta versión trae la migración `personas.0003_sancion`, que crea la tabla de
-sanciones con sus tres claves foráneas a la persona: a quién se sanciona, quién
-la puso y quién la levantó. Hacer el respaldo de la base antes de bajar la
-imagen. No hay variables nuevas en el `.env` ni tareas programadas: la sanción
-deja de regir sola al día siguiente de su término.
-
-### Rutas nuevas
-
-| Ruta | Quién entra |
-|---|---|
-| `/solicitar/mis-sanciones/` | Pestaña **Mis sanciones** del solicitante. Cuentas del grupo **Solicitante** |
-| `/configuracion/sanciones/` | Pestaña **Sanciones** del administrador, para levantarlas. Rol **Administrador** (antes de US-08, `is_staff`) |
-| `/admin/personas/sancion/` | Crear y acortar sanciones. Solo el superusuario |
-
-### Verificar después de desplegar
-
-- En `/admin/` > **Personas › Sanciones**, crear una sanción de un día para una
-  cuenta de prueba.
-- Entrar con esa cuenta por `/solicitante/entrar/`: en vez del formulario sale
-  **No puedes solicitar por ahora**, y la franja de aviso aparece en **Mis
-  solicitudes**.
-- Levantarla en `/configuracion/sanciones/` con un motivo y ver que la cuenta
-  vuelve a ver el formulario.
-
-## Historial de sanciones del administrador (US-12)
-
-### Antes de desplegar
-
-Esta versión **no trae migraciones**: la sanción ya tenía todo lo que hace falta
-(`creada_por` y `creada_en` son quién la aplicó y cuándo), y los incidentes y
-las inasistencias se calculan de las tablas del check-out y de la solicitud. No
-hay variables nuevas en el `.env` ni tareas programadas.
-
-Los correos de sanción salen por el `EMAIL_BACKEND` configurado, igual que los
-de resolución.
-
-### Rutas nuevas
-
-| Ruta | Quién entra |
-|---|---|
-| `/configuracion/sanciones/` | La misma de US-10, ahora con el listado de solicitantes, sus incidentes, inasistencias y sanción. Rol **Administrador** |
-| `/configuracion/sanciones/<id>/` | Historial de una persona, y desde ahí aplicar y levantar. Rol **Administrador** |
-
-### Verificar después de desplegar
-
-- Entrar a `/configuracion/sanciones/` y ver a los solicitantes, con sus
-  incidentes y la sanción vigente de quien tenga una.
-- Abrir a una cuenta de prueba, sancionarla por un día y ver en
-  `docker logs grupo6_frontend` el correo, si el backend es la consola.
-- Entrar con esa cuenta por `/solicitante/entrar/`: sale **No puedes solicitar
-  por ahora**. Levantar la sanción desde el detalle y ver que vuelve el
-  formulario.
-
-### Decisión abierta: una restricción en la base contra sanciones pisadas
+## Decisión abierta: una restricción en la base contra sanciones pisadas
 
 Hoy la regla de que dos sanciones no levantadas no se pisen la revisan
 `Sancion.clean()` y `personas.services.aplicar`, que bloquea la fila de la
@@ -365,68 +230,6 @@ docker exec grupo6_db psql -U oev oev -c "
    AND a.inicio <= b.termino AND b.inicio <= a.termino;"
 ```
 
-## Áreas académicas (US-05)
-
-### Antes de desplegar
-
-Esta versión trae la migración `personas.0004_area_nota_y_cambios`, que agrega
-la nota del área y su registro de cambios. Hacer el respaldo de la base antes de
-bajar la imagen. No hay variables nuevas en el `.env`.
-
-### Rutas nuevas
-
-| Ruta | Quién entra |
-|---|---|
-| `/configuracion/areas/` | Pestaña **Áreas** del administrador. Rol **Administrador** (antes de US-08, `is_staff`) |
-
-### Después de desplegar
-
-Las áreas no vienen cargadas. En la pestaña **Áreas**, crear **Educación
-Continua Online** y **Decanatura** (minuta del 27/10) y desactivar las que ya no
-correspondan. Un solicitante sin un área activa no puede pedir la sala.
-
-## Usuarios (US-08)
-
-### Antes de desplegar
-
-Esta versión trae la migración `personas.0005_cuentas_y_su_registro`, que crea el
-registro de cambios de cuentas. Hacer el respaldo de la base antes de bajar la
-imagen. No hay variables nuevas en el `.env`, pero las cuentas nuevas reciben su
-contraseña por correo: sin SMTP configurado, el enlace queda solo en
-`docker logs grupo6_frontend`.
-
-Desde esta versión el panel del administrador lo abre el rol **Administrador**,
-no solo `is_staff`. El superusuario que crea el arranque
-(`DJANGO_SUPERUSER_EMAIL`) es la cuenta de soporte de la Oficina: es la única
-que da y quita el rol **Administrador**.
-
-### Rutas nuevas
-
-| Ruta | Quién entra |
-|---|---|
-| `/configuracion/usuarios/` | Pestaña **Usuarios**: lista, búsqueda y filtros. Rol **Administrador** |
-| `/configuracion/usuarios/nueva/`, `/configuracion/usuarios/<id>/` | Crear y editar una cuenta. Rol **Administrador** |
-| `/configuracion/usuarios/cargar/` | Carga en lote desde un CSV. Rol **Administrador** |
-| `/configuracion/usuarios/plantilla.csv` | Plantilla de la carga. Rol **Administrador** |
-
-### Verificar después de desplegar
-
-- Entrar con el superusuario por `/configuracion/entrar/` y abrir **Usuarios**.
-- Crear una cuenta de prueba con el rol **Validador** y ver que le llega el
-  correo (o que el enlace aparece en el log) y que entra por
-  `/validacion/entrar/` después de crear su contraseña.
-- Desactivarla y ver que ya no entra.
-
-## Diagramas de la documentación
-
-`docs/` no viaja en la imagen (`.dockerignore`), así que los diagramas no se
-despliegan: se compilan en la máquina de quien los cambia y se commitean con su
-fuente. Todos incluyen `docs/diagramas/estilo.iuml`, que fija la resolución, las
-fuentes y el color de cada capa. Para compilarlos hacen falta PlantUML y las
-fuentes **Noto Sans** y **JetBrainsMono NF** instaladas. El detalle está en
-`docs/diagramas.md`, en
-[Cómo se dibujan y se compilan](diagramas.md#cómo-se-dibujan-y-se-compilan).
-
 ## Problemas conocidos
 
 | Síntoma | Causa | Solución |
@@ -435,7 +238,8 @@ fuentes **Noto Sans** y **JetBrainsMono NF** instaladas. El detalle está en
 | Error 500 sin detalle en el navegador | Con `DEBUG=0` el traceback no se muestra | `docker logs grupo6_frontend` |
 | 500 al enviar el login, pero la página de login carga | Falló la base: la página no la consulta, autenticar sí | Revisar que `grupo6_db` esté *healthy* y que `POSTGRES_PASSWORD` sea la del volumen |
 | 400 *Bad Request* | El dominio no está en `ALLOWED_HOSTS` | Corregir `.env` y redesplegar |
+| 403 *CSRF verification failed* al enviar un formulario | Falta el dominio con `https://` en `CSRF_ORIGINS` | Corregir `.env` y redesplegar |
 | 502 desde el Caddy | El contenedor está caído o no coincide con la regla | `docker ps`; revisar `container_name` y `PUERTO` |
-| `manifest unknown` al hacer `pull` | El workflow no terminó o el `TAG` está mal escrito | Revisar *Actions* y el nombre de la etiqueta |
+| `manifest unknown` al hacer `pull` | El workflow no terminó, el `TAG` está mal escrito o la versión ya no está entre las 15 que se conservan | Revisar *Actions* y el nombre de la etiqueta |
 | `unauthorized` al hacer `pull` | El paquete de GHCR es privado | Hacerlo público en GitHub, o `docker login ghcr.io` con un token con permiso `read:packages` |
 | SSH responde `Connection timed out` | Pasó en septiembre sin explicación, con el sitio funcionando | Preguntar en el Discord del curso si a otros grupos les responde el puerto 22 |
