@@ -1,0 +1,56 @@
+@startuml levantar-sancion
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Levantar una sanción (US-10, desde US-12 en uso)
+
+actor "Administrador" as A
+participant "<b>uso.views</b>\n<size:11>uso/views.py</size>" as N <<presentación>>
+participant "<b>personas.forms</b>\n<size:11>personas/forms.py</size>" as F <<presentación>>
+participant "<b>personas</b>\n<size:11>personas/services.py</size>" as V <<dominio>>
+participant "<b>personas.models</b>\n<size:11>personas/models.py</size>" as M <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : POST /configuracion/sanciones/ → sanciones(request)
+N -> N ++ : _levantar(request)
+N -> D ++ : $comentario("la sanción del formulario, con su persona; si no existe, 404")\nSELECT personas_sancion ⋈ personas_usuario
+return fila
+N -> F ++ : LevantarSancionForm(request.POST).is_valid()
+return valido
+break falta el motivo
+  N -> N : messages.error(request, "Escribe por qué se levanta la sanción.")
+  N --> A : 302 · /configuracion/sanciones/?{volver} con el aviso flotante
+end
+N -> V ++ : levantar(sancion, request.user, motivo)
+V -> D ++ : $comentario("condicionado a que siga vigente: dos administradores a la vez no se pisan")\nUPDATE personas_sancion\nWHERE inicio <= hoy AND termino >= hoy AND levantada_en IS NULL
+return levantadas
+break no actualizó ninguna fila
+  V --> N : ValidationError("Esa sanción ya no está vigente: terminó o alguien la levantó.")
+  N -> N : messages.error(request, " ".join(error.messages))
+  N --> A : 302 · /configuracion/sanciones/?{volver} con el aviso flotante
+end
+V -> D ++ : SELECT personas_sancion
+return fila
+return sancion
+N -> D ++ : $comentario("sancion.usuario, para el aviso: refresh_from_db() soltó la relación")\nSELECT personas_usuario
+return persona
+N -> M ++ : persona.sancion_vigente
+M -> D ++ : $comentario("¿le queda otra? la que termina más tarde")\nSELECT personas_sancion WHERE usuario_id = … AND vigente ORDER BY termino DESC LIMIT 1
+return fila
+return otra
+alt le queda otra vigente
+  N -> N : messages.warning(request, "Levantaste la sanción de …, pero tiene otra vigente: sigue sin poder solicitar la sala hasta el …")
+else no le queda ninguna
+  N -> N : messages.success(request, "Levantaste la sanción de …. Ya puede solicitar la sala.")
+end
+return persona
+N --> A : 302 · /configuracion/sanciones/?{volver}, la misma página y filtros
+deactivate N
+note right of N
+  Desde el detalle de la persona es el mismo
+  _levantar, con accion=levantar en el POST a
+  /configuracion/sanciones/<id>/, y vuelve a ese
+  detalle. La fila no se borra: queda con quién,
+  cuándo y por qué. Las reservas no cambian (AC6).
+end note
+@enduml

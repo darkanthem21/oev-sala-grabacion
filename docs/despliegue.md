@@ -282,6 +282,65 @@ deja de regir sola al día siguiente de su término.
 - Levantarla en `/configuracion/sanciones/` con un motivo y ver que la cuenta
   vuelve a ver el formulario.
 
+## Historial de sanciones del administrador (US-12)
+
+### Antes de desplegar
+
+Esta versión **no trae migraciones**: la sanción ya tenía todo lo que hace falta
+(`creada_por` y `creada_en` son quién la aplicó y cuándo), y los incidentes y
+las inasistencias se calculan de las tablas del check-out y de la solicitud. No
+hay variables nuevas en el `.env` ni tareas programadas.
+
+Los correos de sanción salen por el `EMAIL_BACKEND` configurado, igual que los
+de resolución.
+
+### Rutas nuevas
+
+| Ruta | Quién entra |
+|---|---|
+| `/configuracion/sanciones/` | La misma de US-10, ahora con el listado de solicitantes, sus incidentes, inasistencias y sanción. Cuentas con `is_staff` |
+| `/configuracion/sanciones/<id>/` | Historial de una persona, y desde ahí aplicar y levantar. Cuentas con `is_staff` |
+
+### Verificar después de desplegar
+
+- Entrar a `/configuracion/sanciones/` y ver a los solicitantes, con sus
+  incidentes y la sanción vigente de quien tenga una.
+- Abrir a una cuenta de prueba, sancionarla por un día y ver en
+  `docker logs grupo6_frontend` el correo, si el backend es la consola.
+- Entrar con esa cuenta por `/solicitante/entrar/`: sale **No puedes solicitar
+  por ahora**. Levantar la sanción desde el detalle y ver que vuelve el
+  formulario.
+
+### Decisión abierta: una restricción en la base contra sanciones pisadas
+
+Hoy la regla de que dos sanciones no levantadas no se pisen la revisan
+`Sancion.clean()` y `personas.services.aplicar`, que bloquea la fila de la
+persona mientras revisa. Lo que no pasa por ahí (el shell, un `UPDATE` a mano)
+no la cumple. PostgreSQL podría exigirla siempre con una `ExclusionConstraint`
+sobre `daterange(inicio, termino, '[]')` y `usuario_id`, con
+`levantada_en IS NULL`. No se agregó porque:
+
+- Necesita la extensión `btree_gist`, que la migración crearía con
+  `CreateExtension`. Desde PostgreSQL 13 es una extensión *trusted*: la puede
+  crear el dueño de la base. En este servidor el usuario `oev` es el
+  `POSTGRES_USER` de la imagen, que es superusuario, así que alcanzaría; en
+  otro servidor con un usuario sin privilegio `CREATE` sobre la base, la
+  migración falla y alguien con permisos tiene que correr antes
+  `CREATE EXTENSION btree_gist;`.
+- El contenedor aplica las migraciones solo al arrancar. Si la base ya tiene
+  sanciones pisadas, que US-10 permitía, la migración falla y el sitio no
+  levanta hasta limpiarlas. Antes hay que decidir qué hacer con ellas.
+
+Para revisar si hay sanciones pisadas antes de decidir:
+
+```sh
+docker exec grupo6_db psql -U oev oev -c "
+  SELECT a.usuario_id, a.id, b.id FROM personas_sancion a JOIN personas_sancion b
+    ON a.usuario_id = b.usuario_id AND a.id < b.id
+   AND a.levantada_en IS NULL AND b.levantada_en IS NULL
+   AND a.inicio <= b.termino AND b.inicio <= a.termino;"
+```
+
 ## Áreas académicas (US-05)
 
 ### Antes de desplegar

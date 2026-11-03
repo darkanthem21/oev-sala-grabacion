@@ -592,14 +592,81 @@ AC6 quedó decidido el 20/10: la sanción solo impide pedir. Las reservas ya
 aceptadas y las solicitudes en revisión siguen su curso, así que crear una
 sanción no cancela ni avisa a nadie.
 
-### Levantar una sanción (US-10)
+### Levantar una sanción (US-10 y US-12)
 
-Crear y acortar sanciones es del superusuario, en la administración de Django.
-El administrador las levanta desde la pestaña **Sanciones** del panel. Como en
-los bloqueos de US-17, levantar no borra la fila: la marca con quién, cuándo y
-por qué con un `UPDATE` condicionado a que siga vigente.
+El administrador las levanta desde la pestaña **Sanciones** del panel, en el
+listado o en el detalle de la persona. Como en los bloqueos de US-17, levantar
+no borra la fila: la marca con quién, cuándo y por qué con un `UPDATE`
+condicionado a que siga vigente. Desde US-12 la vista es de `uso` (ver Ver el
+historial de sanciones e incidentes), y antes de avisar pregunta si a la persona
+le queda otra sanción vigente: si le queda, el aviso dice hasta cuándo sigue sin
+poder pedir, en vez de «Ya puede solicitar la sala».
 
-![Levantar una sanción](diagramas/us-10/levantar-sancion.png)
+![Levantar una sanción](diagramas/us-12/levantar-sancion.png)
+
+### Ver el historial de sanciones e incidentes (US-12)
+
+La pestaña **Sanciones** cuenta check-outs, y `personas` no puede importar
+`uso`, así que la vista y su consulta viven en `uso` (`uso.views.sanciones` y
+`uso.services.historial_personas`). Conserva la dirección y el nombre de US-10,
+`/configuracion/sanciones/` y `panel_sanciones`.
+
+Un **incidente** es cada pregunta del check-out respondida «No». No tiene tabla:
+US-20 guarda una fila de `uso_fotointegridad` por cada «No», así que contarlas
+es contar los «No» sin leer el JSON de `uso_checkout`. Esa definición está solo
+en `uso.services.incidentes()`, para cambiarla en un lugar si el equipo decide
+otra. Una **inasistencia** tampoco es una fila: `Solicitud.objects.inasistencias()`
+escribe en SQL la regla de `estado_clave` y `cancelar_cuenta_inasistencia`
+(US-03): aceptada que llegó a su día sin confirmar, o cancelada desde el lunes
+de su semana.
+
+![Ver el historial de sanciones e incidentes](diagramas/us-12/ver-historial.png)
+
+La página es una sola consulta, tenga las filas que tenga: los conteos, la
+sanción vigente, su estado y las áreas son subconsultas correlacionadas y no
+JOIN. Filtrar por área sí hace JOIN con `personas_usuario_areas`, pero una
+persona está a lo más una vez en cada área y los conteos no pasan por ese JOIN,
+así que no se repite nadie ni se inflan los números. El orden es por incidentes
+y luego por `id`, para que la paginación no repita filas. Con el COUNT del
+paginador, `Parametros`, el área del filtro y sus opciones, más la sesión, son 7
+consultas fijas. Los filtros van por GET y htmx pide solo la tabla, como en el
+historial de US-11.
+
+El estado de la sanción de cada persona es **vigente** si tiene una; si no, el
+de su última sanción por fecha de inicio, **levantada** o **terminada**, o **sin
+sanción**. El listado marca, sin sancionar, a quien llega a
+`inasistencias_para_sancion` desde el inicio de su última sanción: la sanción
+automática espera la decisión de la PO (AC8). El detalle junta incidentes,
+inasistencias y sanciones en una línea de tiempo, del más antiguo al más
+reciente. La pregunta y la observación de cada incidente salen de la copia del
+listado que guardó ese check-out, así que editar el listado después no cambia
+lo que se preguntó entonces.
+
+### Aplicar una sanción (US-12)
+
+Desde el detalle de la persona. `personas.services.aplicar` es la única entrada
+para crear una desde el código, para que la sanción automática la reutilice
+cuando se decida. Las reglas están en `Sancion.clean()`, así que `/admin/`
+también las cumple: motivo, término no anterior al inicio, inicio no futuro
+(US-10) y que no se cruce con otra sanción no levantada de la misma persona, con
+los dos extremos incluidos.
+
+![Aplicar una sanción](diagramas/us-12/aplicar-sancion.png)
+
+Revisar el cruce y guardar son dos pasos, y dos administradores a la vez
+pasarían los dos la revisión. Por eso `aplicar` bloquea primero la fila de la
+persona (`SELECT … FOR UPDATE`): el segundo espera a que el primero confirme y
+ya ve su sanción. Sin fechas, empieza hoy y termina en inicio + `dias_sancion` −
+1, porque el día de término rige entero, hasta las 23:59: con 30 días desde el
+3/11 termina el 2/12 y se vuelve a pedir el 3/12. El correo sale con
+`transaction.on_commit`.
+
+Una `ExclusionConstraint` de PostgreSQL sobre `daterange(inicio, termino, '[]')`
+con `levantada_en IS NULL` haría la misma regla en la base, también para el
+shell. No se agregó: necesita la extensión `btree_gist`, y la migración, que
+corre sola al arrancar el contenedor, fallaría si la base ya tiene sanciones
+pisadas, que US-10 permitía. Está anotada como decisión abierta en
+`docs/despliegue.md`.
 
 ### Editar el listado y registrar un check-out (US-20)
 

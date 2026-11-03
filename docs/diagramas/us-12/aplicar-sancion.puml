@@ -1,0 +1,63 @@
+@startuml aplicar-sancion
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Aplicar una sanción (US-12)
+
+actor "Administrador" as A
+participant "<b>uso.views</b>\n<size:11>uso/views.py</size>" as N <<presentación>>
+participant "<b>personas.forms</b>\n<size:11>personas/forms.py</size>" as F <<presentación>>
+participant "<b>personas</b>\n<size:11>personas/services.py</size>" as V <<dominio>>
+participant "<b>personas.models</b>\n<size:11>personas/models.py</size>" as M <<dominio>>
+participant "<b>notificaciones</b>\n<size:11>notificaciones/services.py</size>" as C <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : POST /configuracion/sanciones/12/ accion=aplicar → sanciones_de(request, 12)
+N -> D ++ : $comentario("la persona; si no existe, 404")\nSELECT personas_usuario WHERE id = 12
+return persona
+N -> F ++ : AplicarSancionForm(request.POST).is_valid()
+return valido
+N -> V ++ : aplicar(persona, quien=request.user, motivo, inicio, termino)
+note right of V
+  Sin fechas (la sanción automática de AC8, cuando
+  se decida), inicio = hoy y
+  termino = inicio + dias_sancion − 1: el día de
+  término cuenta entero, hasta las 23:59.
+end note
+V -> D ++ : BEGIN
+return
+V -> D ++ : $comentario("bloquea a la persona: un segundo administrador espera aquí")\nSELECT personas_usuario WHERE id = 12 FOR UPDATE
+return fila
+V -> M ++ : Sancion(usuario, motivo.strip(), inicio, termino, creada_por=quien).full_clean()
+M -> D ++ : $comentario("clean_fields: que existan la persona y quien la pone")\nSELECT personas_usuario
+return filas
+M -> M : $comentario("clean(): inicio no futuro (US-10) y término no anterior al inicio")\nif self.inicio > timezone.localdate(): …
+M -> D ++ : $comentario("clean(): otra no levantada que comparta un día, los extremos incluidos")\nSELECT personas_sancion WHERE usuario_id = 12 AND levantada_en IS NULL\nAND inicio <= termino AND termino >= inicio
+return otra
+break sin motivo, fechas inválidas o se cruza con otra
+  M --> V : ValidationError
+  V -> D : ROLLBACK
+  V --> N : ValidationError
+  N -> F : formulario.add_error(campo o None, errores)
+  N --> A : 200 · uso/sanciones/detalle.html con el error en el formulario
+end
+return
+V -> D ++ : INSERT personas_sancion
+return fila
+V -> V : $comentario("el correo espera a que la sanción quede guardada")\ntransaction.on_commit(partial(_avisar_sancion, sancion), robust=True)
+V -> D ++ : COMMIT
+return
+V -> C ++ : avisar(persona.email, "Tienes una sanción …", "notificaciones/sancion.txt", {nombre, sancion})
+C -> C : $comentario("motivo, sancion.periodo, sancion.hasta y sancion.rehabilita")\nsend_mail(asunto, render_to_string(plantilla, contexto), None, [correo])
+return
+return sancion
+N -> N : messages.success(request, "Sancionaste a … del … al …. Puede volver a solicitar desde el …")
+N --> A : 302 · /configuracion/sanciones/12/?{volver}
+deactivate N
+note right of N
+  Desde ese momento persona.sancion_vigente la
+  encuentra y el formulario de reserva queda
+  bloqueado (ver Pedir la sala con una sanción
+  vigente, US-10). No se cancela ninguna reserva.
+end note
+@enduml

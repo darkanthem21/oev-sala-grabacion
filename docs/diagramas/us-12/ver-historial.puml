@@ -1,0 +1,61 @@
+@startuml ver-historial
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Ver el historial de sanciones e incidentes (US-12)
+
+actor "Administrador" as A
+participant "<b>uso.views</b>\n<size:11>uso/views.py</size>" as N <<presentación>>
+participant "<b>uso.forms</b>\n<size:11>uso/forms.py</size>" as F <<presentación>>
+participant "<b>uso</b>\n<size:11>uso/services.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : GET /configuracion/sanciones/?area=3&estado=vigente → sanciones(request)
+N -> F ++ : FiltroSancionesForm(request.GET).datos()
+F -> D ++ : $comentario("el área elegida tiene que existir; si no, el filtro se ignora y se marca")\nSELECT personas_area WHERE id = 3
+return fila
+return {area, estado, texto}
+N -> V ++ : historial_personas()
+V -> V : $comentario("solicitantes, y quien pidió o fue sancionado alguna vez")\nUsuario.objects.filter(Exists(auth_group) | Exists(solicitudes) | Exists(sanciones))
+V -> V : $comentario("conteos como subconsultas, no JOIN: no se multiplican con las áreas")\nannotate(incidentes=_contar(incidentes(), …), inasistencias=_contar(Solicitud.objects.inasistencias(hoy), …))
+V -> V : $comentario("la sanción vigente, la última y las áreas, también subconsultas")\nannotate(vigente_id, vigente_motivo, vigente_termino, ultima_levantada_en, nombres_areas=ArraySubquery(…))
+V -> V : annotate(estado_sancion=Case(vigente | sin | levantada | terminada)).order_by("-incidentes", "id")
+return personas
+N -> V ++ : filtrar_personas(personas, area, estado, texto)
+V -> V : $comentario("una persona está a lo más una vez en cada área")\nfilter(areas=area, estado_sancion=estado)
+return personas
+N -> D ++ : $comentario("Paginator: cuántas hay con estos filtros")\nSELECT COUNT(*) FROM personas_usuario ⋈ personas_usuario_areas
+return total
+N -> D ++ : $comentario("Parametros.cargar(): el umbral de inasistencias_para_sancion")\nSELECT configuracion_parametros
+return fila
+N -> D ++ : $comentario("la página entera, con todas las subconsultas: una consulta para 25 filas")\nSELECT personas_usuario ⋈ personas_usuario_areas\n(uso_fotointegridad ⋈ uso_checkout ⋈ solicitudes_solicitudbloque ⋈ solicitudes_solicitud,\n solicitudes_solicitud, personas_sancion, personas_area) … LIMIT 25
+return filas
+N -> D ++ : $comentario("las opciones del filtro de área")\nSELECT personas_area
+return filas
+alt la pidió htmx (filtrar o cambiar de página)
+  N --> A : 200 · uso/sanciones/_tabla.html
+else página completa
+  N --> A : 200 · uso/sanciones/listado.html
+end
+deactivate N
+
+A -> N ++ : GET /configuracion/sanciones/12/?area=3&estado=vigente → sanciones_de(request, 12)
+N -> D ++ : $comentario("la persona; si no existe, 404")\nSELECT personas_usuario WHERE id = 12
+return persona
+N -> D ++ : $comentario("dias_sancion, para proponer las fechas del formulario")\nSELECT configuracion_parametros
+return fila
+N -> V ++ : detalle_de(persona, hoy)
+V -> D ++ : $comentario("incidentes(): cada «No», con su check-out, bloque y quien lo registró")\nSELECT uso_fotointegridad ⋈ uso_checkout ⋈ solicitudes_solicitudbloque\n⋈ solicitudes_solicitud ⋈ agenda_bloque ⋈ personas_usuario
+return filas
+V -> V : $comentario("la pregunta y la observación, de la copia del listado que guardó ese check-out")\n_pregunta(checkout.formulario, foto.pregunta), checkout.respuestas[clave]["observacion"]
+V -> D ++ : $comentario("inasistencias, con su área")\nSELECT solicitudes_solicitud ⋈ personas_area
+return filas
+V -> D ++ : $comentario("prefetch: los bloques de esas reservas")\nSELECT solicitudes_solicitudbloque ⋈ agenda_bloque
+return filas
+V -> D ++ : $comentario("las sanciones, con quién las puso y quién las levantó")\nSELECT personas_sancion ⋈ personas_usuario
+return filas
+V -> V : $comentario("una línea de tiempo, del más antiguo al más reciente")\nsorted(eventos, key=(fecha, tipo, hora))
+return eventos
+N --> A : 200 · uso/sanciones/detalle.html con el historial y los formularios Aplicar y Levantar
+deactivate N
+@enduml
