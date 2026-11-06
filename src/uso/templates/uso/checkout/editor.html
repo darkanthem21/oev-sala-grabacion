@@ -25,9 +25,19 @@
     <p>Prueba las preguntas y sus validaciones antes de publicar. La vista previa abre otra pestaña con los cambios que estás editando.</p>
     <div class="checkout-acciones">
       <button type="submit" class="btn checkout-btn-preview" formaction="{% url 'preview_checkout' %}" formtarget="_blank" name="accion" value="vista_previa">Vista previa / Probar listado</button>
-      <button type="submit" class="btn activa">Publicar listado</button>
+      <button type="submit" class="btn activa" id="publicar-listado">Publicar listado</button>
     </div>
   </section>
 </form>
+<dialog id="confirmar-publicacion" class="checkout-confirmacion" role="alertdialog" aria-labelledby="confirmar-publicacion-titulo" aria-describedby="confirmar-publicacion-descripcion">
+  <span class="checkout-confirmacion-icono" aria-hidden="true">!</span>
+  <h2 id="confirmar-publicacion-titulo">Confirmar cambios</h2>
+  <p id="confirmar-publicacion-descripcion">¿Estás seguro de que deseas guardar y publicar los cambios del formulario de check-out?</p>
+  <p class="checkout-ayuda">Los check-outs anteriores conservarán su formulario original.</p>
+  <div class="checkout-acciones">
+    <button type="button" class="btn" id="cancelar-publicacion" autofocus>Seguir editando</button>
+    <button type="button" class="btn activa" id="aceptar-publicacion">Guardar y publicar</button>
+  </div>
+</dialog>
 {% endblock %}
 {% block scripts %}<script defer src="{% static 'uso/checkout/editor.js' %}"></script>{% endblock %}

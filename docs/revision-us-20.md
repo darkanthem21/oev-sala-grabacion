@@ -99,6 +99,28 @@ La revisión no equivale a una auditoría del repositorio completo, una prueba d
 carga ni una inspección visual automatizada en navegador. Las comprobaciones
 manuales de presentación permanecen en los casos de prueba de US-20.
 
+## Actualización de interfaz: 6 de noviembre de 2026
+
+Se incorporó una confirmación antes de publicar el listado administrativo. La
+versión final usa una alerta integrada en la página, en lugar de `window.confirm`.
+
+| Archivo | Cambio |
+|---|---|
+| `src/uso/templates/uso/checkout/editor.html` | Diálogo con rol `alertdialog`, título, descripción, indicador de advertencia y acciones Seguir editando / Guardar y publicar. |
+| `src/uso/static/uso/checkout/editor.js` | Intercepta la publicación, permite cancelar sin POST y confirma mediante `requestSubmit()`. Excluye la vista previa y evita reabrir la alerta en el envío confirmado. |
+| `src/uso/static/uso/checkout/checkout.css` | Alerta compacta con esquinas redondeadas, borde naranja de 1 px, naranja suave en la confirmación y celeste secundario; reutiliza los tokens de marca. |
+
+El foco inicial está en Seguir editando; el diálogo permite cancelar con Escape
+y mantiene la navegación por teclado dentro de la ventana. El borrador cancelado
+permanece en memoria en la pestaña, sin guardado automático. La confirmación de
+interfaz no sustituye la validación de permisos, CSRF, estructura ni concurrencia
+del servidor. No se modificaron modelos, rutas ni dependencias.
+
+Se comprobaron la configuración de Django y los espacios del diff sin errores.
+No se repitió la suite de 57 pruebas para este cambio; los casos visuales y de
+interacción de la alerta están documentados en el plan de US-20 y pendientes de
+ejecución en navegador.
+
 ## Documentación relacionada
 
 - [Manual de uso](uso.md#administrar-el-listado-de-check-out).

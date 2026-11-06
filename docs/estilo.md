@@ -10,6 +10,11 @@ para botones y bordes. Los errores se muestran con texto oscuro sobre el
 relleno naranja de aviso; el naranja no se usa como texto sobre blanco.
 
 Las pestañas Formulario/Historial y las semanas usan los mismos tokens de marca.
+La confirmación de publicación es una ventana modal de la página (`dialog`), con
+título Montserrat Bold y texto Roboto. Tiene formato de alerta compacta, esquinas
+redondeadas, borde fino naranja e indicador de advertencia. El botón de confirmar
+usa naranja suavizado con texto oscuro; el celeste queda en el botón secundario.
+Reutiliza los tokens de marca y permite cancelar con Seguir editando o Escape.
 El PDF incorpora el identificador gráfico de la Facultad y usa Montserrat Bold
 y Roboto Regular desde `src/uso/checkout/fonts/`, cuyas licencias se distribuyen
 junto a las fuentes. Los colores del documento se leen de `marca.css`.

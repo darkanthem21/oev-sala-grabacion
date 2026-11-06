@@ -51,6 +51,27 @@
 .checkout-publicacion { border-top: 1px solid var(--borde); padding-top: 1.5rem; margin-top: 2rem; }
 .checkout-publicacion .btn { min-height: 2.75rem; padding: .3rem 1rem; font-size: .95rem; }
 .checkout-btn-preview { border-color: var(--accion); }
+.checkout-confirmacion {
+  box-sizing: border-box; width: min(26rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem); overflow-y: auto; padding: 1.25rem;
+  border: 1px solid var(--alerta); border-radius: 1rem;
+  color: var(--tinta); background: var(--superficie); font-family: var(--fuente-texto);
+  box-shadow: 0 .75rem 2rem color-mix(in srgb, var(--tinta) 25%, transparent);
+}
+.checkout-confirmacion::backdrop { background: color-mix(in srgb, var(--tinta) 35%, transparent); }
+.checkout-confirmacion-icono {
+  display: flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem;
+  margin-bottom: .75rem; border: 1px solid var(--alerta); border-radius: 50%;
+  background: var(--alerta-suave); color: var(--tinta); font-size: 1.5rem; font-weight: 700;
+}
+.checkout-confirmacion h2 { margin: 0 0 .75rem; font-family: var(--fuente-titulo); font-size: 1.15rem; font-weight: 700; }
+.checkout-confirmacion p { margin: .5rem 0; font-size: .9rem; }
+.checkout-confirmacion .checkout-acciones { justify-content: flex-end; margin-bottom: 0; }
+.checkout-confirmacion .btn { min-height: 2.75rem; padding: .5rem .75rem; border-radius: .5rem; font-family: var(--fuente-texto); font-size: .875rem; border-color: var(--info); color: var(--tinta); background: var(--fondo); }
+.checkout-confirmacion .btn.activa { border-color: var(--alerta); background: var(--alerta-suave); color: var(--tinta); }
+.checkout-confirmacion .btn:hover { border-color: var(--accion); }
+.checkout-confirmacion .btn.activa:hover { background: color-mix(in srgb, var(--alerta) 45%, var(--superficie)); border-color: var(--alerta); }
+.checkout-confirmacion .btn:focus-visible { outline: 2px solid var(--accion); outline-offset: 3px; }
 .checkout-prueba-correcta { color: var(--tinta); border-left: 3px solid var(--exito); background: var(--superficie); padding: 1rem; }
 .checkout-editado { display: inline-block; color: var(--tinta); border-left: 3px solid var(--acento); background: var(--superficie); padding: .5rem .75rem; }
 .checkout-listado-asistencia { border: 0; padding: 0; margin: 0; min-width: 0; }

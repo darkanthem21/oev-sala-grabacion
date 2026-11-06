@@ -587,13 +587,22 @@ En **Revisar y publicar**, pulsa **Vista previa / Probar listado** para abrir
 el borrador en otra pestaña. Allí puedes responder y pulsar **Probar respuestas**:
 se ejecutan las mismas validaciones del check-out, sin guardar respuestas,
 fotografías ni publicar cambios. Regresa a la pestaña del editor para seguir
-editando y usa **Publicar listado** cuando esté listo.
+editando y usa **Publicar listado** cuando esté listo. El sistema mostrará una
+alerta de confirmación dentro de la página, compacta, con esquinas redondeadas,
+borde fino naranja y celeste en la acción secundaria, antes
+de guardar y publicar los cambios. Pulsa **Guardar y publicar** para continuar o
+**Seguir editando** para conservar el borrador. También puedes cerrar la ventana
+con **Escape**. Mientras esté abierta, el foco permanece dentro de la ventana.
+La ventana comienza con el foco en **Seguir editando**. Cancelar no envía datos
+al servidor: el borrador permanece en la pestaña actual, sin publicarse. No se
+guarda automáticamente al salir o recargar. **Vista previa / Probar listado**
+abre la prueba directamente, sin pedir esta confirmación.
 
 La vista previa también comienza por asistencia. Permite probar una inasistencia
 sin pedir el listado ni guardar un registro real. Para revisar las preguntas,
 marca asistencia y continúa; **Cambiar asistencia** vuelve al paso anterior.
 
-Los botones de edición preparan el borrador; **Publicar listado** guarda los
+Los botones de edición preparan el borrador; confirmar **Guardar y publicar** guarda los
 cambios para los check-outs pendientes. La regla de observación y foto ante un
 **No** también se aplica a las preguntas nuevas. No se muestra un número de
 versión publicada en la interfaz.

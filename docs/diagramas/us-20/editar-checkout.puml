@@ -42,6 +42,15 @@ opt Vista previa antes de publicar
     y no guarda fotografías de prueba.
   end note
 end
+A -> E: Pulsar Publicar listado
+E --> A: Alerta modal: Confirmar cambios\nFoco inicial en Seguir editando
+alt Seguir editando o Escape
+  A -> E: Cancelar publicación
+  E --> A: Cerrar alerta y conservar borrador en la pestaña
+  note right of E: Sin POST ni cambios en el listado publicado.
+else Guardar y publicar
+  A -> E: Confirmar publicación
+  E -> E: requestSubmit(): validar y enviar formulario
 A -> V: POST /configuracion/checkout/\nJSON del listado + revisión
 V -> F: EditorCheckoutForm.is_valid()
 F -> F: validar_secciones(): títulos, preguntas\ne identificadores únicos
@@ -63,6 +72,8 @@ else Estructura válida
   else Publicación correcta
     V --> A: 302 · Volver al editor con confirmación
   end
+end
+
 end
 
 == Responder el check-out del bloque ==

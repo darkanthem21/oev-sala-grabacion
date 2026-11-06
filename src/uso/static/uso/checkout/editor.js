@@ -75,6 +75,25 @@
     const seccion = {id: id(), titulo: "Nueva sección", preguntas: [nuevaPregunta()]};
     secciones.push(seccion); guardar(); render(seccion.id);
   });
-  form.addEventListener("submit", () => { datos.value = JSON.stringify(secciones); });
+  const confirmacion = document.getElementById("confirmar-publicacion");
+  const publicar = document.getElementById("publicar-listado");
+  let publicacionConfirmada = false;
+  document.getElementById("cancelar-publicacion").addEventListener("click", () => confirmacion.close());
+  document.getElementById("aceptar-publicacion").addEventListener("click", () => {
+    confirmacion.close();
+    publicacionConfirmada = true;
+    try {
+      form.requestSubmit(publicar);
+    } finally {
+      publicacionConfirmada = false;
+    }
+  });
+  form.addEventListener("submit", evento => {
+    datos.value = JSON.stringify(secciones);
+    if (evento.submitter?.value === "vista_previa") return;
+    if (publicacionConfirmada) return;
+    evento.preventDefault();
+    if (!confirmacion.open) confirmacion.showModal();
+  });
   render();
 })();

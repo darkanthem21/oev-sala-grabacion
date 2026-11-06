@@ -38,6 +38,27 @@ guarda archivos de evidencia. El editor permanece abierto con sus cambios.
 El panel diario de bloques continúa en `src/uso/views.py` y `src/uso/services.py`.
 La edición se realiza en `/apoyo/checkout/<codigo>/editar/`.
 
+## Confirmación de publicación del listado
+
+En el editor administrativo, **Publicar listado** abre una alerta modal de la
+página antes de enviar los cambios. `editor.html` define un `dialog` con rol
+`alertdialog`, título y descripción accesibles. `editor.js` intercepta el envío:
+**Seguir editando** o Escape cierran la alerta sin hacer POST, conservando el
+borrador en la pestaña; **Guardar y publicar** vuelve a enviar mediante
+`requestSubmit()` y mantiene la validación del navegador. La confirmación no se
+solicita para **Vista previa / Probar listado**. No hay guardado automático del
+borrador al recargar o abandonar la página.
+
+El diálogo nativo gestiona el foco dentro de la ventana; la acción inicial es
+**Seguir editando**. `checkout.css` presenta una alerta compacta, con esquinas
+redondeadas, borde fino naranja, indicador de advertencia y celeste secundario.
+Los colores y las fuentes proceden de los tokens de `marca.css`.
+
+Esta confirmación requiere JavaScript y es una protección de interfaz. El servidor
+conserva las comprobaciones de administración, CSRF, estructura y revisión vigente;
+solo una publicación válida modifica el listado. Los check-outs ya completados
+mantienen su copia original. No se añaden rutas, dependencias ni migraciones.
+
 ## Historial administrativo y PDF
 
 Dentro de Configuración → Check-out, las pestañas **Formulario** e **Historial**
