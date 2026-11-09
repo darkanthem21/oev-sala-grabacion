@@ -277,6 +277,16 @@ def test_solo_el_administrador(client, ana, url):
     assert not Sancion.objects.exists()
 
 
+def test_entra_el_rol_administrador_aunque_no_sea_staff(client, ana):
+    """US-08: el panel lo abre el rol, no solo `is_staff`, como las cuentas que
+    crea la pestaña Usuarios."""
+    con_rol = Usuario.objects.create_user(email="rol.admin@uach.cl", password="x")
+    con_rol.groups.add(Group.objects.get(name=Rol.ADMINISTRADOR))
+    entrar(client, con_rol)
+    assert client.get(LISTADO).status_code == 200
+    assert client.get(reverse("sanciones_de", args=[ana.pk])).status_code == 200
+
+
 def test_detalle_de_alguien_que_no_existe_es_404(client, administrador):
     assert entrar(client, administrador).get(reverse("sanciones_de", args=[999999])).status_code == 404
 

@@ -298,8 +298,8 @@ de resolución.
 
 | Ruta | Quién entra |
 |---|---|
-| `/configuracion/sanciones/` | La misma de US-10, ahora con el listado de solicitantes, sus incidentes, inasistencias y sanción. Cuentas con `is_staff` |
-| `/configuracion/sanciones/<id>/` | Historial de una persona, y desde ahí aplicar y levantar. Cuentas con `is_staff` |
+| `/configuracion/sanciones/` | La misma de US-10, ahora con el listado de solicitantes, sus incidentes, inasistencias y sanción. Rol **Administrador** |
+| `/configuracion/sanciones/<id>/` | Historial de una persona, y desde ahí aplicar y levantar. Rol **Administrador** |
 
 ### Verificar después de desplegar
 

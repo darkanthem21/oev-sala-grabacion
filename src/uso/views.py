@@ -4,7 +4,6 @@ del administrador (US-12)."""
 from datetime import date, timedelta
 
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -20,6 +19,7 @@ from configuracion.models import Parametros
 from personas.services import aplicar, levantar, termino_por_defecto
 from personas.forms import AplicarSancionForm, LevantarSancionForm
 from personas.models import Sancion, Usuario
+from personas.permisos import solo_administradores
 from . import services
 from .checkout.permissions import es_apoyo
 from .forms import FiltroSancionesForm
@@ -81,7 +81,7 @@ def _levantar(request):
     return persona
 
 
-@staff_member_required(login_url="login_gestion")
+@solo_administradores
 @require_http_methods(["GET", "HEAD", "POST"])
 def sanciones(request):
     """US-12 T4: las personas con sus incidentes, inasistencias y sanción, con
@@ -122,7 +122,7 @@ def sanciones(request):
     return respuesta
 
 
-@staff_member_required(login_url="login_gestion")
+@solo_administradores
 @require_http_methods(["GET", "HEAD", "POST"])
 def sanciones_de(request, usuario_id):
     """US-12 T5 a T7: el historial de una persona, y desde ahí aplicar o
