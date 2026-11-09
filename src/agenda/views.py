@@ -3,7 +3,6 @@ from collections import Counter
 from datetime import date, time, timedelta
 
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ValidationError
 from django.db.models.functions import Coalesce
 from django.http import HttpResponseBadRequest
@@ -12,6 +11,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 from django.views.decorators.http import require_POST
+
+from personas.permisos import solo_administradores
 
 from . import services
 from .forms import MODOS, BloqueForm, BloqueoForm, HorasForm, LevantarForm
@@ -365,7 +366,7 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None, bloqueo
     }
 
 
-@staff_member_required(login_url="login_gestion")
+@solo_administradores
 def bloques(request):
     contexto = _contexto(request.GET)
     # htmx pide solo la rejilla. El navegador sin htmx pide la página entera y
@@ -435,7 +436,7 @@ def _quienes(afectadas):
     return " " + " y ".join(partes).capitalize() + "; se les avisó por correo."
 
 
-@staff_member_required(login_url="login_gestion")
+@solo_administradores
 @require_POST
 def editar_bloque(request):
     """Agrega, cambia, quita o repone un bloque, en todas las semanas o solo en
@@ -570,7 +571,7 @@ def _nombre(bloque):
     return f"{bloque.get_dia_display()}, {bloque.inicio:%H:%M}–{bloque.termino:%H:%M}"
 
 
-@staff_member_required(login_url="login_gestion")
+@solo_administradores
 @require_POST
 def editar_bloqueo(request):
     """Bloquea la sala en unas fechas, o levanta un bloqueo (US-17).

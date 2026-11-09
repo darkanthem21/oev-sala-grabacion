@@ -1,0 +1,66 @@
+@startuml cargar-planilla
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Cargar cuentas desde una planilla (US-08)
+
+actor "Administrador" as A
+participant "<b>personas.views</b>\n<size:11>personas/views.py</size>" as N <<presentación>>
+participant "<b>personas.carga</b>\n<size:11>personas/carga.py</size>" as K <<dominio>>
+participant "<b>personas.services</b>\n<size:11>personas/services.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : $comentario("«Revisar» con el CSV")\nPOST /configuracion/usuarios/cargar/ (accion=revisar) → cargar_usuarios(request)
+N -> K ++ : leer(archivo.read(MAX_BYTES + 1))
+K -> K : $comentario("UTF-8 con o sin BOM, si no Windows-1252; separador ; o ,")\ncsv.reader(…, delimiter=separador)
+return crudas
+break falta una columna, no hay filas o pesa más de 1 MB
+  N --> A : 200 · personas/cargar_usuarios.html, con el error
+end
+N -> K ++ : revisar(crudas, request.user)
+K -> D ++ : SELECT personas_area
+return áreas
+K -> D ++ : SELECT personas_usuario WHERE email IN (…)
+return cuentas
+loop cada fila
+  K -> K : $comentario("se crea, se le suma, sin cambios o error")\nFila(…).accion
+end
+return filas
+opt ninguna fila con error
+  N -> N : request.session["carga_de_usuarios"] = crudas
+end
+N --> A : 200 · personas/cargar_usuarios.html (vista previa)
+deactivate N
+
+A -> N ++ : $comentario("«Confirmar la carga»")\nPOST /configuracion/usuarios/cargar/ (accion=confirmar)
+N -> N : crudas = request.session.pop("carga_de_usuarios")
+N -> K ++ : aplicar(crudas, request.user)
+group @transaction.atomic
+  K -> K : $comentario("otra vez contra la base, por si algo cambió desde la vista previa")\nfilas = revisar(crudas, quien)
+  loop cada fila que se crea o se actualiza
+    opt se crea
+      K -> D ++ : INSERT personas_usuario
+      deactivate D
+    end
+    K -> D ++ : $comentario("AC9: solo suma, nunca quita")\ncuenta.groups.add(…), cuenta.areas.add(…)\nINSERT personas_usuario_groups, personas_usuario_areas
+    deactivate D
+    K -> V ++ : registrar_cambios_de_cuenta(cuenta, antes, quien)
+    V -> D ++ : INSERT personas_cambiousuario
+    deactivate D
+    deactivate V
+  end
+end
+loop cada cuenta nueva
+  K -> V ++ : enviar_acceso(cuenta)
+  return salió
+end
+return resultado
+N -> N : messages.success(request, "Creaste 2 cuentas y actualizaste 1.")
+N --> A : 302 · /configuracion/usuarios/
+deactivate N
+note right of K
+  Con una fila mala no hay confirmación (AC8),
+  y aplicar no guarda nada si aparece una:
+  todo o nada, en una transacción.
+end note
+@enduml
