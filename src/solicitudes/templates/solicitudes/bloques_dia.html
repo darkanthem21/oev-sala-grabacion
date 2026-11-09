@@ -1,58 +1,87 @@
 <div class="panel-bloques-contenido">
-    {% if fecha_str %}
-        <input type="hidden" name="fecha" value="{{ fecha_str }}">
-        <div class="encabezado-bloques">
-            <h3 class="titulo-bloques">Bloques para el día {% if fecha %}{{ fecha|date:"d/m/Y" }}{% else %}{{ fecha_str }}{% endif %}</h3>
-            <span class="total-bloques">{{ bloques|length }} bloque{{ bloques|length|pluralize }} encontrado{{ bloques|length|pluralize }}</span>
-        </div>
+{% if fecha_str %}
+<input type="hidden" name="fecha" value="{{ fecha_str }}">
+<div class="encabezado-bloques">
+    <h3 class="titulo-bloques">Bloques para el día {% if fecha %}{{ fecha|date:"d/m/Y" }}{% else %}{{ fecha_str }}{% endif %}</h3>
+    <span class="total-bloques">{{ bloques|length }} bloque{{ bloques|length|pluralize }} encontrado{{ bloques|length|pluralize }}</span>
+</div>
 
-        {% if bloques %}
-            <div class="grilla-bloques">
-                {% for bloque in bloques %}
-                    <label class="tarjeta-bloque {% if bloque.es_propio %}bloque-propio pendiente{% else %}disponible bloque-seleccionable{% endif %}"
-                           for="bloque-{{ bloque.id }}"
-                           data-id="{{ bloque.id }}"
-                           data-hora="{{ bloque.inicio|time:'H:i' }} - {{ bloque.termino|time:'H:i' }}"
-                           aria-pressed="false"
-                           {% if bloque.es_propio %}
-                               title="Ya tienes una solicitud pendiente para este horario"
-                           {% else %}
-                               title="Haz clic para seleccionar este bloque"
-                           {% endif %}>
-                        <input type="checkbox"
-                               name="bloques"
-                               id="bloque-{{ bloque.id }}"
-                               value="{{ bloque.id }}"
-                               class="bloque-checkbox"
-                               {% if bloque.es_propio %}disabled{% elif bloques_seleccionados_ids and bloque.id in bloques_seleccionados_ids %}checked{% endif %}>
-                        <span class="checkbox-visual" aria-hidden="true"></span>
-                        <div class="bloque-info">
-                            <div class="bloque-hora">
-                                <svg class="icono-reloj" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                                <strong>{{ bloque.inicio|time:"H:i" }} - {{ bloque.termino|time:"H:i" }}</strong>
-                            </div>
-                            <div class="bloque-estado">
-                                {% if bloque.es_propio %}
-                                    <span class="badge badge-pendiente">Ya solicitaste este bloque · Pendiente</span>
-                                {% else %}
-                                    <span class="badge badge-disponible">Disponible</span>
-                                    <span class="badge badge-seleccionado">Seleccionado</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </label>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="sin-bloques">
-                <svg class="icono-estado-vacio" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                <p>No hay bloques disponibles para esta fecha.</p>
-            </div>
-        {% endif %}
-    {% else %}
-        <div class="sin-bloques">
-            <svg class="icono-estado-vacio" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            <p>Selecciona un día en el calendario para consultar sus bloques.</p>
+{% if bloques %}
+  <div class="grilla-bloques">
+      {% for bloque in bloques %}
+      <div class="celda-bloque">
+        <label class="tarjeta-bloque {% if bloque.es_propio %}bloque-propio pendiente{% else %}disponible bloque-seleccionable{% endif %}"
+                  for="bloque-{{ bloque.id }}"
+                  data-id="{{ bloque.id }}"
+                  data-hora="{{ bloque.inicio|time:'H:i' }} - {{ bloque.termino|time:'H:i' }}"
+                  aria-pressed="false"
+                  {% if bloque.es_propio %}
+                      title="Ya tienes una solicitud pendiente para este horario"
+                  {% else %}
+                      title="Haz clic para seleccionar este bloque"
+                  {% endif %}>
+              <input type="checkbox"
+                      name="bloques"
+                      id="bloque-{{ bloque.id }}"
+                      value="{{ bloque.id }}"
+                      class="bloque-checkbox"
+                      {% if bloque.de_mi_unidad %}aria-describedby="unidad-{{ bloque.id }}"{% endif %}
+                      {% if bloque.es_propio %}disabled{% elif bloques_seleccionados_ids and bloque.id in bloques_seleccionados_ids %}checked{% endif %}>
+              <span class="checkbox-visual" aria-hidden="true"></span>
+              <div class="bloque-info">
+                  <div class="bloque-hora">
+                      <svg class="icono-reloj" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                      <strong>{{ bloque.inicio|time:"H:i" }} - {{ bloque.termino|time:"H:i" }}</strong>
+                  </div>
+                  <div class="bloque-estado">
+                      {% if bloque.es_propio %}
+                          <span class="badge badge-pendiente">Respuesta pendiente</span>
+                      {% else %}
+                          <span class="badge badge-disponible">Disponible</span>
+                          <span class="badge badge-seleccionado">Seleccionado</span>
+                      {% endif %}
+                  </div>
+                  <span class="bloque-demanda">
+                      <svg class="icono-demanda" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a3 3 0 0 0-2-2.87"></path><path d="M16 3.13a4 4 0 0 1 0 5.74"></path></svg>
+                      {% if bloque.es_propio and bloque.otros_solicitantes %}
+                      <span>Tú y <strong>{{bloque.otros_solicitantes}}</strong> persona{{ bloque.otros_solicitantes|pluralize }} más lo solicita{{ bloque.solicitantes|pluralize:"n" }}</span>
+                      {% elif bloque.es_propio %}
+                      <span>Solo tú lo has solicitado</span>
+                      {% elif bloque.solicitantes %}
+                      <span><strong>{{ bloque.solicitantes }}</strong> persona{{ bloque.solicitantes|pluralize }} lo solicita{{ bloque.solicitantes|pluralize:"n" }}</span>
+                      {% else %}
+                      <span>Nadie lo ha solicitado aún</span>
+                      {% endif %}
+                    </span>
+              </div>
+        </label>
+        {% comment %}
+        Quiénes de la unidad lo piden, al pasar el mouse o enfocar el bloque.
+        Fuera del <label> para no sumarse al nombre de la casilla, que lo lee
+        por aria-describedby. Los nombres solo llegan en el asistente y son de
+        quienes pidieron con la misma área (services.obtener_bloques_dia_para_usuario).
+        {% endcomment %}
+        {% if bloque.de_mi_unidad %}
+        <div id="unidad-{{ bloque.id }}" class="lista-unidad" role="tooltip">
+            <p class="titulo-unidad">De {{ area_unidad.nombre }}, también solicitan el bloque:</p>
+            <ul>
+                {% for nombre in bloque.de_mi_unidad %}<li>{{ nombre }}</li>{% endfor %}
+            </ul>
         </div>
-    {% endif %}
+        {% endif %}
+      </div>
+      {% endfor %}
+  </div>
+{% else %}
+    <div class="sin-bloques">
+        <svg class="icono-estado-vacio" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+        <p>No hay bloques disponibles para esta fecha.</p>
+    </div>
+{% endif %}
+{% else %}
+<div class="sin-bloques">
+    <svg class="icono-estado-vacio" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+    <p>Selecciona un día en el calendario para consultar sus bloques.</p>
+</div>
+{% endif %}
 </div>

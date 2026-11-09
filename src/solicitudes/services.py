@@ -1,7 +1,7 @@
 import calendar
 import logging
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import partial
 from datetime import date, datetime, time, timedelta
 from typing import Any, Dict, List, Tuple
@@ -62,6 +62,11 @@ class BloqueVista:
     inicio: time
     termino: time
     es_propio: bool = False
+    solicitantes: int = 0
+    # Nombres de quienes, además del usuario, lo piden con el área que eligió
+    # en el asistente. Vacío fuera del asistente: el calendario público solo
+    # muestra la cantidad.
+    de_mi_unidad: List[str] = field(default_factory=list)
 
     @property
     def disponible_para_reserva(self) -> bool:
@@ -69,7 +74,15 @@ class BloqueVista:
 
     @property
     def texto(self) -> str:
-        return f"{self.inicio:%H:%M} – {self.termino:%H:%M}"
+        return f"{self.inicio:%H:%M} - {self.termino:%H:%M}"
+
+    @property
+    def otros_solicitantes(self) -> int:
+        """Si el usuario ya solicitó el bloque, ¿cuántos otros lo están
+        pidiendo también?"""
+        if not self.es_propio:
+            return self.solicitantes
+        return self.solicitantes - 1
 
 
 def obtener_dias_con_disponibilidad(year: int, month: int) -> set:
@@ -106,10 +119,13 @@ def obtener_dias_con_disponibilidad(year: int, month: int) -> set:
     return dias_disponibles
 
 
-def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List["BloqueVista"]:
+def obtener_bloques_dia_para_usuario(fecha: date, usuario=None, area_id=None) -> List["BloqueVista"]:
     """Retorna los bloques de la jornada configurada para una fecha visibles para el usuario:
     - Bloques disponibles (sin reservas aceptadas).
     - Bloques con solicitud activa propia del usuario (marcado con es_propio=True).
+    - Cuántos usuarios distintos están solicitando cada bloque (para mostrarlo al usuario).
+    - Con `area_id`, los nombres de quienes lo piden con esa área (sin el usuario).
+      Quien llama debe asegurarse de que el área es una de las del usuario.
     Excluye:
     - Bloques con reserva aceptada.
     """
@@ -130,7 +146,7 @@ def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List["BloqueV
             ],
         )
         .exclude(solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA)
-        .select_related("solicitud", "solicitud__solicitante")
+        .select_related("solicitud__solicitante")
     )
 
     solicitudes_por_bloque = {}
@@ -141,18 +157,42 @@ def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List["BloqueV
 
     resultado = []
     for b in sorted(bloques_plantilla, key=lambda x: x.inicio):
-        sols = solicitudes_por_bloque.get(b.id, [])
+        solicitudes = solicitudes_por_bloque.get(b.id, [])
 
         # Si el bloque tiene una solicitud ACEPTADA, no se muestra
-        if any(s.estado_validacion == Solicitud.EstadoValidacion.ACEPTADA for s in sols):
+        if any(s.estado_validacion == Solicitud.EstadoValidacion.ACEPTADA for s in solicitudes):
             continue
+
+        # Personas distintas con una solicitud pendiente por este bloque
+        solicitantes = len({s.solicitante_id for s in solicitudes if s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE})
 
         # Si el usuario actual tiene una solicitud PENDIENTE para este bloque:
         es_propio = bool(usuario_id) and any(
             s.solicitante_id == usuario_id and s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE
-            for s in sols
+            for s in solicitudes
         )
-        resultado.append(BloqueVista(id=b.id, inicio=b.inicio, termino=b.termino, es_propio=es_propio))
+
+        de_mi_unidad = []
+        if usuario_id and area_id:
+            colegas = {
+                s.solicitante_id: s.solicitante
+                for s in solicitudes
+                if s.area_id == area_id
+                and s.solicitante_id != usuario_id
+                and s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE
+            }
+            de_mi_unidad = sorted(
+                (u.get_full_name() or u.email for u in colegas.values()), key=str.casefold
+            )
+
+        resultado.append(BloqueVista(
+            id=b.id,
+            inicio=b.inicio,
+            termino=b.termino,
+            es_propio=es_propio,
+            solicitantes=solicitantes,
+            de_mi_unidad=de_mi_unidad,
+        ))
 
     return resultado
 
@@ -175,6 +215,12 @@ def guardar_solicitud_completa(
         fecha_obj = datos_reserva.get("fecha")
         if isinstance(fecha_obj, str):
             fecha_obj = datetime.strptime(fecha_obj, "%Y-%m-%d").date()
+        motivo = motivo_horario_invalido(
+            usuario, fecha_obj, datos_reserva.get("bloques_ids", []), datos_reserva.get("bloques_texto", "")
+        )
+        if motivo:
+            raise ValidationError(f"{motivo} Elige otro horario.")
+
 
         solicitud = Solicitud(
             solicitante=usuario,
@@ -437,6 +483,35 @@ def confirmar_solicitud(usuario, solicitud_id):
         actualizado_en=timezone.now(),
     ) == 1
 
+def motivo_horario_invalido(usuario, fecha, bloques_ids, bloques_texto=""):
+    """Por qué ese horario ya no se puede pedir, o None si sigue libre. El
+    asistente guarda el horario en la sesión, y mientras se completa la jornada
+    los bloqueos o las aprobaciones pueden cambiar."""
+    bloques = list(Bloque.objects.filter(id__in=bloques_ids).order_by("inicio"))
+    for bloque in bloques:
+        if not bloque.activo:
+            return f"El bloque de las {bloque.inicio:%H:%M} ya no está en la jornada."
+    actual = ", ".join(f"{b.inicio:%H:%M} - {b.termino:%H:%M}" for b in bloques)
+    if bloques_texto and actual != bloques_texto:
+        return f"El horario que marcaste ({bloques_texto}) ya no coincide con la jornada actual ({actual})."
+    # Otra fecha, otro día o bloqueado: lo mismo que miran el envío y el validador.
+    for bloque in bloques:
+        razon = impedimento(bloque, fecha)
+        if razon is not None:
+            return razon
+    pedidos = SolicitudBloque.objects.filter(solicitud__fecha=fecha, bloque_id__in=bloques_ids).select_related("bloque")
+    reservado = pedidos.filter(
+        solicitud__estado_validacion=Solicitud.EstadoValidacion.ACEPTADA
+    ).exclude(solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA).first()
+    if reservado:
+        return f"El bloque de las {reservado.bloque.inicio:%H:%M} ya está reservado."
+    propio = pedidos.filter(
+        solicitud__solicitante=usuario,
+        solicitud__estado_validacion=Solicitud.EstadoValidacion.PENDIENTE
+    ).first()
+    if propio:
+        return f"Ya tienes una solicitud pendiente para el bloque de las {propio.bloque.inicio:%H:%M}."
+    return None
 
 def _avisar_cancelacion(solicitud):
     """AC6: el correo a quien aprobó la reserva, cuando la cancelación se

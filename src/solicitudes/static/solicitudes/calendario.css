@@ -134,6 +134,47 @@
 .bloque-hora { display: flex; align-items: center; gap: var(--esp-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .icono-reloj { color: var(--tinta-suave); flex-shrink: 0; }
 
+/* Cuántos lo piden (el contador, en todas las vistas del calendario). */
+.bloque-demanda {
+  display: flex; align-items: flex-start; gap: var(--esp-2);
+  font-size: var(--txt-xs); line-height: 1.35; color: var(--tinta-suave);
+}
+.bloque-demanda strong { color: var(--tinta); font-weight: 600; }
+.icono-demanda { flex-shrink: 0; color: var(--tinta-suave); }
+
+/* Quiénes de la misma unidad lo piden (solo en el asistente): aparece bajo la
+ * tarjeta al pasar el mouse o al enfocar su casilla. Del ancho de la tarjeta,
+ * así en la última columna no se sale del panel, y sin recibir el puntero,
+ * así no tapa el hover de la tarjeta de abajo. */
+.celda-bloque { position: relative; display: flex; flex-direction: column; }
+.celda-bloque > .tarjeta-bloque { flex: 1; }
+.lista-unidad {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 20; box-sizing: border-box;
+  padding: var(--esp-3) var(--esp-4);
+  background: var(--superficie); color: var(--tinta);
+  /* Sin esquinas redondeadas: la franja de color se doblaría en ellas. */
+  border: 1px solid var(--borde); border-top: 3px solid var(--accion);
+  box-shadow: 0 18px 40px -18px color-mix(in srgb, var(--tinta) 55%, transparent);
+  font-size: var(--txt-sm);
+  pointer-events: none; opacity: 0; visibility: hidden;
+}
+.celda-bloque:hover .lista-unidad,
+.celda-bloque:has(.bloque-checkbox:focus-visible) .lista-unidad { opacity: 1; visibility: visible; }
+@media (prefers-reduced-motion: no-preference) {
+  .lista-unidad {
+    transform: translateY(-3px);
+    transition: opacity .12s ease, transform .12s ease, visibility 0s linear .12s;
+  }
+  /* Un respiro antes de abrir, para que cruzar la grilla no lo haga parpadear. */
+  .celda-bloque:hover .lista-unidad,
+  .celda-bloque:has(.bloque-checkbox:focus-visible) .lista-unidad {
+    transform: none;
+    transition: opacity .12s ease .15s, transform .12s ease .15s, visibility 0s linear .15s;
+  }
+}
+.titulo-unidad { margin: 0 0 var(--esp-1); text-wrap: balance; font-family: var(--fuente-titulo); font-weight: 700; }
+.lista-unidad ul { margin: 0; padding-left: 1.1rem; line-height: 1.5; }
+
 /* El estado del bloque, con el mismo filete que los estados de una solicitud. */
 .badge {
   display: inline-block; width: fit-content; padding: 0 0 0 var(--esp-2);

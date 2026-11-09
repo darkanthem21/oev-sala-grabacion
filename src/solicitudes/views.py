@@ -1,3 +1,4 @@
+from datetime import date
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -17,7 +18,7 @@ from personas.models import Area, Rol, Sancion
 from personas.permisos import solo_administradores
 
 from . import validacion
-from .calendar import construir_calendario_contexto
+from .calendar import area_del_asistente, construir_calendario_contexto
 from .forms import (
     MAXIMO_ACOMPANANTES,
     MAXIMO_PERSONAS,
@@ -34,6 +35,7 @@ from .services import (
     cancelar_solicitud,
     confirmar_solicitud,
     guardar_solicitud_completa,
+    motivo_horario_invalido,
     obtener_bloques_dia_para_usuario,
     resolver,
     retirar_solicitud,
@@ -299,8 +301,14 @@ def bloques_dia(request):
     """Vista parcial HTMX para consultar y desplegar los bloques de una fecha."""
     fecha_str = request.GET.get("fecha")
     fecha = FechaReservaForm.fecha_de(fecha_str)
-    bloques = obtener_bloques_dia_para_usuario(fecha=fecha, usuario=request.user) if fecha else []
+    # Los nombres de la unidad solo dentro del asistente; el calendario público
+    # sigue mostrando solo la cantidad.
+    area_unidad = area_del_asistente(request) if request.GET.get("paso") else None
+    bloques = obtener_bloques_dia_para_usuario(
+        fecha=fecha, usuario=request.user, area_id=area_unidad.id if area_unidad else None
+    ) if fecha else []
     return render(request, "solicitudes/bloques_dia.html", {
+        "area_unidad": area_unidad,
         "fecha": fecha,
         "fecha_str": fecha_str,
         "bloques": bloques,
@@ -401,6 +409,18 @@ def solicitar(request):
     if paso_actual != paso_solicitado and request.method == "GET":
         return redirect(f"{reverse('solicitar')}?paso={paso_actual.value}")
 
+    # Regresar al paso 1 si el horario seleccionado previamente dejó de ser válido
+    if paso_actual >= PasoSolicitud.DATOS:
+        fecha = date.fromisoformat(wizard.fecha_str)
+        motivo = motivo_horario_invalido(
+            request.user, fecha, wizard.bloques_ids, wizard.datos.get("bloques_texto", "")
+            )
+        if motivo:
+            wizard.limpiar_horario()
+            messages.error(request, f"{motivo} Elige otro horario.")
+            consulta = urlencode({"year": fecha.year, "month": fecha.month, "fecha": fecha.isoformat()})
+            return redirect(f"{reverse('solicitar')}?{consulta}")
+    
     manejar = {
         PasoSolicitud.HORARIO: _manejar_paso_horario,
         PasoSolicitud.DATOS: _manejar_paso_datos,
