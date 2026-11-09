@@ -1,6 +1,8 @@
 {% load static %}{% comment %}
   La banda naranja que abre toda pantalla con sesión, con el logo blanco oficial
   de la Facultad. Debajo, cada cascarón pone su riel: pestañas y _rol.html.
+  `puerta` (gestion, validacion, apoyo, solicitante) es a dónde vuelve al cerrar
+  sesión; sin ella, la vista de salida lleva a la del solicitante.
 {% endcomment %}
 <div class="banda">
   <div class="dentro">
@@ -8,7 +10,7 @@
          alt="Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile">
     <h1 class="producto">Sala de grabación</h1>
     <form method="post" action="{% url 'logout' %}">
-      {% csrf_token %}<button class="btn" type="submit">Cerrar sesión</button>
+      {% csrf_token %}{% if puerta %}<input type="hidden" name="next" value="{% url 'login_'|add:puerta %}">{% endif %}<button class="btn" type="submit">Cerrar sesión</button>
     </form>
   </div>
 </div>
