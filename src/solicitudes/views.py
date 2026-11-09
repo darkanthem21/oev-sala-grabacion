@@ -18,7 +18,7 @@ from configuracion.models import Parametros
 from personas.models import Rol, Sancion
 
 from . import validacion
-from .calendar import construir_calendario_contexto
+from .calendar import area_del_asistente, construir_calendario_contexto
 from .forms import (
     MAXIMO_ACOMPANANTES,
     MAXIMO_PERSONAS,
@@ -209,8 +209,14 @@ def bloques_dia(request):
     """Vista parcial HTMX para consultar y desplegar los bloques de una fecha."""
     fecha_str = request.GET.get("fecha")
     fecha = FechaReservaForm.fecha_de(fecha_str)
-    bloques = obtener_bloques_dia_para_usuario(fecha=fecha, usuario=request.user) if fecha else []
+    # Los nombres de la unidad solo dentro del asistente; el calendario público
+    # sigue mostrando solo la cantidad.
+    area_unidad = area_del_asistente(request) if request.GET.get("paso") else None
+    bloques = obtener_bloques_dia_para_usuario(
+        fecha=fecha, usuario=request.user, area_id=area_unidad.id if area_unidad else None
+    ) if fecha else []
     return render(request, "solicitudes/bloques_dia.html", {
+        "area_unidad": area_unidad,
         "fecha": fecha,
         "fecha_str": fecha_str,
         "bloques": bloques,

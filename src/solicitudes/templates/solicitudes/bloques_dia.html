@@ -9,6 +9,7 @@
 {% if bloques %}
   <div class="grilla-bloques">
       {% for bloque in bloques %}
+      <div class="celda-bloque">
         <label class="tarjeta-bloque {% if bloque.es_propio %}bloque-propio pendiente{% else %}disponible bloque-seleccionable{% endif %}"
                   for="bloque-{{ bloque.id }}"
                   data-id="{{ bloque.id }}"
@@ -24,6 +25,7 @@
                       id="bloque-{{ bloque.id }}"
                       value="{{ bloque.id }}"
                       class="bloque-checkbox"
+                      {% if bloque.de_mi_unidad %}aria-describedby="unidad-{{ bloque.id }}"{% endif %}
                       {% if bloque.es_propio %}disabled{% elif bloques_seleccionados_ids and bloque.id in bloques_seleccionados_ids %}checked{% endif %}>
               <span class="checkbox-visual" aria-hidden="true"></span>
               <div class="bloque-info">
@@ -53,6 +55,21 @@
                     </span>
               </div>
         </label>
+        {% comment %}
+        Quiénes de la unidad lo piden, al pasar el mouse o enfocar el bloque.
+        Fuera del <label> para no sumarse al nombre de la casilla, que lo lee
+        por aria-describedby. Los nombres solo llegan en el asistente y son de
+        quienes pidieron con la misma área (services.obtener_bloques_dia_para_usuario).
+        {% endcomment %}
+        {% if bloque.de_mi_unidad %}
+        <div id="unidad-{{ bloque.id }}" class="lista-unidad" role="tooltip">
+            <p class="titulo-unidad">De {{ area_unidad.nombre }}, también solicitan el bloque:</p>
+            <ul>
+                {% for nombre in bloque.de_mi_unidad %}<li>{{ nombre }}</li>{% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+      </div>
       {% endfor %}
   </div>
 {% else %}

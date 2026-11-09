@@ -553,6 +553,73 @@
     opacity: 0.6;
 }
 
+/* Quiénes de la misma unidad piden el bloque (solo en el asistente): aparece
+ * bajo la tarjeta al pasar el mouse o al enfocar su casilla. No recibe el
+ * puntero, así no tapa el hover de la tarjeta de abajo. */
+.celda-bloque {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.celda-bloque > .tarjeta-bloque {
+    flex: 1;
+}
+
+.lista-unidad {
+    position: absolute;
+    top: calc(100% + 6px);
+    /* Del ancho de la tarjeta: en la última columna no se sale del panel. */
+    left: 0;
+    right: 0;
+    z-index: 20;
+    box-sizing: border-box;
+    padding: 0.65rem 0.85rem 0.7rem;
+    background: var(--superficie);
+    color: var(--tinta);
+    border: 1px solid var(--borde);
+    /* Sin esquinas redondeadas: la franja de color se doblaría en ellas. */
+    border-top: 3px solid var(--accion);
+    box-shadow: 0 18px 40px -18px color-mix(in srgb, var(--tinta) 55%, transparent);
+    font-size: 0.85rem;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.celda-bloque:hover .lista-unidad,
+.celda-bloque:has(.bloque-checkbox:focus-visible) .lista-unidad {
+    opacity: 1;
+    visibility: visible;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .lista-unidad {
+        transform: translateY(-3px);
+        transition: opacity 0.12s ease, transform 0.12s ease, visibility 0s linear 0.12s;
+    }
+
+    .celda-bloque:hover .lista-unidad,
+    .celda-bloque:has(.bloque-checkbox:focus-visible) .lista-unidad {
+        transform: none;
+        /* Un respiro antes de abrir, para que cruzar la grilla no lo haga parpadear. */
+        transition: opacity 0.12s ease 0.15s, transform 0.12s ease 0.15s, visibility 0s linear 0.15s;
+    }
+}
+
+.titulo-unidad {
+    margin: 0 0 0.35rem;
+    text-wrap: balance;
+    font-family: var(--fuente-titulo);
+    font-weight: 700;
+}
+
+.lista-unidad ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    line-height: 1.5;
+}
+
 .icono-reloj {
     color: var(--tinta-suave);
     flex-shrink: 0;

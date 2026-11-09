@@ -1,5 +1,5 @@
 import calendar
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import partial
 from datetime import date, datetime, time
 from typing import Any, Dict, List, Tuple
@@ -58,6 +58,10 @@ class BloqueVista:
     termino: time
     es_propio: bool = False
     solicitantes: int = 0
+    # Nombres de quienes, además del usuario, lo piden con el área que eligió
+    # en el asistente. Vacío fuera del asistente: el calendario público solo
+    # muestra la cantidad.
+    de_mi_unidad: List[str] = field(default_factory=list)
 
     @property
     def disponible_para_reserva(self) -> bool:
@@ -110,13 +114,15 @@ def obtener_dias_con_disponibilidad(year: int, month: int) -> set:
     return dias_disponibles
 
 
-def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List["BloqueVista"]:
+def obtener_bloques_dia_para_usuario(fecha: date, usuario=None, area_id=None) -> List["BloqueVista"]:
     """Retorna los bloques de la jornada configurada para una fecha visibles para el usuario:
     - Bloques disponibles (sin reservas aceptadas).
     - Bloques con solicitud activa propia del usuario (marcado con es_propio=True).
+    - Cuántos usuarios distintos están solicitando cada bloque (para mostrarlo al usuario).
+    - Con `area_id`, los nombres de quienes lo piden con esa área (sin el usuario).
+      Quien llama debe asegurarse de que el área es una de las del usuario.
     Excluye:
     - Bloques con reserva aceptada.
-    - Cuántos usuarios distintos están solicitando cada bloque (para mostrarlo al usuario).
     """
     bloques_plantilla = disponibilidad(fecha, fecha).get(fecha, [])
     if not bloques_plantilla:
@@ -135,7 +141,7 @@ def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List["BloqueV
             ],
         )
         .exclude(solicitud__estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA)
-        .select_related("solicitud")
+        .select_related("solicitud__solicitante")
     )
 
     solicitudes_por_bloque = {}
@@ -160,13 +166,28 @@ def obtener_bloques_dia_para_usuario(fecha: date, usuario=None) -> List["BloqueV
             s.solicitante_id == usuario_id and s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE
             for s in solicitudes
         )
+
+        de_mi_unidad = []
+        if usuario_id and area_id:
+            colegas = {
+                s.solicitante_id: s.solicitante
+                for s in solicitudes
+                if s.area_id == area_id
+                and s.solicitante_id != usuario_id
+                and s.estado_validacion == Solicitud.EstadoValidacion.PENDIENTE
+            }
+            de_mi_unidad = sorted(
+                (u.get_full_name() or u.email for u in colegas.values()), key=str.casefold
+            )
+
         resultado.append(BloqueVista(
             id=b.id,
-            inicio=b.inicio, 
-            termino=b.termino, 
-            es_propio=es_propio, 
-            solicitantes=solicitantes)
-            )
+            inicio=b.inicio,
+            termino=b.termino,
+            es_propio=es_propio,
+            solicitantes=solicitantes,
+            de_mi_unidad=de_mi_unidad,
+        ))
 
     return resultado
 
