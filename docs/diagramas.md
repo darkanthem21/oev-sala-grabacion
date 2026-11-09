@@ -365,6 +365,41 @@ solo ve sus áreas activas; las solicitudes que ya la usan no cambian.
 
 ![Desactivar o reactivar un área](diagramas/us-05/desactivar-area.png)
 
+### Crear una cuenta (US-08)
+
+Nueva cuenta y Editar comparten la vista y el formulario. `UsuarioForm` revisa
+que el correo no se repita sin distinguir mayúsculas y que haya al menos un rol.
+`guardar_usuario` aplica las reglas que no son de un campo (el rol Administrador
+lo da solo el superusuario, un solicitante necesita un área activa) y guarda la
+cuenta, sus roles y su registro en una transacción. La contraseña es una al azar
+que nadie conoce: la persona crea la suya con el enlace del correo, el mismo de
+recuperar la clave (US-01 AC6).
+
+![Crear una cuenta](diagramas/us-08/crear-cuenta.png)
+
+El correo sale después de la transacción: si falla, la cuenta queda creada y el
+administrador lo reenvía desde la ficha. `UsuarioAdmin` usa el mismo registro
+desde `/admin/` y no deja borrar cuentas.
+
+### Desactivar una cuenta (US-08)
+
+Antes de desactivar, la ficha cuenta lo que la persona tiene abierto de hoy en
+adelante (AC5). `personas` no importa `solicitudes`: lo pregunta por la relación
+inversa, `cuenta.solicitudes`. La regla del último administrador (AC6) vive en
+`Usuario.save` y en una señal de `groups`, así que rige igual desde la pestaña,
+`/admin/` o el shell.
+
+![Desactivar una cuenta](diagramas/us-08/desactivar-cuenta.png)
+
+### Cargar cuentas desde una planilla (US-08)
+
+La vista previa y la confirmación son dos `POST`. Entre uno y otro, lo leído
+espera en la sesión; al confirmar se revisa de nuevo contra la base, por si
+alguien cambió una cuenta entremedio. A una cuenta que ya existe solo se le
+suman roles y áreas (AC9).
+
+![Cargar cuentas desde una planilla](diagramas/us-08/cargar-planilla.png)
+
 ### Editar la plantilla semanal de bloques (US-04)
 
 Un bloque es un tramo de la semana, no una fecha: el cambio vale para ese día
