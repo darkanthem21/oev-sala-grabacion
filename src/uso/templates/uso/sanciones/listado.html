@@ -1,0 +1,23 @@
+{% extends "panel.html" %}
+{% load static %}
+{% comment %}
+  US-12. Pestaña Sanciones: una fila por persona con sus incidentes, sus
+  inasistencias y el estado de su sanción. La sirve `uso` (ver uso/views.py).
+{% endcomment %}
+{% block titulo %}Sanciones{% endblock %}
+{% block estilos_seccion %}<link rel="stylesheet" href="{% static 'uso/sanciones.css' %}">{% endblock %}
+
+{% block seccion %}
+<div class="cabeza-sanciones">
+  <h2>Historial de sanciones e incidentes</h2>
+  <p class="suave">
+    Un incidente es una pregunta del check-out respondida «No». Una inasistencia
+    es una reserva aceptada que llegó a su día sin confirmar, o que se canceló
+    desde el lunes de su semana. Abre a una persona para ver el detalle y
+    sancionarla. Mientras una sanción está vigente la persona no puede enviar
+    solicitudes nuevas; sus reservas ya aceptadas no cambian.
+  </p>
+</div>
+
+{% include "uso/sanciones/_tabla.html" %}
+{% endblock %}

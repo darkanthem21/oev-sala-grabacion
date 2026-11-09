@@ -13,6 +13,21 @@ class LevantarSancionForm(forms.Form):
     )
 
 
+class AplicarSancionForm(forms.Form):
+    """US-12: lo que el administrador escribe para sancionar. Las reglas de las
+    fechas no van acá: las revisa services.aplicar con `full_clean()`, así valen
+    igual para la sanción automática cuando llegue."""
+
+    motivo = forms.CharField(
+        max_length=300,
+        error_messages={"required": "Escribe el motivo de la sanción: le llega a la persona."},
+    )
+    inicio = forms.DateField(label="Desde", input_formats=["%Y-%m-%d"],
+                             widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"))
+    termino = forms.DateField(label="Hasta (incluido)", input_formats=["%Y-%m-%d"],
+                              widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"))
+
+
 class AreaForm(forms.ModelForm):
     """US-05 AC2: crear un área o cambiarle el nombre y la nota."""
 

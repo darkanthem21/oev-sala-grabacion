@@ -1,0 +1,103 @@
+{% extends "panel.html" %}
+{% load static %}
+{% comment %}
+  US-12 T5 a T7. Lo que pasó con una persona, del más antiguo al más reciente,
+  y desde aquí se le aplica o se le levanta una sanción. Los dos formularios
+  llevan `volver`, para regresar al listado con los filtros de antes.
+{% endcomment %}
+{% block titulo %}Sanciones de {{ persona.get_full_name|default:persona.email }}{% endblock %}
+{% block estilos_seccion %}<link rel="stylesheet" href="{% static 'uso/sanciones.css' %}">{% endblock %}
+
+{% block seccion %}
+<div class="cabeza-sanciones">
+  <div>
+    <h2>{{ persona.get_full_name|default:persona.email }}</h2>
+    <p class="suave">{{ persona.email }} · {{ incidentes }} incidente{{ incidentes|pluralize }} ·
+      {{ inasistencias }} inasistencia{{ inasistencias|pluralize }}</p>
+  </div>
+  <a class="btn" href="{% url 'panel_sanciones' %}{% if volver %}?{{ volver }}{% endif %}">Volver al listado</a>
+</div>
+
+<div class="ficha-sanciones">
+  <section class="marco linea-de-tiempo" aria-labelledby="titulo-historial">
+    <h3 id="titulo-historial">Historial</h3>
+    {% if eventos %}
+      <ol class="eventos">
+        {% for e in eventos %}
+          <li class="evento {{ e.tipo }}">
+            <p class="cuando cifra">{{ e.fecha|date:"D d/m/Y"|capfirst }}</p>
+            {% if e.tipo == "incidente" %}
+              <p><span class="estado incidente">Incidente</span>
+                 <span class="cifra">{{ e.bloque.inicio|time:"H:i" }}–{{ e.bloque.termino|time:"H:i" }}</span>
+                 {% if e.seccion %}<span class="suave">· {{ e.seccion }}</span>{% endif %}</p>
+              <p>{{ e.pregunta }} <strong>No</strong></p>
+              {% if e.observacion %}<p class="observacion">«{{ e.observacion }}»</p>{% endif %}
+              <p class="suave">Check-out de {% firstof e.registrado_por.get_full_name e.registrado_por.email "—" %} ·
+                 <a href="{% url 'foto_integridad' e.foto.pk %}">foto</a></p>
+            {% elif e.tipo == "inasistencia" %}
+              <p><span class="estado inasistencia">Inasistencia</span>
+                {% for b in e.bloques %}<span class="cifra">{{ b.inicio|time:"H:i" }}–{{ b.termino|time:"H:i" }}</span>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+              <p class="suave">Solicitud #{{ e.solicitud.pk }} ·
+                {% if e.cancelada %}cancelada el {{ e.solicitud.cancelada_en|date:"d/m/Y H:i" }}, en la semana de la reserva{% else %}llegó su día sin confirmar{% endif %}</p>
+            {% else %}
+              {% with s=e.sancion %}
+                <p><span class="estado {{ e.estado }}">Sanción {{ e.estado }}</span> {{ s.periodo }}</p>
+                <p>{{ s.motivo }}</p>
+                <p class="suave">Puesta por {% firstof s.creada_por.get_full_name s.creada_por.email "—" %}
+                  el {{ s.creada_en|date:"d/m/Y H:i" }}</p>
+                {% if s.levantada %}
+                  <p class="suave">Levantada por {% firstof s.levantada_por.get_full_name s.levantada_por.email "—" %}
+                    el {{ s.levantada_en|date:"d/m/Y H:i" }}: {{ s.motivo_levantamiento }}</p>
+                {% endif %}
+              {% endwith %}
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p class="vacio">Sin incidentes, inasistencias ni sanciones.</p>
+    {% endif %}
+  </section>
+
+  <div class="acciones-sancion">
+    {% for s in vigentes %}
+      <section class="marco" aria-labelledby="titulo-vigente-{{ s.pk }}">
+        <h3 id="titulo-vigente-{{ s.pk }}">Sanción vigente</h3>
+        <p>{{ s.periodo|capfirst }}. No puede solicitar hasta el {{ s.hasta }}.</p>
+        <form method="post" class="levantar">
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="levantar">
+          <input type="hidden" name="sancion" value="{{ s.pk }}">
+          <input type="hidden" name="volver" value="{{ volver }}">
+          <input type="text" name="motivo" maxlength="200" required placeholder="Motivo del levantamiento"
+                 aria-label="Motivo para levantar la sanción {{ s.periodo }}">
+          <button class="btn" type="submit">Levantar</button>
+        </form>
+      </section>
+    {% endfor %}
+
+    <section class="marco" aria-labelledby="titulo-aplicar">
+      <h3 id="titulo-aplicar">Aplicar una sanción</h3>
+      <p class="suave">
+        Por defecto empieza hoy y dura {{ parametros.dias_sancion }} día{{ parametros.dias_sancion|pluralize }}
+        (Reglas), contando el de inicio: rige hasta las 23:59 del día «Hasta». No puede empezar en una fecha
+        futura ni cruzarse con otra sanción sin levantar. La persona recibe un correo.
+      </p>
+      <form method="post" class="aplicar" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="aplicar">
+        <input type="hidden" name="volver" value="{{ volver }}">
+        {% for error in aplicar.non_field_errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}
+        {% for campo in aplicar %}
+          <div class="filtro{% if campo.errors %} con-error{% endif %}">
+            <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+            {{ campo }}
+            {% for error in campo.errors %}<p class="error">{{ error }}</p>{% endfor %}
+          </div>
+        {% endfor %}
+        <button class="btn activa" type="submit">Sancionar</button>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

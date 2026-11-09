@@ -1,0 +1,15 @@
+{% autoescape off %}Hola, {{ nombre }}:
+
+La Oficina de Educación Virtual te aplicó una sanción {{ sancion.periodo }}.
+
+Motivo: {{ sancion.motivo }}
+
+Mientras rige, hasta el {{ sancion.hasta }}, no puedes enviar solicitudes nuevas de la sala de grabación. Desde el {{ sancion.rehabilita }} puedes volver a pedirla, sin hacer nada.
+
+Tus reservas ya aceptadas y tus solicitudes en revisión no cambian.
+
+En la pestaña «Mis sanciones» del sistema puedes ver este y otros periodos.
+
+Oficina de Educación Virtual
+Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile
+{% endautoescape %}

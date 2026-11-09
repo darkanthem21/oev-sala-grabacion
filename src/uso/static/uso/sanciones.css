@@ -1,0 +1,98 @@
+/* Pestaña Sanciones (US-10, y desde US-12 el listado y el detalle de cada
+ * persona). Los filtros y las páginas son los del historial de US-11. Botones,
+ * campos y marco vienen de base.css. Solo variables de marca.css
+ * (docs/estilo.md). */
+
+.cabeza-sanciones {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--esp-4);
+  margin-bottom: var(--esp-4);
+}
+.cabeza-sanciones h2 { margin: 0 0 var(--esp-1); font-size: var(--txt-lg); }
+.cabeza-sanciones p { margin: 0; font-size: var(--txt-sm); line-height: 1.45; max-width: 70ch; }
+.suave { color: var(--tinta-suave); }
+.cifra, .numero { font-variant-numeric: tabular-nums; }
+
+/* --- Filtros --- */
+.filtros {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); align-items: start;
+  gap: var(--esp-2) var(--esp-4); margin: 0 0 var(--esp-4); padding: var(--esp-3) var(--esp-4);
+  border: 1px solid var(--borde); background: var(--superficie);
+}
+.filtro { display: flex; flex-direction: column; gap: var(--esp-1); min-width: 0; }
+.filtro label { font-size: var(--txt-xs); color: var(--tinta-suave); }
+.filtro input, .filtro select {
+  width: 100%; box-sizing: border-box; min-height: var(--alto-control);
+  font-size: var(--txt-sm); padding: 0 var(--esp-2);
+}
+.con-error input, .con-error select { border-color: var(--alerta); }
+.error { margin: 0; font-size: var(--txt-xs); color: var(--alerta); }
+/* Arriba, como los campos, para que un error bajo uno no los desalinee. */
+.filtros .acciones { display: flex; flex-wrap: wrap; gap: var(--esp-2); padding-top: var(--esp-4); }
+
+/* --- Tabla --- */
+.tabla { width: 100%; border-collapse: collapse; font-size: var(--txt-sm); }
+.tabla th {
+  text-align: left; font-size: var(--txt-xs); text-transform: uppercase; letter-spacing: .05em;
+  color: var(--tinta-suave); padding: var(--esp-2) var(--esp-4); border-bottom: 1px solid var(--borde);
+}
+.tabla td { padding: var(--esp-2) var(--esp-4); border-bottom: 1px solid var(--borde); vertical-align: top; }
+.tabla tr:last-child td { border-bottom: 0; }
+.tabla .numero { text-align: right; }
+
+/* El mismo filete de los estados de Mis solicitudes y de Resueltas hoy; el
+ * texto dice cuál. */
+.estado {
+  display: inline-block; padding: 1px 0 1px var(--esp-2); white-space: nowrap;
+  border-left: 3px solid var(--borde); font-weight: 500;
+}
+.estado.vigente, .estado.umbral { border-left-color: var(--alerta); }
+.estado.levantada { border-left-color: var(--accion); }
+.estado.incidente, .estado.inasistencia { border-left-color: var(--precaucion); }
+
+.levantar { display: flex; gap: var(--esp-2); margin: 0; }
+.levantar input {
+  min-width: 10rem; flex: 1; min-height: var(--alto-control);
+  font-size: var(--txt-sm); padding: 0 var(--esp-2);
+}
+
+/* --- Páginas --- */
+.paginas {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--esp-4);
+  margin-top: var(--esp-4); font-size: var(--txt-sm);
+}
+.paginas > :first-child { justify-self: start; }
+.paginas > :last-child { justify-self: end; }
+/* htmx pone esta clase mientras espera la tabla nueva. */
+.personas.htmx-request { opacity: .6; transition: opacity .15s ease; }
+
+/* --- Detalle --- */
+.ficha-sanciones { display: grid; grid-template-columns: 3fr 2fr; gap: var(--esp-4); align-items: start; }
+.ficha-sanciones section { padding: var(--esp-4); }
+.ficha-sanciones h3 { margin: 0 0 var(--esp-2); font-size: var(--txt-sm); }
+.ficha-sanciones p { margin: 0 0 var(--esp-1); font-size: var(--txt-sm); line-height: 1.45; }
+.acciones-sancion { display: flex; flex-direction: column; gap: var(--esp-4); }
+.aplicar { display: flex; flex-direction: column; gap: var(--esp-2); margin-top: var(--esp-2); }
+.aplicar .btn { align-self: flex-start; }
+
+.eventos { margin: 0; padding: 0; list-style: none; }
+.evento { padding: var(--esp-2) 0 var(--esp-2) var(--esp-3); border-left: 3px solid var(--borde); margin-bottom: var(--esp-2); }
+.evento.incidente, .evento.inasistencia { border-left-color: var(--precaucion); }
+.evento.sancion { border-left-color: var(--alerta); }
+.evento .cuando { font-size: var(--txt-xs); color: var(--tinta-suave); }
+.evento .observacion { font-style: italic; }
+
+@media (max-width: 48rem) {
+  .ficha-sanciones { grid-template-columns: minmax(0, 1fr); }
+  .cabeza-sanciones { flex-direction: column; }
+  .tabla-personas thead { display: none; }
+  .tabla-personas tr { display: block; padding: var(--esp-2) var(--esp-4); border-bottom: 1px solid var(--borde); }
+  .tabla-personas tr:last-child { border-bottom: 0; }
+  .tabla-personas td, .tabla-personas .numero { display: block; padding: var(--esp-1) 0; border: 0; text-align: left; }
+  .tabla-personas td::before {
+    content: attr(data-titulo); display: block;
+    font-size: var(--txt-xs); text-transform: uppercase; letter-spacing: .05em; color: var(--tinta-suave);
+  }
+  .levantar { flex-wrap: wrap; }
+  .paginas { grid-template-columns: 1fr 1fr; }
+  .paginas > .suave { grid-column: 1 / -1; grid-row: 1; text-align: center; }
+}

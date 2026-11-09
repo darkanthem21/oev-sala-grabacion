@@ -89,6 +89,9 @@ urlpatterns = [
     path("configuracion/usuarios/<int:pk>/", views.usuario, name="panel_usuario"),
     path("configuracion/reglas/", configuracion.reglas, name="panel_reglas"),
     path("configuracion/validacion/", solicitudes.panel_validacion_admin, name="panel_validacion"),
-    path("configuracion/sanciones/", views.sanciones, name="panel_sanciones"),
+    # US-12: la pestaña la sirve `uso`, porque cuenta check-outs; la dirección y
+    # el nombre son los de US-10, para no romper enlaces.
+    path("configuracion/sanciones/", uso.sanciones, name="panel_sanciones"),
+    path("configuracion/sanciones/<int:usuario_id>/", uso.sanciones_de, name="sanciones_de"),
     path("admin/", admin.site.urls),
 ]

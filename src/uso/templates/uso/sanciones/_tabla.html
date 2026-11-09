@@ -1,0 +1,109 @@
+{% comment %}
+  US-12. Filtros, tabla y páginas del listado de Sanciones. htmx reemplaza este
+  bloque entero al filtrar o cambiar de página; sin htmx, el mismo formulario y
+  los mismos enlaces cargan la página completa. Levantar va por POST normal y
+  vuelve a la misma página y filtros (`volver`).
+{% endcomment %}
+{% url 'panel_sanciones' as url_listado %}
+<div id="personas" class="personas">
+  <form class="filtros" method="get" action="{{ url_listado }}"
+        hx-get="{{ url_listado }}" hx-target="#personas" hx-swap="outerHTML"
+        hx-push-url="true" hx-indicator="#personas">
+    {% for campo in filtros %}
+      <div class="filtro{% if campo.errors %} con-error{% endif %}">
+        <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+        {{ campo }}
+        {% for error in campo.errors %}<p class="error">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+    <div class="acciones">
+      <button class="btn activa" type="submit">Filtrar</button>
+      {% if filtrado %}
+        <a class="btn" href="{{ url_listado }}" hx-get="{{ url_listado }}">Quitar filtros</a>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if pagina.object_list %}
+    <div class="marco">
+      <table class="tabla tabla-personas">
+        <thead>
+          <tr>
+            <th scope="col">Persona</th>
+            <th scope="col" class="numero">Incidentes</th>
+            <th scope="col" class="numero">Inasistencias</th>
+            <th scope="col">Sanción</th>
+            <th scope="col">Levantar</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in pagina.object_list %}
+            <tr>
+              <td data-titulo="Persona">
+                <a href="{% url 'sanciones_de' p.pk %}{% if consulta_completa %}?{{ consulta_completa }}{% endif %}">{{ p.get_full_name|default:p.email }}</a><br>
+                <span class="suave">{{ p.email }}{% if p.nombres_areas %} · {{ p.nombres_areas|join:", " }}{% endif %}</span>
+              </td>
+              <td data-titulo="Incidentes" class="numero">{{ p.incidentes }}</td>
+              <td data-titulo="Inasistencias" class="numero">
+                {{ p.inasistencias }}
+                {# T9: solo avisa; la sanción automática espera la decisión de la PO (AC8). #}
+                {% if p.estado_sancion != "vigente" and p.inasistencias_sin_sancion >= umbral %}
+                  <br><span class="estado umbral" title="{{ p.inasistencias_sin_sancion }} desde su última sanción">Llega al umbral de {{ umbral }}</span>
+                {% endif %}
+              </td>
+              <td data-titulo="Sanción">
+                <span class="estado {{ p.estado_sancion }}">{{ p.estado_texto }}</span>
+                {% if p.estado_sancion == "vigente" %}
+                  <br><span class="cifra">hasta el {{ p.vigente_termino|date:"d/m/Y" }}</span>
+                  <br><span class="suave">{{ p.vigente_motivo }}</span>
+                {% endif %}
+              </td>
+              <td data-titulo="Levantar">
+                {% if p.vigente_id %}
+                  <form method="post" action="{{ url_listado }}" class="levantar">
+                    {% csrf_token %}
+                    <input type="hidden" name="sancion" value="{{ p.vigente_id }}">
+                    <input type="hidden" name="volver" value="{{ consulta_completa }}">
+                    <input type="text" name="motivo" maxlength="200" required
+                           placeholder="Motivo del levantamiento"
+                           aria-label="Motivo para levantar la sanción de {{ p.email }}">
+                    <button class="btn" type="submit">Levantar</button>
+                  </form>
+                {% else %}<span class="suave">—</span>{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if pagina.has_other_pages %}
+      <nav class="paginas" aria-label="Páginas del listado"
+           hx-target="#personas" hx-swap="outerHTML show:#personas:top" hx-push-url="true"
+           hx-indicator="#personas">
+        {% if pagina.has_previous %}
+          <a class="btn" rel="prev" href="{{ url_pagina }}{{ pagina.previous_page_number }}"
+             hx-get="{{ url_pagina }}{{ pagina.previous_page_number }}">&larr; Anterior</a>
+        {% else %}
+          <span class="btn deshabilitado" aria-disabled="true">&larr; Anterior</span>
+        {% endif %}
+
+        <span class="suave" aria-live="polite">
+          Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}
+          · {{ pagina.paginator.count }} persona{{ pagina.paginator.count|pluralize }}
+        </span>
+
+        {% if pagina.has_next %}
+          <a class="btn" rel="next" href="{{ url_pagina }}{{ pagina.next_page_number }}"
+             hx-get="{{ url_pagina }}{{ pagina.next_page_number }}">Siguiente &rarr;</a>
+        {% else %}
+          <span class="btn deshabilitado" aria-disabled="true">Siguiente &rarr;</span>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <p class="vacio" role="status">
+      {% if filtrado %}Nadie coincide con estos filtros.{% else %}Todavía no hay solicitantes.{% endif %}
+    </p>
+  {% endif %}
+</div>

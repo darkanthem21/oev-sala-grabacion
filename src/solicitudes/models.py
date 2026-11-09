@@ -4,7 +4,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
+from django.db.models.functions import TruncWeek
 from django.utils import timezone
 
 from agenda.models import impedimento, primera_fecha_pedible
@@ -57,6 +58,25 @@ class SolicitudQuerySet(models.QuerySet):
         con el id de desempate para que la paginación no repita filas.
         """
         return self.filter(resuelta_en__isnull=False).order_by("-resuelta_en", "-id")
+
+    def inasistencias(self, hoy=None):
+        """US-12: las reservas que cuentan como inasistencia, en SQL para que el
+        panel de Sanciones las cuente en una subconsulta.
+
+        Es la misma regla de `estado_clave` y `cancelar_cuenta_inasistencia`:
+        una aceptada que llegó a su día sin confirmar ni cancelar («no
+        confirmada»), y una cancelada desde el lunes de su semana (US-03 AC6).
+        Las dos fechas se comparan en America/Santiago. Una confirmada a la que
+        nadie llegó no se distingue de una usada: el check-out no anota ausencias.
+        """
+        hoy = hoy or timezone.localdate()
+        aceptada = self.filter(estado_validacion=Solicitud.EstadoValidacion.ACEPTADA)
+        return aceptada.filter(
+            Q(estado_confirmacion__in=[Solicitud.EstadoConfirmacion.NO_HABILITADA,
+                                       Solicitud.EstadoConfirmacion.PENDIENTE], fecha__lte=hoy)
+            | Q(estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA,
+                cancelada_en__date__gte=TruncWeek("fecha"))
+        )
 
     def con_detalle(self):
         """Con lo que dibuja la tabla: el área y los bloques con su hora, en

@@ -16,8 +16,8 @@ from django.utils import timezone
 from configuracion.models import Parametros
 
 from . import carga, services
-from .forms import AreaForm, LevantarSancionForm, UsuarioForm
-from .models import PUERTA_DEL_ROL, Area, CambioArea, CambioUsuario, Rol, Sancion, Usuario
+from .forms import AreaForm, UsuarioForm
+from .models import PUERTA_DEL_ROL, Area, CambioArea, CambioUsuario, Rol, Usuario
 from .permisos import solo_administradores
 
 # Como en Reglas: el registro completo está en /admin/, y acá basta lo último.
@@ -135,35 +135,6 @@ def entrar(request, rol, destino, ruta, titulo, puerta, nombre):
 def panel(request):
     """La raíz lleva a cada uno a su panel, por la prioridad de sus roles."""
     return redirect(destino_tras_login(request.user))
-
-
-@solo_administradores
-def sanciones(request):
-    """US-10: las sanciones vigentes, para que el administrador las levante.
-
-    Crearlas y acortarlas es del superusuario, en la administración de Django;
-    el historial completo también está ahí. Levantar va por POST y vuelve con
-    una redirección, para que recargar no lo intente dos veces.
-    """
-    if request.method == "POST":
-        sancion = get_object_or_404(Sancion, pk=request.POST.get("sancion"))
-        formulario = LevantarSancionForm(request.POST)
-        if not formulario.is_valid():
-            messages.error(request, " ".join(formulario.errors["motivo"]))
-            return redirect("panel_sanciones")
-        try:
-            services.levantar(sancion, request.user, formulario.cleaned_data["motivo"])
-        except ValidationError as error:
-            messages.error(request, " ".join(error.messages))
-        else:
-            persona = sancion.usuario.get_full_name() or sancion.usuario.email
-            messages.success(request, f"Levantaste la sanción de {persona}. Ya puede solicitar la sala.")
-        return redirect("panel_sanciones")
-
-    return render(request, "personas/sanciones.html", {
-        "pestana": "sanciones",
-        "vigentes": Sancion.objects.vigentes().select_related("usuario", "creada_por").order_by("termino", "id"),
-    })
 
 
 @solo_administradores

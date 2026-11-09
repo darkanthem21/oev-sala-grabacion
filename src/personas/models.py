@@ -251,6 +251,12 @@ class SancionQuerySet(models.QuerySet):
         hoy = hoy or timezone.localdate()
         return self.filter(Q(termino__lt=hoy) | Q(levantada_en__isnull=False)).order_by("-termino", "-id")
 
+    def cruzan(self, inicio, termino):
+        """US-12: las no levantadas que comparten al menos un día con ese
+        periodo, con los dos extremos incluidos. Una levantada ya no rige, así
+        que no choca con nada."""
+        return self.filter(levantada_en__isnull=True, inicio__lte=termino, termino__gte=inicio)
+
 
 class Sancion(models.Model):
     """Una suspensión temporal del derecho a pedir la sala (US-10).
@@ -339,3 +345,15 @@ class Sancion(models.Model):
             raise ValidationError({"inicio": "Una sanción no puede empezar en una fecha futura."})
         if self.termino < self.inicio:
             raise ValidationError({"termino": "La sanción tiene que terminar el mismo día que empieza o después."})
+        # US-12: dos sanciones no levantadas no se pisan. Va acá y no solo en
+        # services.aplicar para que /admin/ tampoco las cruce al crear o al
+        # alargar una; la que corre a la vez que otra la frena aplicar, que
+        # bloquea a la persona antes de llegar aquí.
+        if self.usuario_id and not self.levantada:
+            otra = (Sancion.objects.filter(usuario_id=self.usuario_id).cruzan(self.inicio, self.termino)
+                    .exclude(pk=self.pk).order_by("inicio").first())
+            if otra:
+                raise ValidationError(
+                    f"Se cruza con otra sanción de la misma persona, {otra.periodo}. "
+                    "Levántala o elige fechas que no se pisen."
+                )

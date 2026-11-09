@@ -11,6 +11,7 @@ Este manual cubre lo que hoy está disponible en el sistema, ordenado por rol:
 | US-09 Historial de solicitudes | Solicitante | [Mis solicitudes](#mis-solicitudes) |
 | US-03 Confirmar la asistencia | Solicitante | [Confirmar la asistencia](#confirmar-la-asistencia) |
 | US-10 Historial de sanciones | Solicitante y administrador | [Mis sanciones](#mis-sanciones) y [Sanciones](#sanciones) |
+| US-12 Historial de sanciones (administrador) | Administrador | [Sanciones](#sanciones) |
 | US-07 Panel del validador | Validador y administrador | [Validador](#3-validador) |
 | US-04 Panel de administrador | Administrador | [Jornada semanal](#jornada-semanal) y [Reglas](#reglas-los-parámetros-del-sistema) |
 | US-17 Bloquear fechas de la sala | Administrador | [Bloquear fechas de la sala](#bloquear-fechas-de-la-sala) |
@@ -312,7 +313,9 @@ Al cancelar, vuelves a **Mis solicitudes** con el aviso **Cancelaste la reserva
 Una sanción suspende por un tiempo la posibilidad de enviar solicitudes nuevas.
 La pone la Oficina, por ejemplo tras inasistencias, con un motivo y un periodo.
 Rige desde su primer día hasta las **23:59 de su último día**, en hora de Chile;
-al día siguiente se puede volver a pedir sin hacer nada.
+al día siguiente se puede volver a pedir sin hacer nada. Cuando la Oficina la
+pone desde su panel, llega un correo con el motivo, el periodo y desde qué día
+se puede volver a pedir.
 
 Mientras hay una sanción vigente:
 
@@ -691,22 +694,74 @@ inicio hasta las 23:59 de su fecha de término. **No cancela sus reservas ya
 aceptadas ni sus solicitudes en revisión** (decisión del 20/10 sobre AC6 de
 US-10).
 
-**Crear o acortar una sanción** lo hace solo el superusuario, en `/admin`:
-**Personas › Sanciones › Añadir**, con la persona, el motivo, la fecha de inicio
-y la de término. La de término es obligatoria y el inicio no puede ser una fecha
-futura. Para acortarla se cambia la fecha de término. Las sanciones no se
-borran, y el administrador sin cuenta de superusuario no las ve en `/admin`.
+#### El listado
 
-**Levantar una sanción** antes de tiempo se hace en la pestaña **Sanciones**, que
-lista las vigentes con la persona, el motivo, el periodo y quién la puso:
+La pestaña **Sanciones** muestra una fila por solicitante, con:
 
-1. En la fila, escribe el motivo del levantamiento. Es obligatorio.
+| Columna | Qué cuenta |
+|---|---|
+| Incidentes | Cada pregunta del check-out respondida **No**, en todos sus bloques |
+| Inasistencias | Reservas aceptadas que llegaron a su día sin confirmar, y las canceladas desde el lunes de su semana |
+| Sanción | **Vigente** (hasta qué día y por qué), **Levantada**, **Terminada** o **Sin sanción**, según la vigente o, si no hay, la última |
+| Levantar | Solo si tiene una vigente: el motivo y el botón, como en el detalle |
+
+Primero van quienes tienen más incidentes. Arriba se filtra por nombre o
+correo, por área y por estado de la sanción, y **Quitar filtros** vuelve a
+mostrar a todos. La dirección guarda los filtros, así que se puede compartir.
+Hay 25 personas por página.
+
+Si una persona llega a las **Inasistencias para sancionar** de
+[Reglas](#reglas-los-parámetros-del-sistema) desde su última sanción, la fila
+lo marca con **Llega al umbral de N**. El sistema **no la sanciona solo**:
+decide el administrador.
+
+#### El detalle de una persona
+
+Un clic en el nombre abre su historial, del más antiguo al más reciente:
+
+- **Incidente**: el día y el bloque, la sección y la pregunta del check-out tal
+  como se preguntó ese día, la observación de quien lo registró y la foto.
+- **Inasistencia**: el día, los bloques y si llegó su día sin confirmar o se
+  canceló tarde.
+- **Sanción**: el periodo, el motivo, quién la puso y cuándo y, si se levantó,
+  quién, cuándo y por qué.
+
+**Volver al listado** regresa a la misma página y filtros.
+
+#### Aplicar una sanción
+
+En el detalle, **Aplicar una sanción**:
+
+1. Escribe el motivo. Es obligatorio y le llega a la persona por correo.
+2. Revisa las fechas. Vienen propuestas: desde hoy y por la **Duración de la
+   sanción** de Reglas, contando el primer día. Con 30 días desde el 3 de
+   noviembre, **Hasta** dice 2 de diciembre: la sanción rige hasta las 23:59 de
+   ese día y la persona vuelve a pedir el 3.
+3. Pulsa **Sancionar**.
+
+No se puede empezar en una fecha futura, terminar antes de empezar ni cruzarse
+con otra sanción de la misma persona que no se haya levantado, aunque solo
+compartan un día. Si pasa, el formulario lo dice y no se guarda nada. Si otro
+administrador la sancionó justo antes, el segundo ve el cruce.
+
+La persona recibe un correo con el motivo, el periodo y desde qué día puede
+volver a pedir, y desde ese momento ve **No puedes solicitar por ahora**.
+
+El superusuario puede además crear y acortar sanciones en `/admin`, en
+**Personas › Sanciones**, con las mismas reglas. Las sanciones no se borran.
+
+#### Levantar una sanción
+
+Antes de que termine, en la fila del listado o en el detalle:
+
+1. Escribe el motivo del levantamiento. Es obligatorio.
 2. Pulsa **Levantar**.
 
-La persona puede volver a solicitar de inmediato y el aviso dice **Levantaste la
-sanción de …**. La sanción no se borra: queda en su historial con quién la
-levantó, cuándo y por qué. Si otra persona la levantó justo antes, o ya terminó,
-el aviso lo dice y no cambia nada.
+El aviso dice **Levantaste la sanción de …**. Si la persona no tiene otra
+vigente, agrega **Ya puede solicitar la sala** y puede pedir de inmediato. Si
+tiene otra, dice hasta cuándo sigue sin poder pedir. La sanción no se borra:
+queda en su historial con quién la levantó, cuándo y por qué. Si otra persona
+la levantó justo antes, o ya terminó, el aviso lo dice y no cambia nada.
 
 ---
 
