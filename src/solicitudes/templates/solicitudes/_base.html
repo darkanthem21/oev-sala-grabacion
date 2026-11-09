@@ -20,7 +20,7 @@
 {% block contenido %}
 {% with ruta=request.resolver_match.url_name %}
 <header class="techo">
-  {% include "_banda.html" %}
+  {% include "_banda.html" with puerta="solicitante" %}
   <div class="riel">
     <div class="dentro">
       <nav class="pestanas" aria-label="Secciones del solicitante">

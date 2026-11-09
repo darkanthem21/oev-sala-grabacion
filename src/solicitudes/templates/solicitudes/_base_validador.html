@@ -15,7 +15,7 @@ cambiar nada más.
 
 {% block contenido %}
 <header class="techo">
-  {% include "_banda.html" %}
+  {% include "_banda.html" with puerta="validacion" %}
   <div class="riel">
     <div class="dentro">
       {% include "_rol.html" with rol="validacion" nombre="Validador" %}
