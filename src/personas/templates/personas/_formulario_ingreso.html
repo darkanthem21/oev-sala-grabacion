@@ -9,8 +9,10 @@ correo escrito. Al entrar bien la vista responde 204 con HX-Redirect.
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
   <label for="username">Correo electrónico</label>
+  {% comment %}Tras un error el correo sigue escrito: el foco va a la clave, que es
+  lo único que hay que volver a escribir. htmx respeta autofocus al reemplazar.{% endcomment %}
   <input id="username" name="username" type="email" value="{{ form.data.username|default:'' }}"
-         autocomplete="username" autocapitalize="none" autofocus required>
+         autocomplete="username" autocapitalize="none" {% if not form.data.username %}autofocus{% endif %} required>
 
   {% comment %}
   AC2: el navegador oculta los caracteres. Alpine solo decide si se ven, y eso
@@ -19,7 +21,7 @@ correo escrito. Al entrar bien la vista responde 204 con HX-Redirect.
   <div x-data="{ ver: false }">
     <label for="password">Contraseña</label>
     <input id="password" name="password" :type="ver ? 'text' : 'password'"
-           type="password" autocomplete="current-password" required>
+           type="password" autocomplete="current-password" {% if form.data.username %}autofocus{% endif %} required>
     <label class="ver"><input type="checkbox" x-model="ver"> Ver contraseña</label>
   </div>
 

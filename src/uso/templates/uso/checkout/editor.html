@@ -1,0 +1,22 @@
+{% extends "panel.html" %}
+{% load static %}
+{% block estilos_seccion %}<link rel="stylesheet" href="{% static 'uso/checkout/checkout.css' %}">{% endblock %}
+{% block seccion %}
+<h2>Formulario de check-out</h2>
+<p>Organiza las secciones y sus preguntas de Sí o No. Los cambios se aplican al publicar el listado.</p>
+<p class="checkout-regla"><strong>Regla de integridad permanente:</strong> todas las preguntas son obligatorias. Cada «No» requiere una observación de al menos 10 caracteres y una foto antes de enviar. Esta regla también se aplica a las preguntas nuevas.</p>
+<p>Versión publicada: {{ listado.revision }}{% if listado.actualizado_por %} · {{ listado.actualizado_por }}{% endif %}</p>
+<form method="post" id="editor-checkout">
+  {% csrf_token %}{{ form.revision }}{{ form.revision.errors }}{{ form.non_field_errors }}
+  {{ form.secciones.errors }}
+  <div id="editor-datos"><label for="id_secciones">Listado en formato JSON</label>{{ form.secciones }}</div>
+  <noscript><p>Activa JavaScript para usar el editor visual. También puedes editar el listado en formato JSON.</p></noscript>
+  <div id="editor-secciones"></div>
+  <div class="checkout-acciones">
+    <button type="button" class="btn" id="agregar-seccion" hidden>Añadir sección</button>
+    <button type="submit" class="btn principal">Publicar listado</button>
+  </div>
+  <p id="editor-estado" role="status" aria-live="polite"></p>
+</form>
+{% endblock %}
+{% block scripts %}<script defer src="{% static 'uso/checkout/editor.js' %}"></script>{% endblock %}

@@ -52,7 +52,7 @@
         </div>
 
         <div class="pie-formulario">
-            <button type="submit" id="btn-confirmar" class="btn-accion" :disabled="!haySeleccion" {% if not bloques_seleccionados_ids %}disabled{% endif %}>Confirmar Selección</button>
+            <button type="submit" id="btn-confirmar" class="btn principal" :disabled="!haySeleccion" {% if not bloques_seleccionados_ids %}disabled{% endif %}>Confirmar Selección</button>
             {% if fecha_str and bloques_seleccionados %}
                 <span class="pista-accion">Puedes seleccionar uno o más bloques contiguos para tu grabación.</span>
             {% endif %}

@@ -1,0 +1,14 @@
+{% comment %}
+  US-03 AC4. Las reservas a las que ya les llegó el recordatorio y siguen sin
+  confirmar. Va bajo el techo, como la franja de sanción, para que se vea al
+  entrar y en todas las pantallas del solicitante.
+{% endcomment %}
+{% with por_confirmar=user.solicitudes.por_confirmar %}{% if por_confirmar %}
+<div class="franja-confirmar" role="status">
+  <p>
+    <strong>Tienes {{ por_confirmar|length }} reserva{{ por_confirmar|length|pluralize }} por confirmar.</strong>
+    Confírmala{{ por_confirmar|length|pluralize }} a más tardar el día anterior, o cancéla{{ por_confirmar|length|pluralize:"la,las" }} si no vas a usar la sala.
+    <a href="{% url 'mis_solicitudes' %}?vista=proximas">Ver mis solicitudes</a>
+  </p>
+</div>
+{% endif %}{% endwith %}

@@ -8,16 +8,16 @@
 
 .barra {
   display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
-  gap: .75rem; margin-bottom: 1rem;
+  gap: var(--esp-3); margin-bottom: var(--esp-4);
 }
-.periodo { font-size: 1.15rem; margin: 0; letter-spacing: -.01em; }
-.mandos { display: flex; gap: .5rem; }
+.periodo { font-size: var(--txt-lg); margin: 0; letter-spacing: -.01em; }
+.mandos { display: flex; flex-wrap: wrap; gap: var(--esp-2); }
 
 /* --- vista mensual --- */
 .mes { width: 100%; min-width: 40rem; border-collapse: collapse; }
 .mes th {
-  padding: .5rem .7rem; border-bottom: 1px solid var(--borde); text-align: left;
-  font-family: var(--fuente-titulo); font-weight: 700; font-size: .7rem; color: var(--tinta-suave);
+  padding: var(--esp-2) var(--esp-3); border-bottom: 1px solid var(--borde); text-align: left;
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: var(--txt-xs); color: var(--tinta-suave);
 }
 /* La plantilla se repite todas las semanas, así que cuánta jornada tiene cada
  * día se dice una vez por columna. */
@@ -33,60 +33,60 @@
 .dia:first-child { border-left: 0; }
 .dia:last-child { border-right: 0; }
 .celda {
-  display: flex; flex-direction: column; justify-content: space-between; gap: .5rem;
-  min-height: 4.5rem; padding: .5rem .6rem;
+  display: flex; flex-direction: column; justify-content: space-between; gap: var(--esp-2);
+  min-height: 4.5rem; padding: var(--esp-2) var(--esp-2);
 }
-.numero { font-size: .95rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.numero { font-size: var(--txt-base); font-weight: 500; font-variant-numeric: tabular-nums; }
 .dia.fuera { background: var(--fondo); }
 .dia.fuera .numero { color: var(--tinta-suave); }
-/* Hoy se marca con un filete al canto. El acento de marca da 3.0:1 contra
- * blanco, así que no puede llevar texto encima (marca.css:27). */
+/* Hoy se marca con un filete naranjo al canto: sin texto encima, porque el
+ * naranjo con texto chico no alcanza el 4.5:1 (marca.css). */
 .dia.hoy { box-shadow: inset 3px 0 0 var(--acento); }
 .dia.hoy .numero { font-weight: 700; }
 
 /* Qué significa cada marca de la vista mensual, porque nadie las adivina. */
 .leyenda {
-  display: flex; flex-wrap: wrap; gap: .35rem 1.25rem;
-  margin: .7rem 0 0; padding: 0; list-style: none;
-  font-size: .78rem; color: var(--tinta-suave);
+  display: flex; flex-wrap: wrap; gap: var(--esp-1) var(--esp-5);
+  margin: var(--esp-3) 0 0; padding: 0; list-style: none;
+  font-size: var(--txt-xs); color: var(--tinta-suave);
 }
-.leyenda li { display: flex; align-items: center; gap: .4rem; }
+.leyenda li { display: flex; align-items: center; gap: var(--esp-2); }
 .muestra { flex: none; width: 1.6rem; height: .7rem; }
 .hoy-m { background: var(--superficie); box-shadow: inset 3px 0 0 var(--acento), inset 0 0 0 1px var(--borde); }
 .distinto-m { background: var(--superficie); box-shadow: inset 0 -2px 0 var(--precaucion), inset 0 0 0 1px var(--borde); }
 .bloqueado-m { background: var(--rayado-bloqueo); box-shadow: inset 0 0 0 1px var(--borde); }
 
 /* --- bloqueos (US-17) --- */
-/* Líneas oblicuas en rojo pastel: el día bloqueado se reconoce de lejos, y la
- * forma dice "no disponible" también a quien no distingue el color. Las franjas
- * son claras y más angostas que el blanco, así el número y los avisos se leen. */
-.mes { --rayado-bloqueo: repeating-linear-gradient(135deg, var(--alerta-suave) 0 4px, var(--superficie) 4px 11px); }
-.leyenda { --rayado-bloqueo: repeating-linear-gradient(135deg, var(--alerta-suave) 0 2px, var(--superficie) 2px 5px); }
+/* Líneas oblicuas finas en el color del error: el día bloqueado se reconoce de
+ * lejos, y la forma dice "no disponible" también a quien no distingue el color.
+ * Son de 1 px y muy separadas, así el número y los avisos se leen. */
+.mes { --rayado-bloqueo: repeating-linear-gradient(135deg, var(--alerta) 0 1px, var(--superficie) 1px 8px); }
+.leyenda { --rayado-bloqueo: repeating-linear-gradient(135deg, var(--alerta) 0 1px, var(--superficie) 1px 4px); }
 .dia.bloqueado { background: var(--rayado-bloqueo); }
 /* Lo que se está por bloquear, mientras el editor está abierto. */
-.dia.elegida { box-shadow: inset 0 0 0 2px var(--accion); }
-.dia.hoy.elegida { box-shadow: inset 3px 0 0 var(--acento), inset 0 0 0 2px var(--accion); }
+.dia.elegida { box-shadow: inset 0 0 0 2px var(--acento); }
+.dia.hoy.elegida { box-shadow: inset 3px 0 0 var(--acento), inset 0 0 0 2px var(--acento); }
 
-.celda { justify-content: flex-start; gap: .3rem; }
+.celda { justify-content: flex-start; gap: var(--esp-1); }
 .celda.bloqueable { cursor: cell; }
 /* El número es el botón de teclado de lo que el mouse hace con la celda. */
 button.numero {
-  align-self: flex-start; padding: 0 .15rem; margin: 0 0 0 -.15rem;
-  border: 0; background: none; color: inherit; cursor: pointer; font: inherit; font-size: .95rem;
+  align-self: flex-start; min-width: 1.5rem; min-height: 1.5rem; padding: 0 .15rem; margin: 0 0 0 -.15rem; text-align: left;
+  border: 0; background: none; color: inherit; cursor: pointer; font: inherit; font-size: var(--txt-base);
 }
 button.numero:hover { color: var(--accion); text-decoration: underline; }
 
 /* Un bloqueo es un aviso que se abre, no un bloque de la jornada: filete del
- * color que ningún otro estado usa. */
+ * color del error, el mismo del rayado. */
 .bloqueo {
-  display: flex; align-items: baseline; gap: .3rem; width: 100%; min-width: 0; box-sizing: border-box;
-  padding: .15rem .35rem; cursor: pointer; text-align: left;
-  border: 1px solid var(--borde); border-left: 3px solid var(--destacado);
+  display: flex; align-items: baseline; gap: var(--esp-1); width: 100%; min-width: 0; box-sizing: border-box;
+  min-height: 1.5rem; padding: .15rem var(--esp-1); cursor: pointer; text-align: left;
+  border: 1px solid var(--borde); border-left: 3px solid var(--alerta);
   background: var(--superficie); color: var(--tinta);
-  font-family: var(--fuente-texto); font-size: .7rem; line-height: 1.3;
+  font-family: var(--fuente-texto); font-size: var(--txt-xs); line-height: 1.3;
 }
-.bloqueo:hover { border-color: var(--destacado); }
-.bloqueo[aria-pressed="true"] { background: var(--destacado); border-color: var(--destacado); color: var(--superficie); }
+.bloqueo:hover { border-color: var(--alerta); }
+.bloqueo[aria-pressed="true"] { background: var(--alerta); border-color: var(--alerta); color: var(--superficie); }
 .bloqueo[aria-pressed="true"] .detalle-b, .bloqueo[aria-pressed="true"] .hora-b { color: var(--superficie); }
 .hora-b { font-variant-numeric: tabular-nums; color: var(--tinta-suave); }
 .motivo-b { font-weight: 500; flex: none; }
@@ -97,18 +97,18 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
  * lo demás cuelga de ahí, así que la rejilla crece con un bloque nocturno. */
 .semana { display: grid; grid-template-columns: 3.4rem repeat(5, minmax(6.5rem, 1fr)); min-width: 44rem; }
 .regla, .rejilla { position: relative; height: calc(var(--horas) * 3rem); }
-.regla { margin-top: 2.25rem; }
+.regla { margin-top: var(--esp-6); }
 .hora {
   position: absolute; right: .5rem; transform: translateY(-.5em);
-  font-size: .68rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums;
+  font-size: var(--txt-xs); color: var(--tinta-suave); font-variant-numeric: tabular-nums;
 }
 
 .columna { display: flex; flex-direction: column; border-left: 1px solid var(--borde); }
 .cabecera {
   position: relative;
-  display: flex; align-items: center; justify-content: center; gap: .3rem;
+  display: flex; align-items: center; justify-content: center; gap: var(--esp-1);
   height: 2.25rem; border-bottom: 1px solid var(--borde);
-  font-size: .78rem; color: var(--tinta-suave);
+  font-size: var(--txt-xs); color: var(--tinta-suave);
 }
 /* Visible siempre, porque es la vía por teclado de lo que el mouse hace
  * clicando la rejilla. Escondida hasta el hover no existe para quien no la
@@ -116,7 +116,7 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
 .mas {
   position: absolute; right: 2px; width: 1.4rem; height: 1.4rem; padding: 0;
   border: 1px solid var(--borde); background: var(--superficie); color: var(--accion);
-  font: inherit; font-size: .95rem; line-height: 1; cursor: pointer;
+  font: inherit; font-size: var(--txt-base); line-height: 1; cursor: pointer;
 }
 .mas:hover { border-color: var(--accion); }
 .dsem { font-family: var(--fuente-titulo); font-weight: 700; }
@@ -143,19 +143,19 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
    * arrancado. */
   display: none;
   position: absolute; left: 3px; right: 3px; box-sizing: border-box;
-  padding: .25rem .4rem; pointer-events: none;
+  padding: var(--esp-1) var(--esp-2); pointer-events: none;
   border: 1px dashed var(--accion); background: var(--fondo);
-  font-size: .7rem; color: var(--accion); font-variant-numeric: tabular-nums;
+  font-size: var(--txt-xs); color: var(--accion); font-variant-numeric: tabular-nums;
 }
 
 /* Las dos horas juntas arriba. En un bloque de cinco horas, una en cada punta
  * queda demasiado separada para leerse como un rango. */
 .bloque {
   position: absolute; left: 3px; right: 3px; box-sizing: border-box;
-  padding: .25rem .4rem; overflow: hidden; cursor: pointer; text-align: left;
+  padding: var(--esp-1) var(--esp-2); overflow: hidden; cursor: pointer; text-align: left;
   background: var(--superficie); color: var(--tinta);
-  border: 1px solid var(--info); border-left-width: 3px;
-  font-family: var(--fuente-texto); font-size: .72rem; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--borde); border-left: 3px solid var(--tinta-suave);
+  font-family: var(--fuente-texto); font-size: var(--txt-xs); font-variant-numeric: tabular-nums;
 }
 .bloque .hasta { color: var(--tinta-suave); }
 .bloque:hover { border-color: var(--accion); }
@@ -169,115 +169,114 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
 .sin-bloques {
   position: absolute; inset: 0; margin: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15rem;
-  font-size: .7rem; color: var(--tinta-suave); text-align: center;
+  font-size: var(--txt-xs); color: var(--tinta-suave); text-align: center;
   /* Cubre la rejilla entera, así que si recibiera el clic no se podría crear
    * nada justo en los días vacíos. */
   pointer-events: none;
 }
-.sin-bloques span { font-size: .65rem; }
+.sin-bloques span { font-size: var(--txt-xs); }
 
 /* --- editores: pop-ups anclados (css/flotantes.css) --- */
-.flotante .que { margin: 0 0 .8rem; font-size: .8rem; line-height: 1.45; color: var(--tinta-suave); }
+.flotante .que { margin: 0 0 var(--esp-3); font-size: var(--txt-sm); line-height: 1.45; color: var(--tinta-suave); }
 .flotante .que strong { color: var(--tinta); font-weight: 500; }
-.titulo-f { display: block; margin-bottom: .15rem; font-family: var(--fuente-titulo); font-weight: 700; font-size: .95rem; color: var(--tinta); }
-.flotante .acciones { flex-wrap: wrap; justify-content: flex-end; margin: .9rem 0 0; }
+.titulo-f { display: block; margin-bottom: .15rem; font-family: var(--fuente-titulo); font-weight: 700; font-size: var(--txt-base); color: var(--tinta); }
+.flotante .acciones { flex-wrap: wrap; justify-content: flex-end; margin: var(--esp-4) 0 0; }
 .flotante .acciones .separa { flex: 1; }
-.flotante .campos + .campos, .flotante .campos + .opciones, .flotante .opciones + .campos { margin-top: .7rem; }
+.flotante .campos + .campos, .flotante .campos + .opciones, .flotante .opciones + .campos { margin-top: var(--esp-3); }
 .flotante .campos .ancho { flex-basis: 100%; }
 
-/* El error de lo que se intentó, dentro de su pop-up. El naranja de marca da
- * 3.5:1 sobre el fondo, por debajo del 4.5:1 que exige el texto, así que va
- * como filete y el mensaje queda en tinta (marca.css:28). */
+/* El error de lo que se intentó, dentro de su pop-up: filete y texto en tinta. */
 .aviso {
-  margin: 0 0 .7rem; padding: .5rem .7rem; font-size: .82rem;
+  margin: 0 0 var(--esp-3); padding: var(--esp-2) var(--esp-3); font-size: var(--txt-sm);
   background: var(--fondo); border-left: 3px solid var(--alerta);
 }
 
-.campos { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem; }
+.campos { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--esp-3); }
 .campos label {
-  display: flex; flex-direction: column; gap: .2rem;
-  font-family: var(--fuente-titulo); font-weight: 700; font-size: .68rem; color: var(--tinta-suave);
+  display: flex; flex-direction: column; gap: var(--esp-1);
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: var(--txt-xs); color: var(--tinta-suave);
 }
 .campos input {
-  padding: .3rem .45rem; border: 1px solid var(--borde); background: var(--superficie); color: var(--tinta);
-  font-family: var(--fuente-texto); font-size: .85rem; font-variant-numeric: tabular-nums;
+  padding: var(--esp-1) var(--esp-2);
+  font-family: var(--fuente-texto); font-size: var(--txt-sm); font-variant-numeric: tabular-nums;
 }
 .campos input[type="number"] { width: 4.5rem; text-align: right; }
-.campos input:hover { border-color: var(--tinta-suave); }
-.conunidad { display: flex; align-items: center; gap: .35rem; }
-.unidad { font-family: var(--fuente-texto); font-weight: 400; font-size: .78rem; }
-.acciones { display: flex; gap: .4rem; margin-left: auto; }
+.conunidad { display: flex; align-items: center; gap: var(--esp-1); }
+.unidad { font-family: var(--fuente-texto); font-weight: 400; font-size: var(--txt-xs); }
+.acciones { display: flex; gap: var(--esp-2); margin-left: auto; }
 
-.pista { margin: .6rem 0 0; font-size: .78rem; color: var(--tinta-suave); }
+.pista { margin: var(--esp-2) 0 0; font-size: var(--txt-xs); color: var(--tinta-suave); }
 
 /* --- editor de bloqueos (US-17) --- */
-.opciones { display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin: 0 0 .7rem; padding: 0; border: 0; }
+.opciones { display: flex; flex-wrap: wrap; gap: var(--esp-1) var(--esp-4); margin: 0 0 var(--esp-3); padding: 0; border: 0; }
 .opciones legend {
-  float: left; margin-right: .5rem; padding: 0;
-  font-family: var(--fuente-titulo); font-weight: 700; font-size: .68rem; color: var(--tinta-suave);
+  float: left; margin-right: var(--esp-2); padding: 0;
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: var(--txt-xs); color: var(--tinta-suave);
   line-height: 1.6;
 }
-.opciones label { display: flex; align-items: center; gap: .3rem; font-size: .82rem; cursor: pointer; }
+.opciones label { display: flex; align-items: center; gap: var(--esp-1); font-size: var(--txt-sm); cursor: pointer; }
 .campos select {
-  padding: .3rem .45rem; border: 1px solid var(--borde); background: var(--superficie); color: var(--tinta);
-  font-family: var(--fuente-texto); font-size: .85rem; font-variant-numeric: tabular-nums;
+  padding: var(--esp-1) var(--esp-2);
+  font-family: var(--fuente-texto); font-size: var(--txt-sm); font-variant-numeric: tabular-nums;
 }
 .campos .ancho { flex: 1 1 18rem; }
 .campos .ancho input { width: 100%; box-sizing: border-box; }
-.sin-jornada { margin: 0; font-size: .8rem; color: var(--tinta-suave); align-self: center; }
-.quien-bq { margin: -.35rem 0 .6rem; font-size: .78rem; color: var(--tinta-suave); }
+.sin-jornada { margin: 0; font-size: var(--txt-sm); color: var(--tinta-suave); align-self: center; }
+.quien-bq { margin: -.35rem 0 var(--esp-2); font-size: var(--txt-xs); color: var(--tinta-suave); }
 
 /* AC4. Filete de precaución y texto en tinta, por el mismo contraste que `.aviso`. */
 .afectadas {
-  margin-top: .75rem; padding: .5rem .7rem; font-size: .82rem;
+  margin-top: var(--esp-3); padding: var(--esp-2) var(--esp-3); font-size: var(--txt-sm);
   background: var(--fondo); border-left: 3px solid var(--precaucion);
 }
-.afectadas p { margin: 0 0 .35rem; }
-.afectadas ul { margin: 0; padding-left: 1.1rem; }
+.afectadas p { margin: 0 0 var(--esp-1); }
+.afectadas ul { margin: 0; padding-left: var(--esp-4); }
 .afectadas .folio { font-variant-numeric: tabular-nums; font-weight: 500; }
+.afectadas .grupo { margin: var(--esp-2) 0 var(--esp-1); font-weight: 500; }
 
 /* AC6. El registro se abre en un diálogo desde la barra. */
-.historial { max-height: 60vh; overflow: auto; margin-bottom: 1rem; }
-.historial table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.historial { max-height: 60vh; overflow: auto; margin-bottom: var(--esp-4); }
+.historial table { width: 100%; border-collapse: collapse; font-size: var(--txt-sm); }
 .historial th {
-  text-align: left; font-weight: 500; font-size: .8rem; color: var(--tinta-suave);
-  padding: .3rem .6rem .3rem 0; border-bottom: 1px solid var(--borde);
+  text-align: left; font-weight: 500; font-size: var(--txt-sm); color: var(--tinta-suave);
+  padding: var(--esp-1) var(--esp-2) var(--esp-1) 0; border-bottom: 1px solid var(--borde);
 }
-.historial td { padding: .35rem .6rem .35rem 0; border-bottom: 1px solid var(--borde); vertical-align: top; }
+.historial td { padding: var(--esp-1) var(--esp-2) var(--esp-1) 0; border-bottom: 1px solid var(--borde); vertical-align: top; }
 .historial tr:last-child td { border-bottom: 0; }
 .historial .cifra { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* Un botón rojo grita más de lo que una baja lógica merece. */
-.btn.peligro { color: var(--tinta); }
-.btn.peligro:hover { border-color: var(--alerta); background: var(--fondo); }
 
 /* --- semana con fechas (US-17): mini calendario y bloqueos --- */
-.con-mini { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr); gap: 1rem; align-items: start; }
+.con-mini { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr); gap: var(--esp-4); align-items: start; }
 .con-mini > .marco { min-width: 0; }
 @media (max-width: 60rem) { .con-mini { grid-template-columns: 1fr; } }
 
-.mini { padding: .6rem; border: 1px solid var(--borde); background: var(--superficie); }
-.mini-barra { display: flex; align-items: center; justify-content: space-between; margin-bottom: .4rem; }
-.mini-mes { font-family: var(--fuente-titulo); font-size: .85rem; font-weight: 700; }
+.mini { padding: var(--esp-2); border: 1px solid var(--borde); background: var(--superficie); }
+.mini-barra { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--esp-2); }
+.mini-mes { font-family: var(--fuente-titulo); font-size: var(--txt-sm); font-weight: 700; }
 .mini table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.mini th { padding: .2rem 0; font-size: .65rem; font-weight: 600; color: var(--tinta-suave); }
+.mini th { padding: var(--esp-1) 0; font-size: var(--txt-xs); font-weight: 600; color: var(--tinta-suave); }
 .mini td { padding: 1px; text-align: center; }
 /* La semana que muestra la rejilla, de lunes a domingo. */
-.mini td.elegida { background: var(--fondo); }
+.mini td.elegida { background: var(--borde); }
 .mini a {
-  display: block; padding: .25rem 0; border-radius: 50%;
-  font-size: .75rem; color: var(--tinta); text-decoration: none; font-variant-numeric: tabular-nums;
+  display: block; padding: var(--esp-1) 0; border-radius: 50%;
+  font-size: var(--txt-xs); color: var(--tinta); text-decoration: none; font-variant-numeric: tabular-nums;
 }
-.mini a:hover { background: var(--borde); }
+.mini a:hover { box-shadow: inset 0 0 0 1px var(--borde-campo); }
 .mini a.fuera { color: var(--tinta-suave); }
 .mini a.hoy { background: var(--accion); color: var(--superficie); font-weight: 700; }
 
 .dnum { font-variant-numeric: tabular-nums; }
-.columna.hoy .dnum { padding: 0 .4rem; border-radius: 999px; background: var(--acento); color: var(--superficie); font-weight: 700; }
+.columna.hoy .dnum { padding: 0 var(--esp-2); border-radius: 999px; background: var(--accion); color: var(--superficie); font-weight: 700; }
 
 /* Un bloque bloqueado en la fecha de su columna, con el mismo rayado de la
  * vista mensual. Sigue siendo clicable: la jornada se edita igual. */
-.semana { --rayado-bloqueo: repeating-linear-gradient(135deg, var(--alerta-suave) 0 4px, var(--superficie) 4px 11px); }
+.semana { --rayado-bloqueo: repeating-linear-gradient(135deg, var(--alerta) 0 1px, var(--superficie) 1px 8px); }
 .bloque.bloqueado { background: var(--rayado-bloqueo); border-color: var(--alerta); }
+/* Jornada por semana: uno que es solo de esta semana lleva el filete de acento;
+ * uno de la plantilla que esta semana no va queda punteado y apagado. */
+.bloque.propio { border-left-color: var(--acento); }
+.bloque.omitido { border-style: dashed; background: transparent; color: var(--tinta-suave); }
 .columna.bloqueada .rejilla { background: var(--rayado-bloqueo); }
 .mini .btn.ico { min-width: 1.6rem; width: 1.6rem; height: 1.6rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; }

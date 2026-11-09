@@ -8,7 +8,7 @@
 <script>
 /* Toda la lógica de pantalla del panel. Aprobar y rechazar se guardan
  * (services.resolver) y la pantalla cambia solo si el servidor aceptó. Lo que
- * se revisa acá (motivo, bloqueo) es para avisar rápido; AC3 lo garantiza el
+ * se revisa acá (el motivo) es para avisar rápido; AC3 lo garantiza el
  * servidor. */
 function panelValidador(datos, validador, urlResolver) {
   const MINIMO_MOTIVO = 10;
@@ -51,7 +51,6 @@ function panelValidador(datos, validador, urlResolver) {
       return "Semana del " + a.dia + (a.mes === b.mes ? "" : " de " + MESES[a.mes]) + " al " + hasta;
     },
     tramo(id) { return bloques[id].inicio + "–" + bloques[id].termino; },
-    activo(id) { return bloques[id].activo; },
     diaLargo(iso) { const d = fechaDe(iso); return cap(DIAS[(d.getDay() + 6) % 7]) + " " + d.getDate(); },
     cuando(fecha, id) { return this.diaLargo(fecha) + ", " + this.tramo(id); },
     fechaLarga(iso) { const d = fechaDe(iso); return this.diaLargo(iso) + " de " + MESES[d.getMonth()]; },
@@ -73,12 +72,10 @@ function panelValidador(datos, validador, urlResolver) {
         .concat(datos.solicitudes.filter(s => this.resoluciones[s.id]?.estado === "aprobada" && this.pide(s, fecha, id))
           .map(s => s.encargado.nombre));
     },
-    razon(fecha, id) { return datos.bloqueos.find(b => b.fecha === fecha && b.bloque === id)?.razon || ""; },
-    // Los bloques del día: los de la jornada y los quitados que esa fecha todavía tienen algo.
-    bloquesDel(d) {
-      return datos.bloques.filter(b => b.dia === d.numero &&
-        (b.activo || this.pedidos(d.iso, b.id).length || this.reservas(d.iso, b.id).length));
-    },
+    // Los bloques que se pueden pedir esa fecha (agenda.disponibilidad): lo
+    // quitado o bloqueado no viene, y lo que es solo de esa semana sí.
+    bloquesDel(d) { return (datos.dias[d.iso] || []).map(id => bloques[id]); },
+    bloqueadoEntero(d) { return datos.dias_bloqueados[d.iso] || ""; },
     // La rejilla mide lo que mide la jornada, nunca menos que la laboral, como en Configuración.
     get geometria() {
       let [desde, hasta] = datos.ventana;
@@ -106,14 +103,12 @@ function panelValidador(datos, validador, urlResolver) {
       return {
         tope: vivas > 1,
         reservada: !vivas && this.reservas(d.iso, b.id).length > 0,
-        bloqueado: !!this.razon(d.iso, b.id),
-        quitado: !b.activo,
         elegido: this.elegido(d.iso, b.id),
       };
     },
     describir(d, b) {
-      const vivas = this.pedidos(d.iso, b.id), bq = this.razon(d.iso, b.id), ocupada = this.reservas(d.iso, b.id);
-      return this.cuando(d.iso, b.id) + (bq ? ". Bloqueado: " + bq : "") + (!b.activo ? ". Quitado de la jornada" : "") +
+      const vivas = this.pedidos(d.iso, b.id), ocupada = this.reservas(d.iso, b.id);
+      return this.cuando(d.iso, b.id) +
         (vivas.length > 1 ? ". Tope: " + vivas.map(s => s.encargado.nombre).join(", ")
          : vivas.length ? ". Lo pide " + vivas[0].encargado.nombre
          : ocupada.length ? ". Reservado por " + ocupada[0] : ". Libre");
@@ -221,12 +216,6 @@ function panelValidador(datos, validador, urlResolver) {
     // AC3 y AC6: se aprueba la solicitud entera; las que chocan pierden enteras.
     async aprobar(s, claveMotivo) {
       this.error = "";
-      const b = s.bloques.find(b => this.razon(s.fecha, b.bloque));
-      if (b) return this.falla("La sala está bloqueada el " + this.cuando(s.fecha, b.bloque).toLowerCase() + " (" +
-                               this.razon(s.fecha, b.bloque) + "): no se puede aprobar. Recházala con ese motivo.");
-      const fuera = s.bloques.find(b => !this.activo(b.bloque));
-      if (fuera) return this.falla("El bloque de las " + bloques[fuera.bloque].inicio +
-                                   " ya no está en la jornada: no se puede aprobar. Recházala.");
       const rivales = this.rivales(s), motivo = (this.motivos[claveMotivo] || "").trim();
       if (rivales.length && motivo.length < MINIMO_MOTIVO) return this.falla("Escribe el motivo del rechazo (mínimo " + MINIMO_MOTIVO + " caracteres).");
       const error = await this.enviar(s, "aprobar", motivo);
@@ -269,6 +258,8 @@ function panelValidador(datos, validador, urlResolver) {
   <h2 class="periodo" x-text="periodo"></h2>
   <div class="mandos">
     <button type="button" class="btn" data-abre="resueltas" x-text="'Resueltas (' + resueltas.length + ')'"></button>
+    {# US-11: lo resuelto de todos los días. Una sola vista para el validador y el administrador. #}
+    <a class="btn" href="{% url 'historial_validacion' %}">Historial</a>
     <div class="grupo">
       <button type="button" class="btn ico" :disabled="semana === 0" @click="semana--" aria-label="Semana anterior">&larr;</button>
       <button type="button" class="btn" @click="semana = 0">Hoy</button>
@@ -288,9 +279,10 @@ function panelValidador(datos, validador, urlResolver) {
         </div>
         <template x-for="d in dias" :key="d.iso">
           <div class="columna">
-            <div class="cabecera"><span class="dsem" x-text="d.nombre"></span><span class="dnum" x-text="d.dia"></span></div>
+            <div class="cabecera"><span class="dsem" x-text="d.nombre"></span><span class="dnum" x-text="d.dia"></span>
+              <span class="razon-dia" x-show="bloqueadoEntero(d)" x-text="bloqueadoEntero(d)"></span></div>
             <div class="rejilla">
-              {# Un bloque sin pendientes no se elige: es reservado, bloqueado o libre. #}
+              {# Un bloque sin pendientes no se elige: es reservado o libre. #}
               <template x-for="b in bloquesDel(d)" :key="b.id">
                 <button type="button" class="bloque" :class="clases(d, b)" :style="posicion(b)"
                         :disabled="!pedidos(d.iso, b.id).length" :aria-pressed="elegido(d.iso, b.id)"
@@ -309,8 +301,6 @@ function panelValidador(datos, validador, urlResolver) {
     <ul class="leyenda">
       <li><span class="muestra tope-m" aria-hidden="true"></span>Tope: dos o más piden el bloque</li>
       <li><span class="muestra reservada-m" aria-hidden="true"></span>Reservada</li>
-      <li><span class="muestra bloqueado-m" aria-hidden="true"></span>Bloqueado: no se puede aprobar</li>
-      <li><span class="muestra quitado-m" aria-hidden="true"></span>Quitado de la jornada, con pedidos</li>
     </ul>
   </div>
 
@@ -352,6 +342,7 @@ function panelValidador(datos, validador, urlResolver) {
         <div class="trozo">
           <dl class="ficha">
             <dt>Motivo</dt><dd x-text="solicitud.motivo"></dd>
+            <template x-if="area(solicitud).nota"><div><dt>Nota del área</dt><dd x-text="area(solicitud).nota"></dd></div></template>
             <template x-if="solicitud.observaciones"><div><dt>Observaciones</dt><dd x-text="solicitud.observaciones"></dd></div></template>
             <dt>Personas</dt><dd x-text="personas(solicitud)"></dd>
             <dt>Enviada</dt><dd x-text="enviada(solicitud.enviada)"></dd>
@@ -370,10 +361,6 @@ function panelValidador(datos, validador, urlResolver) {
         </template>
         <template x-if="!rivales(solicitud).length">
           <div>
-            <p class="trozo" x-show="solicitud.bloques.some(b => !activo(b.bloque))">
-              <span class="error">Uno de sus bloques ya no está en la jornada: no se puede aprobar. Recházala.</span></p>
-            <p class="trozo" x-show="solicitud.bloques.some(b => razon(solicitud.fecha, b.bloque))">
-              <span class="error">La sala está bloqueada ese día: no se puede aprobar. Recházala con ese motivo.</span></p>
             <template x-if="rechazando === solicitud.id">
               <div class="campo">
                 <label for="motivo-validacion">Motivo del rechazo</label>
@@ -385,7 +372,7 @@ function panelValidador(datos, validador, urlResolver) {
             <div class="acciones" x-show="rechazando !== solicitud.id">
               <button type="button" class="btn peligro" :disabled="enviando" @click="rechazando = solicitud.id; error = ''; enfocarMotivo()">Rechazar</button>
               <button type="button" class="btn activa"
-                      :disabled="enviando || solicitud.bloques.some(b => razon(solicitud.fecha, b.bloque) || !activo(b.bloque))"
+                      :disabled="enviando"
                       @click="aprobar(solicitud, 's:' + solicitud.id)">Aprobar</button>
             </div>
             <div class="acciones" x-show="rechazando === solicitud.id">
@@ -411,19 +398,16 @@ function panelValidador(datos, validador, urlResolver) {
               <input type="radio" name="foco" :value="s.id" :checked="s.id === tope.foco.id" @change="sel = { ...sel, foco: s.id }">
               <b x-text="s.encargado.nombre"></b>
               <span class="suave" x-text="area(s).nombre + ', prioridad ' + area(s).prioridad"></span>
+              <span class="suave" x-show="area(s).nota" x-text="'Nota del área: ' + area(s).nota"></span>
               <span x-text="s.motivo"></span>
               <span class="suave" x-show="s.bloques.length > 1"
                     x-text="'También pide ' + s.bloques.filter(b => b.bloque !== tope.id).map(b => tramo(b.bloque)).join(' y ')"></span>
             </label>
           </template>
         </div>
-        <p class="trozo" x-show="razon(tope.fecha, tope.id)">
-          <span class="error">La sala está bloqueada en este horario: ninguna se puede aprobar.</span></p>
-        <p class="trozo" x-show="!activo(tope.id)">
-          <span class="error">Este bloque ya no está en la jornada: ninguna se puede aprobar.</span></p>
         <div class="acciones">
           <button type="button" class="btn peligro" @click="confirmar('rechazar')" x-text="'Rechazar a ' + tope.foco.encargado.nombre"></button>
-          <button type="button" class="btn activa" :disabled="!!razon(tope.fecha, tope.id) || !activo(tope.id)" @click="confirmar('aprobar')"
+          <button type="button" class="btn activa" @click="confirmar('aprobar')"
                   x-text="'Aprobar a ' + tope.foco.encargado.nombre"></button>
         </div>
       </div>

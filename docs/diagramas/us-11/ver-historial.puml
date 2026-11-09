@@ -1,0 +1,59 @@
+@startuml ver-historial
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Consultar el historial de resoluciones (US-11)
+
+actor "Validador" as A
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.forms</b>\n<size:11>solicitudes/forms.py</size>" as F <<presentación>>
+participant "<b>solicitudes</b>\n<size:11>solicitudes/models.py</size>" as M <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : GET /validacion/historial/?decision=rechazada&pagina=2 → historial_validacion(request)
+N -> F ++ : HistorialValidacionForm(request.GET)
+F -> F : $comentario("solo quien ha resuelto algo")\nfields["validador"].queryset = Usuario.objects.filter(pk__in=…resuelta_por)
+return filtros
+N -> M ++ : Solicitud.objects.resueltas()
+M -> M : $comentario("ni pendientes ni retiradas, la más reciente primero")\nfilter(resuelta_en__isnull=False).order_by("-resuelta_en", "-id")
+return resoluciones
+N -> F ++ : filtros.filtrar(resoluciones)
+F -> F : $comentario("desde > hasta marca el error en «Hasta» y esa fecha no filtra")\nself.is_valid()
+F -> F : $comentario("la fecha de la resolución en America/Santiago")\nfilter(resuelta_en__date__gte=desde, …, estado_validacion=ACEPTADA | RECHAZADA, resuelta_por=…)
+return resoluciones
+N -> M ++ : resoluciones.con_detalle().select_related("solicitante", "resuelta_por")
+return resoluciones
+N -> N : $comentario("los filtros con la página vacía al final, para los enlaces Anterior y Siguiente")\nurl_pagina = f"{reverse('historial_validacion')}?{consulta.urlencode()}"
+N -> D ++ : $comentario("Paginator: cuántas hay con estos filtros")\nSELECT COUNT(*) FROM solicitudes_solicitud
+return total
+N -> D ++ : $comentario("la página, con área, solicitante y validador")\nSELECT solicitudes_solicitud ⋈ personas_area ⋈ personas_usuario … LIMIT 20 OFFSET 20
+return filas
+N -> D ++ : $comentario("prefetch: los bloques de toda la página con su hora")\nSELECT solicitudes_solicitudbloque ⋈ agenda_bloque
+return filas
+N -> D ++ : $comentario("las opciones de los filtros")\nSELECT personas_area, personas_usuario
+return filas
+alt la pidió htmx (filtrar o cambiar de página)
+  N --> A : 200 · solicitudes/_tabla_resoluciones.html
+else página completa
+  N -> N : $comentario("panel.html para el administrador, _base_validador.html para el validador")\n_envoltorio_validacion(request.user)
+  N --> A : 200 · solicitudes/historial_validacion.html
+end
+deactivate N
+note right of N
+  Solo lectura: la vista responde a GET y HEAD
+  (require_safe) y la tabla no tiene formularios
+  POST. El enlace de cada solicitud lleva los
+  filtros, así «Volver al historial» regresa a la
+  misma página.
+end note
+
+A -> N ++ : GET /validacion/historial/26/?decision=rechazada&pagina=2 → resolucion(request, 26)
+N -> M ++ : Solicitud.objects.resueltas().con_detalle()
+return resoluciones
+N -> D ++ : $comentario("solo si está resuelta; si no, 404")\nSELECT solicitudes_solicitud ⋈ personas_usuario ⋈ personas_area WHERE id = 26
+return fila
+N -> D ++ : $comentario("prefetch: sus bloques y sus acompañantes")\nSELECT solicitudes_solicitudbloque ⋈ agenda_bloque, solicitudes_acompanante
+return filas
+N --> A : 200 · solicitudes/resolucion.html con lo enviado y la resolución
+deactivate N
+@enduml

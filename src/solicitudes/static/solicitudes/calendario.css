@@ -1,805 +1,213 @@
-/* Solo variables de marca.css: ningun color literal (docs/estilo.md). */
+/* Calendario de disponibilidad y elección de bloques del solicitante (US-02).
+ * Lo usa el paso 1 de solicitar y la página suelta del calendario. Solo
+ * variables de marca.css. */
 
-/* --- Contenedor principal estilo ficha institucional --- */
+/* --- Página suelta --- */
 .calendario-contenedor {
-    width: 100%;
-    max-width: 52rem;
-    margin: 2.5rem auto;
-    padding: 2rem 1.75rem;
-    box-sizing: border-box;
-    background: var(--superficie);
-    border: 1px solid var(--borde);
-    border-radius: 4px;
-    font-family: var(--fuente-texto);
-    color: var(--tinta);
+  box-sizing: border-box; max-width: 52rem; margin: 0 auto; padding: var(--esp-6) var(--esp-5) var(--esp-7);
 }
+.calendario-cabecera { margin-bottom: var(--esp-6); }
+.titulo-calendario { font-size: var(--txt-xl); margin: 0 0 var(--esp-1); }
+.subtitulo-calendario { margin: 0; color: var(--tinta-suave); }
 
-/* --- Cabecera del calendario --- */
-.calendario-cabecera {
-    margin-bottom: 2rem;
+/* --- Avisos --- */
+/* Filete de color junto al texto en tinta, como en el resto de la app. */
+.aviso, .error {
+  display: flex; align-items: flex-start; gap: var(--esp-3);
+  padding: var(--esp-2) var(--esp-3); margin-bottom: var(--esp-5);
+  border-left: 3px solid var(--info);
 }
+.error { border-left-color: var(--alerta); }
+.aviso p, .error p { margin: 0; }
+.icono-alerta { flex-shrink: 0; margin-top: 2px; }
+.aviso-anticipacion { margin: var(--esp-2) 0 var(--esp-4); font-size: var(--txt-sm); color: var(--tinta-suave); }
 
-.titulo-calendario {
-    font-family: var(--fuente-titulo);
-    font-size: 1.35rem;
-    font-weight: 700;
-    margin: 0 0 0.35rem;
-    color: var(--tinta);
-}
-
-.subtitulo-calendario {
-    margin: 0;
-    font-size: 0.9rem;
-    color: var(--tinta-suave);
-    line-height: 1.45;
-}
-
-/* --- Avisos y confirmaciones del sistema --- */
-.aviso {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.65rem;
-    border-left: 3px solid var(--info);
-    background: var(--fondo);
-    padding: 0.75rem 1rem;
-    margin-bottom: 1.5rem;
-    border-radius: 0 3px 3px 0;
-    font-size: 0.9rem;
-    color: var(--tinta);
-}
-
-.aviso p {
-    margin: 0;
-}
-
-.error {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.65rem;
-    border-left: 3px solid var(--alerta);
-    background: var(--fondo);
-    padding: 0.75rem 1rem;
-    margin-bottom: 1.5rem;
-    border-radius: 0 3px 3px 0;
-    font-size: 0.9rem;
-    color: var(--tinta);
-}
-
-.error p {
-    margin: 0;
-}
-
-.icono-alerta {
-    flex-shrink: 0;
-    margin-top: 0.15rem;
-    color: inherit;
-}
-
-/* --- Barra de navegación de meses y selector rápido --- */
+/* --- Meses y selector rápido --- */
 .controles-calendario {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    padding: 0.85rem 1rem;
-    background: var(--fondo);
-    border: 1px solid var(--borde);
-    border-radius: 4px;
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--esp-4);
+  margin-bottom: var(--esp-4); padding-bottom: var(--esp-4); border-bottom: 1px solid var(--borde);
 }
+.navegacion-meses { display: flex; align-items: center; gap: var(--esp-3); }
+.mes-actual { margin: 0; min-width: 11.5rem; text-align: center; font-size: var(--txt-base); }
+.icono-nav { flex-shrink: 0; }
+.selector-rapido { display: flex; align-items: center; gap: var(--esp-2); }
+.select-personalizado { min-height: var(--alto-control); padding: 0 var(--esp-3); font-size: var(--txt-sm); cursor: pointer; }
 
-.navegacion-meses {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.mes-actual {
-    font-family: var(--fuente-titulo);
-    margin: 0;
-    padding: 0;
-    border-bottom: none;
-    line-height: 1.2;
-    color: var(--tinta);
-    font-size: 1.05rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    min-width: 11.5rem;
-    text-align: center;
-}
-
-.btn-nav {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    padding: 0.45rem 0.85rem;
-    background-color: var(--superficie);
-    color: var(--tinta);
-    text-decoration: none;
-    border: 1px solid var(--borde);
-    border-radius: 3px;
-    font-family: var(--fuente-titulo);
-    font-size: 0.82rem;
-    font-weight: 700;
-    line-height: 1.2;
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.icono-nav {
-    flex-shrink: 0;
-}
-
-.btn-nav:hover:not(.disabled) {
-    background-color: var(--accion);
-    border-color: var(--accion);
-    color: var(--superficie);
-}
-
-.btn-nav.disabled {
-    background-color: var(--superficie);
-    border-color: var(--borde);
-    color: var(--tinta-suave);
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.selector-rapido {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.select-personalizado {
-    padding: 0.45rem 0.65rem;
-    border: 1px solid var(--borde);
-    border-radius: 3px;
-    font-family: var(--fuente-texto);
-    font-size: 0.85rem;
-    background-color: var(--superficie);
-    color: var(--tinta);
-    cursor: pointer;
-}
-
-.select-personalizado:focus-visible {
-    outline: 2px solid var(--acento);
-    outline-offset: 1px;
-}
-
-.btn-ir {
-    padding: 0.45rem 0.85rem;
-    background-color: var(--accion);
-    color: var(--superficie);
-    border: 1px solid var(--accion);
-    border-radius: 3px;
-    cursor: pointer;
-    font-family: var(--fuente-titulo);
-    font-weight: 700;
-    font-size: 0.82rem;
-    line-height: 1.2;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-
-.btn-ir:hover {
-    background-color: var(--tinta);
-    border-color: var(--tinta);
-}
-
-/* --- Grilla del calendario mensual --- */
-.calendario-wrapper {
-    margin-bottom: 2rem;
-}
-
-.calendario {
-    width: 100%;
-    overflow-x: auto;
-}
-
+/* --- Grilla del mes --- */
+.calendario-wrapper { margin-bottom: var(--esp-6); }
+.calendario { width: 100%; overflow-x: auto; }
 .calendario table {
-    border-collapse: collapse;
-    width: 100%;
-    table-layout: fixed;
-    background: var(--superficie);
-    border: 1px solid var(--borde);
-    border-radius: 4px;
-    overflow: hidden;
+  width: 100%; border-collapse: collapse; table-layout: fixed;
+  border: 1px solid var(--borde); border-radius: var(--radio);
 }
-
-.calendario table th.month {
-    display: none;
-}
-
+.calendario table th.month { display: none; }
 .calendario th {
-    background-color: var(--fondo);
-    padding: 0.75rem 0.25rem;
-    text-align: center;
-    font-family: var(--fuente-titulo);
-    font-weight: 700;
-    color: var(--tinta-suave);
-    text-transform: uppercase;
-    font-size: 0.78rem;
-    letter-spacing: 0.05em;
-    border-bottom: 2px solid var(--borde);
-    border-left: 1px solid var(--borde);
+  padding: var(--esp-3) var(--esp-1); text-align: center; border-bottom: 1px solid var(--borde);
+  font-size: var(--txt-xs); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; color: var(--tinta-suave);
 }
-
-.calendario th:first-child {
-    border-left: none;
-}
-
 .calendario td {
-    border: 1px solid var(--borde);
-    padding: 0;
-    text-align: center;
-    font-size: 0.95rem;
-    height: 3.4rem;
-    color: var(--tinta);
-    position: relative;
-    vertical-align: middle;
-    transition: background-color 0.15s ease, color 0.15s ease;
+  position: relative; height: 3.5rem; padding: 0; border: 1px solid var(--borde);
+  text-align: center; vertical-align: middle; font-variant-numeric: tabular-nums;
 }
-
-.calendario td.noday {
-    background-color: var(--fondo);
-    opacity: 0.35;
-}
-
-.calendario td:not(.noday):not(.available) {
-    color: var(--tinta-suave);
-    background-color: var(--superficie);
-    opacity: 0.65;
-}
-
-.calendario td.sat:not(.available),
-.calendario td.sun:not(.available) {
-    background-color: var(--fondo);
-    opacity: 0.45;
-}
-
-.calendario td.bloqueado-anticipacion {
-    cursor: not-allowed;
-    opacity: 0.4;
-}
-
-.calendario .available {
-    background-color: var(--fondo);
-    color: var(--accion);
-    font-weight: 500;
-}
+/* Los días que no se pueden pedir son controles inactivos: van apagados. */
+.calendario td.noday { opacity: .35; }
+.calendario td:not(.noday):not(.available) { color: var(--tinta-suave); opacity: .65; }
+.calendario td.bloqueado-anticipacion { cursor: not-allowed; opacity: .4; }
+.calendario .available { font-weight: 500; }
 
 .calendario td.dia-seleccionable a.dia-enlace {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-    color: var(--accion);
-    text-decoration: none;
-    font-family: var(--fuente-titulo);
-    font-weight: 700;
-    font-size: 1rem;
-    transition: background-color 0.15s ease, color 0.15s ease;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  width: 100%; height: 100%; box-sizing: border-box;
+  color: var(--tinta); text-decoration: none; font-family: var(--fuente-titulo); font-weight: 700;
 }
-
+/* El punto naranjo dice "se puede pedir" sin depender del color del número. */
 .calendario td.dia-seleccionable a.dia-enlace::after {
-    content: "";
-    display: block;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background-color: var(--acento);
-    margin-top: 3px;
+  content: ""; display: block; width: 5px; height: 5px; margin-top: 3px; border-radius: 50%; background: var(--acento);
 }
-
-.calendario td.dia-seleccionable:hover,
-.calendario td.dia-seleccionable:hover a.dia-enlace {
-    background-color: var(--acento);
-    color: var(--superficie);
-}
-
-.calendario td.dia-seleccionable:hover a.dia-enlace::after {
-    background-color: var(--superficie);
-}
-
+.calendario td.dia-seleccionable:hover { box-shadow: inset 0 0 0 2px var(--acento); }
+/* Elegido: relleno en tinta, porque lleva el número encima. */
 .calendario td.dia-seleccionable.selected,
 .calendario .available.selected,
 .calendario td.dia-seleccionable.selected a.dia-enlace,
-.calendario .available.selected a.dia-enlace {
-    background-color: var(--accion) !important;
-    color: var(--superficie) !important;
-}
+.calendario .available.selected a.dia-enlace { background: var(--accion); color: var(--superficie); }
+.calendario td.dia-seleccionable.selected a.dia-enlace::after { background: var(--superficie); }
 
-.calendario td.dia-seleccionable.selected a.dia-enlace::after {
-    background-color: var(--superficie) !important;
-}
-
-/* --- Leyenda explicativa del calendario --- */
+/* --- Leyenda --- */
 .leyenda-calendario {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    gap: 1.5rem;
-    margin-top: 0.85rem;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.8rem;
-    color: var(--tinta-suave);
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--esp-2) var(--esp-5);
+  margin-top: var(--esp-3); font-size: var(--txt-sm); color: var(--tinta-suave);
 }
+.leyenda-item { display: inline-flex; align-items: center; gap: var(--esp-2); }
+.leyenda-muestra { display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 2px; box-sizing: border-box; }
+.muestra-disponible { border: 1px solid var(--borde-campo); }
+.muestra-disponible::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--acento); }
+.muestra-seleccionado { background: var(--accion); }
+.muestra-no-disponible { border: 1px solid var(--borde); }
 
-.leyenda-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-}
-
-.leyenda-muestra {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 2px;
-    box-sizing: border-box;
-}
-
-.muestra-disponible {
-    background-color: var(--fondo);
-    border: 1px solid var(--accion);
-}
-
-.muestra-seleccionado {
-    background-color: var(--accion);
-    border: 1px solid var(--accion);
-}
-
-.muestra-no-disponible {
-    background-color: var(--superficie);
-    border: 1px solid var(--borde);
-}
-
-/* --- Panel de selección de bloques horarios --- */
-.panel-bloques {
-    margin-top: 1.5rem;
-    background: var(--superficie);
-    border: 1px solid var(--borde);
-    border-radius: 4px;
-    padding: 1.5rem;
-}
-
+/* --- Bloques del día --- */
+.panel-bloques { margin-top: var(--esp-6); }
 .encabezado-bloques {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--borde);
-    padding-bottom: 0.6rem;
-    margin-bottom: 1.25rem;
+  display: flex; justify-content: space-between; align-items: center; gap: var(--esp-4); flex-wrap: wrap;
+  padding-bottom: var(--esp-2); margin-bottom: var(--esp-4); border-bottom: 1px solid var(--borde);
 }
+.titulo-bloques { margin: 0; font-size: var(--txt-base); }
+.total-bloques { font-size: var(--txt-sm); color: var(--tinta-suave); }
 
-.titulo-bloques {
-    font-family: var(--fuente-titulo);
-    font-size: 0.95rem;
-    color: var(--tinta);
-    margin: 0;
-    font-weight: 700;
-}
-
-.total-bloques {
-    font-size: 0.8rem;
-    color: var(--tinta-suave);
-    background: var(--fondo);
-    padding: 0.2rem 0.55rem;
-    border-radius: 3px;
-    border: 1px solid var(--borde);
-    font-weight: 500;
-}
-
-/* Estados vacíos informativos */
+/* Estados vacíos: un texto centrado, sin caja. */
 .mensaje-sin-seleccion,
 .sin-bloques {
-    text-align: center;
-    padding: 2.5rem 1.5rem;
-    color: var(--tinta-suave);
-    font-size: 0.9rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.75rem;
+  display: flex; flex-direction: column; align-items: center; gap: var(--esp-3);
+  padding: var(--esp-6) var(--esp-5); text-align: center; color: var(--tinta-suave);
 }
-
 .mensaje-sin-seleccion p,
-.sin-bloques p {
-    margin: 0;
-    max-width: 26rem;
-    line-height: 1.45;
-}
+.sin-bloques p { margin: 0; max-width: 26rem; }
+.icono-estado-vacio { color: var(--tinta-suave); }
 
-.icono-estado-vacio {
-    color: var(--tinta-suave);
-    opacity: 0.6;
-}
+.grilla-bloques { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--esp-3); }
 
-/* Grilla y tarjetas de bloques */
-.grilla-bloques {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 0.85rem;
-}
-
+/* Cada bloque es una casilla grande: todo el recuadro se toca. */
 .tarjeta-bloque {
-    border: 1px solid var(--borde);
-    border-radius: 4px;
-    padding: 0.85rem 1rem;
-    display: flex;
-    align-items: flex-start;
-    gap: 0.85rem;
-    background: var(--superficie);
-    transition: background-color 0.15s ease, border-color 0.15s ease;
-    box-sizing: border-box;
+  display: flex; align-items: center; gap: var(--esp-3); box-sizing: border-box;
+  padding: var(--esp-3) var(--esp-4); border: 1px solid var(--borde); border-radius: var(--radio);
 }
-
-.tarjeta-bloque.disponible {
-    border-left: 3px solid var(--acento);
-    cursor: pointer;
-    user-select: none;
-    position: relative;
-}
-
-.tarjeta-bloque.disponible:hover {
-    background-color: var(--fondo);
-    border-color: var(--acento);
-}
-
-.tarjeta-bloque.disponible:has(.bloque-checkbox:focus-visible) {
-    outline: 2px solid var(--acento);
-    outline-offset: 2px;
-}
-
+.tarjeta-bloque.disponible { position: relative; border-left: 3px solid var(--acento); cursor: pointer; user-select: none; }
+.tarjeta-bloque.disponible:hover { border-color: var(--borde-campo); border-left-color: var(--acento); }
+.tarjeta-bloque.disponible:has(.bloque-checkbox:focus-visible) { outline: 2px solid var(--foco); outline-offset: 2px; }
 .tarjeta-bloque.disponible:has(.bloque-checkbox:checked),
-.tarjeta-bloque.disponible.selected {
-    background-color: var(--fondo);
-    border-color: var(--accion);
-    border-left: 3px solid var(--accion);
-}
+.tarjeta-bloque.disponible.selected { border-color: var(--accion); box-shadow: inset 0 0 0 1px var(--accion); }
 
-.bloque-checkbox {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-    pointer-events: none;
-}
-
-/* Indicador visual de casilla */
+.bloque-checkbox { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
 .checkbox-visual {
-    width: 1.15rem;
-    height: 1.15rem;
-    border: 1.5px solid var(--borde);
-    border-radius: 3px;
-    background: var(--superficie);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    box-sizing: border-box;
-    transition: all 0.15s ease;
-    margin-top: 0.1rem;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-sizing: border-box;
+  width: 1.25rem; height: 1.25rem; border: 1.5px solid var(--borde-campo); border-radius: 3px;
 }
-
-.tarjeta-bloque.disponible:hover .checkbox-visual {
-    border-color: var(--acento);
-}
-
 .tarjeta-bloque.disponible:has(.bloque-checkbox:checked) .checkbox-visual,
-.tarjeta-bloque.disponible.selected .checkbox-visual {
-    background-color: var(--accion);
-    border-color: var(--accion);
-}
-
+.tarjeta-bloque.disponible.selected .checkbox-visual { background: var(--accion); border-color: var(--accion); }
 .tarjeta-bloque.disponible:has(.bloque-checkbox:checked) .checkbox-visual::after,
 .tarjeta-bloque.disponible.selected .checkbox-visual::after {
-    content: "";
-    display: block;
-    width: 4px;
-    height: 8px;
-    border: solid var(--superficie);
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-    margin-bottom: 2px;
+  content: ""; display: block; width: 4px; height: 8px; margin-bottom: 2px;
+  border: solid var(--superficie); border-width: 0 2px 2px 0; transform: rotate(45deg);
 }
+.checkbox-visual.disabled { opacity: .3; cursor: not-allowed; }
 
-.checkbox-visual.disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-}
+.bloque-info { display: flex; flex-direction: column; gap: var(--esp-1); flex-grow: 1; min-width: 0; }
+.bloque-hora { display: flex; align-items: center; gap: var(--esp-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.icono-reloj { color: var(--tinta-suave); flex-shrink: 0; }
 
-.bloque-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    flex-grow: 1;
-    min-width: 0;
-}
-
-.bloque-hora {
-    font-size: 0.95rem;
-    color: var(--tinta);
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    white-space: nowrap;
-}
-
+/* Cuántos lo piden (el contador, en todas las vistas del calendario). */
 .bloque-demanda {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.45rem;
-    font-size: 0.8rem;
-    line-height: 1.35;
-    color: var(--tinta-suave);
+  display: flex; align-items: flex-start; gap: var(--esp-2);
+  font-size: var(--txt-xs); line-height: 1.35; color: var(--tinta-suave);
 }
+.bloque-demanda strong { color: var(--tinta); font-weight: 600; }
+.icono-demanda { flex-shrink: 0; color: var(--tinta-suave); }
 
-.bloque-demanda strong {
-    color: var(--tinta);
-    font-weight: 600;
-}
-
-.icono-demanda {
-    flex-shrink: 0;
-    color: var(--tinta-suave);
-}
-
-.bloque-demanda-vacia .icono-demanda {
-    opacity: 0.6;
-}
-
-/* Quiénes de la misma unidad piden el bloque (solo en el asistente): aparece
- * bajo la tarjeta al pasar el mouse o al enfocar su casilla. No recibe el
- * puntero, así no tapa el hover de la tarjeta de abajo. */
-.celda-bloque {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-}
-
-.celda-bloque > .tarjeta-bloque {
-    flex: 1;
-}
-
+/* Quiénes de la misma unidad lo piden (solo en el asistente): aparece bajo la
+ * tarjeta al pasar el mouse o al enfocar su casilla. Del ancho de la tarjeta,
+ * así en la última columna no se sale del panel, y sin recibir el puntero,
+ * así no tapa el hover de la tarjeta de abajo. */
+.celda-bloque { position: relative; display: flex; flex-direction: column; }
+.celda-bloque > .tarjeta-bloque { flex: 1; }
 .lista-unidad {
-    position: absolute;
-    top: calc(100% + 6px);
-    /* Del ancho de la tarjeta: en la última columna no se sale del panel. */
-    left: 0;
-    right: 0;
-    z-index: 20;
-    box-sizing: border-box;
-    padding: 0.65rem 0.85rem 0.7rem;
-    background: var(--superficie);
-    color: var(--tinta);
-    border: 1px solid var(--borde);
-    /* Sin esquinas redondeadas: la franja de color se doblaría en ellas. */
-    border-top: 3px solid var(--accion);
-    box-shadow: 0 18px 40px -18px color-mix(in srgb, var(--tinta) 55%, transparent);
-    font-size: 0.85rem;
-    pointer-events: none;
-    opacity: 0;
-    visibility: hidden;
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 20; box-sizing: border-box;
+  padding: var(--esp-3) var(--esp-4);
+  background: var(--superficie); color: var(--tinta);
+  /* Sin esquinas redondeadas: la franja de color se doblaría en ellas. */
+  border: 1px solid var(--borde); border-top: 3px solid var(--accion);
+  box-shadow: 0 18px 40px -18px color-mix(in srgb, var(--tinta) 55%, transparent);
+  font-size: var(--txt-sm);
+  pointer-events: none; opacity: 0; visibility: hidden;
 }
-
 .celda-bloque:hover .lista-unidad,
-.celda-bloque:has(.bloque-checkbox:focus-visible) .lista-unidad {
-    opacity: 1;
-    visibility: visible;
-}
-
+.celda-bloque:has(.bloque-checkbox:focus-visible) .lista-unidad { opacity: 1; visibility: visible; }
 @media (prefers-reduced-motion: no-preference) {
-    .lista-unidad {
-        transform: translateY(-3px);
-        transition: opacity 0.12s ease, transform 0.12s ease, visibility 0s linear 0.12s;
-    }
-
-    .celda-bloque:hover .lista-unidad,
-    .celda-bloque:has(.bloque-checkbox:focus-visible) .lista-unidad {
-        transform: none;
-        /* Un respiro antes de abrir, para que cruzar la grilla no lo haga parpadear. */
-        transition: opacity 0.12s ease 0.15s, transform 0.12s ease 0.15s, visibility 0s linear 0.15s;
-    }
-}
-
-.titulo-unidad {
-    margin: 0 0 0.35rem;
-    text-wrap: balance;
-    font-family: var(--fuente-titulo);
-    font-weight: 700;
-}
-
-.lista-unidad ul {
-    margin: 0;
-    padding-left: 1.1rem;
-    line-height: 1.5;
-}
-
-.icono-reloj {
-    color: var(--tinta-suave);
-    flex-shrink: 0;
-}
-
-/* Badges de estado de bloque */
-.badge {
-    display: inline-block;
-    padding: 0.15rem 0.5rem;
-    border-radius: 3px;
-    font-size: 0.72rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    width: fit-content;
-}
-
-.badge-disponible {
-    background-color: var(--fondo);
-    color: var(--accion);
-    border: 1px solid var(--info);
-}
-
-.badge-seleccionado {
-    background-color: var(--accion);
-    color: var(--superficie);
-    border: 1px solid var(--accion);
-    font-weight: 600;
-}
-
-.badge-no-disponible {
-    background-color: var(--fondo);
-    color: var(--tinta-suave);
-    border: 1px solid var(--borde);
-}
-
-.tarjeta-bloque .badge-seleccionado {
-    display: none;
-}
-
-.tarjeta-bloque:has(.bloque-checkbox:checked) .badge-disponible,
-.tarjeta-bloque.disponible.selected .badge-disponible {
-    display: none;
-}
-
-.tarjeta-bloque:has(.bloque-checkbox:checked) .badge-seleccionado,
-.tarjeta-bloque.disponible.selected .badge-seleccionado {
-    display: inline-block !important;
-}
-
-.badge-pendiente {
-    background-color: var(--superficie);
-    color: var(--tinta);
-    border: 1px solid var(--precaucion);
-    font-weight: 600;
-}
-
-.tarjeta-bloque.bloque-propio {
-    cursor: not-allowed;
-    background-color: var(--superficie);
-    border: 1px solid var(--borde);
-    opacity: 0.92;
-}
-
-.tarjeta-bloque.bloque-propio:hover {
-    border-color: var(--borde);
+  .lista-unidad {
+    transform: translateY(-3px);
+    transition: opacity .12s ease, transform .12s ease, visibility 0s linear .12s;
+  }
+  /* Un respiro antes de abrir, para que cruzar la grilla no lo haga parpadear. */
+  .celda-bloque:hover .lista-unidad,
+  .celda-bloque:has(.bloque-checkbox:focus-visible) .lista-unidad {
     transform: none;
-    box-shadow: none;
+    transition: opacity .12s ease .15s, transform .12s ease .15s, visibility 0s linear .15s;
+  }
 }
+.titulo-unidad { margin: 0 0 var(--esp-1); text-wrap: balance; font-family: var(--fuente-titulo); font-weight: 700; }
+.lista-unidad ul { margin: 0; padding-left: 1.1rem; line-height: 1.5; }
 
-.tarjeta-bloque.bloque-propio.pendiente {
-    border-left: 3px solid var(--precaucion);
+/* El estado del bloque, con el mismo filete que los estados de una solicitud. */
+.badge {
+  display: inline-block; width: fit-content; padding: 0 0 0 var(--esp-2);
+  border-left: 3px solid var(--borde); font-size: var(--txt-sm); color: var(--tinta-suave);
 }
+/* El filete naranjo del recuadro ya dice "disponible": la etiqueta va sin él. */
+.badge-disponible { border-left: 0; padding-left: 0; }
+.badge-seleccionado { border-left-color: var(--accion); color: var(--tinta); font-weight: 500; }
+.badge-no-disponible { border-left-color: var(--borde); }
+.badge-pendiente { border-left-color: var(--precaucion); color: var(--tinta); }
+.tarjeta-bloque .badge-seleccionado { display: none; }
+.tarjeta-bloque:has(.bloque-checkbox:checked) .badge-disponible,
+.tarjeta-bloque.disponible.selected .badge-disponible { display: none; }
+.tarjeta-bloque:has(.bloque-checkbox:checked) .badge-seleccionado,
+.tarjeta-bloque.disponible.selected .badge-seleccionado { display: inline-block; }
 
-.tarjeta-bloque.bloque-propio .checkbox-visual {
-    opacity: 0.35;
-    cursor: not-allowed;
-    background-color: var(--fondo);
-}
+.tarjeta-bloque.bloque-propio { cursor: not-allowed; }
+.tarjeta-bloque.bloque-propio.pendiente { border-left: 3px solid var(--precaucion); }
+.tarjeta-bloque.bloque-propio .checkbox-visual { opacity: .35; }
+.tarjeta-bloque.no-disponible { border-style: dashed; opacity: .65; cursor: not-allowed; user-select: none; }
 
-.tarjeta-bloque.no-disponible {
-    border: 1px dashed var(--borde);
-    border-left: 3px solid var(--borde);
-    background-color: var(--fondo);
-    opacity: 0.65;
-    cursor: not-allowed;
-    user-select: none;
-}
+/* --- Pie del formulario --- */
+.pie-formulario { display: flex; flex-direction: column; gap: var(--esp-2); margin-top: var(--esp-5); }
+.pie-formulario .btn { width: 100%; }
+.pista-accion { font-size: var(--txt-sm); color: var(--tinta-suave); text-align: center; }
 
-/* --- Botón y pie del formulario --- */
-.pie-formulario {
-    margin-top: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.btn-accion {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.75rem 1.25rem;
-    background-color: var(--accion);
-    color: var(--superficie);
-    border: 0;
-    border-radius: 3px;
-    font-family: var(--fuente-titulo);
-    font-size: 0.95rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-}
-
-.btn-accion:hover:not(:disabled) {
-    background-color: var(--tinta);
-}
-
-.btn-accion:disabled {
-    background-color: var(--tinta-suave);
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.pista-accion {
-    font-size: 0.8rem;
-    color: var(--tinta-suave);
-    text-align: center;
-}
-
-/* Utilidad para lectores de pantalla */
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border-width: 0;
-}
-
-/* --- Responsividad --- */
 @media (max-width: 40rem) {
-    .controles-calendario {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    /* Mes arriba a todo el ancho y los dos botones debajo, mitad y mitad. */
-    .navegacion-meses {
-        flex-wrap: wrap;
-        gap: 0.6rem;
-    }
-
-    .mes-actual {
-        order: -1;
-        flex: 1 0 100%;
-        min-width: 0;
-    }
-
-    .btn-nav {
-        flex: 1 1 0;
-    }
-
-    .selector-rapido {
-        justify-content: stretch;
-    }
-
-    .select-personalizado {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .calendario td {
-        height: 2.8rem;
-        font-size: 0.85rem;
-    }
+  .controles-calendario { flex-direction: column; align-items: stretch; }
+  /* Mes arriba a todo el ancho y los dos botones debajo, mitad y mitad. */
+  .navegacion-meses { flex-wrap: wrap; gap: var(--esp-2); }
+  .mes-actual { order: -1; flex: 1 0 100%; min-width: 0; }
+  .navegacion-meses .btn { flex: 1 1 0; }
+  .selector-rapido { justify-content: stretch; }
+  .select-personalizado { flex: 1; min-width: 0; }
+  .calendario td { height: 2.75rem; }
 }
-

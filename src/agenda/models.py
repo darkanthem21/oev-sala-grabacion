@@ -30,11 +30,12 @@ def minutos(hora):
 
 
 class Bloque(models.Model):
-    """Un tramo de la plantilla semanal, sin fecha.
+    """Un tramo de la jornada.
 
-    La jornada se define una vez y se repite todas las semanas. Suspender fechas
-    concretas es `Bloqueo` (US-17). La colación no está modelada: es el hueco
-    entre dos bloques.
+    Sin `fecha` es de la plantilla: se repite todas las semanas. Con `fecha` vale
+    solo ese día, para agregar o mover un bloque en una semana. Sacar uno de la
+    plantilla en una semana es un `Bloqueo` con motivo «fuera de jornada»
+    (US-17). La colación no está modelada: es el hueco entre dos bloques.
     """
 
     dia = models.PositiveSmallIntegerField("día", choices=Dia)
@@ -43,6 +44,7 @@ class Bloque(models.Model):
     # US-04 AC3: un bloque nunca se borra. Desactivarlo lo saca de la jornada y
     # las solicitudes que ya lo apuntan siguen resolviendo.
     activo = models.BooleanField(default=True)
+    fecha = models.DateField(null=True, blank=True)
 
     class Meta:
         ordering = ["dia", "inicio"]
@@ -52,11 +54,17 @@ class Bloque(models.Model):
                 name="bloque_termina_despues_de_empezar",
             ),
             # Parcial porque un bloque quitado sigue en la tabla y su hora
-            # tiene que quedar libre.
+            # tiene que quedar libre. Uno de una semana puede empezar a la misma
+            # hora que el de plantilla que reemplaza.
             models.UniqueConstraint(
                 fields=["dia", "inicio"],
-                condition=Q(activo=True),
+                condition=Q(activo=True, fecha__isnull=True),
                 name="bloque_unico_por_dia_y_hora",
+            ),
+            models.UniqueConstraint(
+                fields=["fecha", "inicio"],
+                condition=Q(activo=True, fecha__isnull=False),
+                name="bloque_unico_por_fecha_y_hora",
             ),
         ]
 
@@ -71,17 +79,30 @@ class Bloque(models.Model):
         """El bloque activo con el que se pisa, si hay alguno.
 
         Devuelve el bloque para que la pantalla pueda señalarlo. Un error que
-        dice cuál es el otro se arregla solo.
+        dice cuál es el otro se arregla solo. Uno de plantilla se compara con la
+        plantilla de su día y con los de una semana que vienen; uno de una semana,
+        con lo que hay esa fecha. Lo bloqueado esa fecha no cuenta: es lo que
+        deja el hueco para mover un bloque solo esa semana.
         """
         if self.inicio is None or self.termino is None or self.termino <= self.inicio:
             return None
-        return (
-            Bloque.objects.filter(
-                activo=True, dia=self.dia, inicio__lt=self.termino, termino__gt=self.inicio
-            )
-            .exclude(pk=self.pk)
-            .first()
-        )
+        pisan = Bloque.objects.filter(
+            activo=True, dia=self.dia, inicio__lt=self.termino, termino__gt=self.inicio
+        ).exclude(pk=self.pk)
+        if self.fecha is None:
+            pisan = pisan.filter(Q(fecha__isnull=True) | Q(fecha__gte=timezone.localdate()))
+        else:
+            pisan = pisan.filter(Q(fecha__isnull=True) | Q(fecha=self.fecha))
+        for otro in pisan:
+            # Dos de plantilla, o dos de la misma fecha, siempre chocan.
+            if (otro.fecha is None) == (self.fecha is None):
+                return otro
+            # Uno de plantilla y uno de una semana chocan salvo que el de
+            # plantilla esté bloqueado esa fecha.
+            fecha, plantilla = (self.fecha, otro) if otro.fecha is None else (otro.fecha, self)
+            if bloqueo_de(fecha, plantilla.inicio, plantilla.pk) is None:
+                return otro
+        return None
 
     def clean(self):
         """El cruce se valida acá porque declararlo en la base necesitaría una
@@ -90,10 +111,14 @@ class Bloque(models.Model):
             return  # Falta una hora: eso lo reporta `clean_fields`, no este.
         if self.termino <= self.inicio:
             raise ValidationError({"termino": "El bloque tiene que terminar después de empezar."})
+        if self.fecha is not None and self.fecha.weekday() != self.dia:
+            raise ValidationError({"fecha": f"El {self.fecha:%d/%m} no es {self.get_dia_display()}."})
         otro = self.cruce()
         if otro is not None:
+            # Si el otro es de una sola semana, no se ve en la que se mira: se dice cuál.
+            cuando = f" del {date_format(otro.fecha, r'l j \d\e F')}, solo esa semana" if otro.fecha else ""
             raise ValidationError(
-                f"Se cruza con el bloque de {otro.inicio:%H:%M} a {otro.termino:%H:%M}."
+                f"Se cruza con el bloque de {otro.inicio:%H:%M} a {otro.termino:%H:%M}{cuando}."
             )
 
 
@@ -103,6 +128,9 @@ class Motivo(models.TextChoices):
     MANTENCION = "mantencion", "mantención"
     FERIADO = "feriado", "feriado"
     EVENTO = "evento", "evento"
+    # Sacar un bloque de la plantilla solo en una semana. Lo pone el pop-up
+    # semanal, no la vista mensual.
+    FUERA_DE_JORNADA = "jornada", "fuera de jornada"
 
 
 class BloqueoQuerySet(models.QuerySet):
@@ -201,16 +229,23 @@ class Bloqueo(models.Model):
             return f"del {self.desde.day} al {hasta}"
         return f"del {date_format(self.desde, dia_y_mes)} al {hasta}"
 
-    def cubre(self, fecha, inicio):
+    def cubre(self, fecha, inicio, bloque=None):
         """Si deja fuera el horario que empieza a `inicio` en `fecha`.
 
         Compara la hora y no el bloque porque una reserva apunta a un horario.
         Si el bloque se quita y se vuelve a crear a la misma hora, el bloqueo
-        lo tiene que seguir alcanzando.
+        lo tiene que seguir alcanzando. La excepción es «fuera de jornada»:
+        saca un bloque y no una hora, así que no alcanza al que lo reemplaza
+        esa semana aunque empiece a la misma hora. Para eso hay que pasar el id
+        del `bloque`.
         """
         if not self.desde <= fecha <= self.hasta:
             return False
-        return self.bloque_id is None or self.bloque.inicio == inicio
+        if self.bloque_id is None:
+            return True
+        if self.motivo == Motivo.FUERA_DE_JORNADA and bloque is not None:
+            return self.bloque_id == bloque
+        return self.bloque.inicio == inicio
 
     def clean(self):
         """Lo que vale para cualquier bloqueo, venga del panel o de la
@@ -226,6 +261,8 @@ class Bloqueo(models.Model):
             return
         if self.hasta != self.desde:
             raise ValidationError("Un bloqueo de un solo bloque es de una sola fecha.")
+        if self.bloque.fecha is not None and self.bloque.fecha != self.desde:
+            raise ValidationError({"bloque": f"Ese bloque es solo del {self.bloque.fecha:%d/%m}."})
         if self.bloque.dia != self.desde.weekday():
             raise ValidationError({
                 "bloque": f"Ese bloque es de los {self.bloque.get_dia_display()} "
@@ -234,12 +271,34 @@ class Bloqueo(models.Model):
 
 
 def plantilla_semanal():
-    """Los bloques activos agrupados por día de la semana. Uno desactivado ya no
-    es parte de la jornada."""
+    """Los bloques activos de la plantilla agrupados por día de la semana. Uno
+    desactivado ya no es parte de la jornada, y uno con fecha no se repite."""
     por_dia = defaultdict(list)
-    for bloque in Bloque.objects.filter(activo=True):
+    for bloque in Bloque.objects.filter(activo=True, fecha__isnull=True):
         por_dia[bloque.dia].append(bloque)
     return por_dia
+
+
+def jornada(desde, hasta):
+    """Los bloques de cada fecha del rango, ambos extremos incluidos: la
+    plantilla de su día más los que son solo de esa fecha. No descuenta
+    bloqueos; eso lo hace `disponibilidad`.
+
+    Devuelve {fecha: [bloques]} ordenados por hora. Una fecha sin bloques no
+    aparece.
+    """
+    plantilla = plantilla_semanal()
+    propios = defaultdict(list)
+    for bloque in Bloque.objects.filter(activo=True, fecha__range=(desde, hasta)):
+        propios[bloque.fecha].append(bloque)
+    dias = {}
+    fecha = desde
+    while fecha <= hasta:
+        bloques = sorted(plantilla.get(fecha.weekday(), []) + propios[fecha], key=lambda b: b.inicio)
+        if bloques:
+            dias[fecha] = bloques
+        fecha += timedelta(days=1)
+    return dias
 
 
 def bloqueos_por_fecha(desde, hasta):
@@ -257,7 +316,7 @@ def bloqueos_por_fecha(desde, hasta):
     return por_fecha
 
 
-def bloqueo_de(fecha, inicio):
+def bloqueo_de(fecha, inicio, bloque=None):
     """El bloqueo vigente que deja fuera ese horario, o None.
 
     US-17 AC3: es lo que tiene que preguntar quien reciba una solicitud o
@@ -265,7 +324,7 @@ def bloqueo_de(fecha, inicio):
     solicitante hay que decirle por qué (AC7).
     """
     return next(
-        (b for b in bloqueos_por_fecha(fecha, fecha).get(fecha, []) if b.cubre(fecha, inicio)),
+        (b for b in bloqueos_por_fecha(fecha, fecha).get(fecha, []) if b.cubre(fecha, inicio, bloque)),
         None,
     )
 
@@ -281,20 +340,32 @@ def disponibilidad(desde, hasta):
     Devuelve {fecha: [bloques]}. Una fecha sin jornada, o bloqueada entera, no
     aparece.
     """
-    plantilla = plantilla_semanal()
     bloqueos = bloqueos_por_fecha(desde, hasta)
     dias = {}
-    fecha = desde
-    while fecha <= hasta:
+    for fecha, bloques in jornada(desde, hasta).items():
         del_dia = bloqueos.get(fecha, ())
-        bloques = [
-            b for b in plantilla.get(fecha.weekday(), ())
-            if not any(x.cubre(fecha, b.inicio) for x in del_dia)
-        ]
-        if bloques:
-            dias[fecha] = bloques
-        fecha += timedelta(days=1)
+        libres = [b for b in bloques if not any(x.cubre(fecha, b.inicio, b.pk) for x in del_dia)]
+        if libres:
+            dias[fecha] = libres
     return dias
+
+
+def impedimento(bloque, fecha):
+    """Por qué ese bloque no se puede pedir ni aprobar esa fecha, o None.
+
+    Es la única respuesta a esa pregunta: la usan el envío, el alta en
+    /admin/ y el validador.
+    """
+    if not bloque.activo:
+        return f"El bloque de las {bloque.inicio:%H:%M} ya no está en la jornada."
+    if bloque.fecha is not None and bloque.fecha != fecha:
+        return f"El bloque de las {bloque.inicio:%H:%M} es solo del {bloque.fecha:%d/%m}."
+    if bloque.dia != fecha.weekday():
+        return f"El bloque de las {bloque.inicio:%H:%M} es de los {bloque.get_dia_display()}."
+    bloqueo = bloqueo_de(fecha, bloque.inicio, bloque.pk)
+    if bloqueo is not None:
+        return f"La sala está bloqueada a las {bloque.inicio:%H:%M} ({bloqueo.razon})."
+    return None
 
 
 def primera_fecha_pedible(ahora=None):

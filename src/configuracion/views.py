@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import redirect, render
 
 from .forms import ParametrosForm
@@ -10,8 +10,14 @@ from .services import guardar
 # último que se tocó, que es como se detecta un cambio ajeno.
 ULTIMOS = 15
 
+# Como `personas.permisos.solo_administradores`, escrito acá porque `configuracion`
+# no depende de ningún módulo (README.md).
+solo_administradores = user_passes_test(
+    lambda usuario: usuario.is_authenticated and usuario.es_administrador, login_url="login_gestion",
+)
 
-@staff_member_required(login_url="login_gestion")
+
+@solo_administradores
 def reglas(request):
     """Los parámetros con los que opera el sistema (US-04).
 
@@ -41,9 +47,3 @@ def reglas(request):
         "form": formulario,
         "historial": CambioParametro.objects.select_related("quien")[:ULTIMOS],
     })
-
-
-# Marcador de posición; Áreas es US-05.
-@staff_member_required(login_url="login_gestion")
-def seccion(request, pestana):
-    return render(request, "configuracion/seccion.html", {"pestana": pestana})

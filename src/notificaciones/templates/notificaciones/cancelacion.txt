@@ -1,0 +1,10 @@
+{% autoescape off %}Hola, {{ nombre }}:
+
+{{ solicitante }} canceló la reserva #{{ solicitud.pk }} del {{ solicitud.fecha|date:"l j \d\e F" }} ({{ solicitud.area }}):
+{% for b in bloques %}  - de {{ b.inicio|time:"H:i" }} a {{ b.termino|time:"H:i" }}
+{% endfor %}
+Esos bloques quedan libres en la agenda.{% if solicitud.cancelar_cuenta_inasistencia %} La canceló durante la semana de la reserva, así que cuenta como inasistencia.{% endif %}
+
+Oficina de Educación Virtual
+Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile
+{% endautoescape %}

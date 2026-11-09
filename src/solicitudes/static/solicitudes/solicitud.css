@@ -1,685 +1,261 @@
-/* Solo variables de marca.css: ningun color literal (docs/estilo.md). */
+/* Pantallas del solicitante: pedir, mis solicitudes, confirmar y cancelar. El
+ * botón, los campos y el marco vienen de base.css. Solo variables de marca.css. */
 
-/* Alpine evalua x-show despues de cargar. Sin esto, las filas de acompanante
- * que sobran alcanzan a verse un instante antes de esconderse. */
-[x-cloak] { display: none !important; }
-
-.hoja {
-  width: 100%; max-width: 42rem; margin: 2.5rem auto; padding: 2rem 1.75rem;
-  background: var(--superficie); border: 1px solid var(--borde); border-radius: 4px;
-}
-/* En pantalla angosta, width 100% más el padding desbordaba la página hacia
- * el costado. Solo aquí: en escritorio cambiaría el ancho útil de las hojas. */
+/* --- Hoja --- */
+/* Sin tarjeta: el mismo ancho y margen del encabezado, con una columna de
+ * lectura para los formularios. La tabla y el calendario usan más ancho. */
+.hoja { box-sizing: border-box; max-width: 74rem; margin: 0 auto; padding: var(--esp-6) var(--esp-5) var(--esp-7); }
+.hoja > * { max-width: 42rem; }
+.hoja.hoja-calendario > * { max-width: 58rem; }
+.hoja.hoja-historial > * { max-width: none; }
 @media (max-width: 40rem) {
-  .hoja { box-sizing: border-box; margin: 1rem auto; padding: 1.5rem 1rem; }
+  .hoja { padding: var(--esp-5) var(--esp-4) var(--esp-6); }
 }
-.hoja h1 { font-size: 1.35rem; margin: 0 0 .25rem; }
+.hoja h1 { font-size: var(--txt-xl); margin: 0 0 var(--esp-1); }
 .hoja h2 {
-  font-size: .95rem; margin: 0 0 1rem;
-  padding-bottom: .4rem; border-bottom: 1px solid var(--borde);
+  font-size: var(--txt-lg); margin: 0 0 var(--esp-4);
+  padding-bottom: var(--esp-2); border-bottom: 1px solid var(--borde);
 }
-.sub { color: var(--tinta-suave); font-size: .9rem; margin: 0 0 1.75rem; }
-.pista { display: block; color: var(--tinta-suave); font-size: .8rem; margin: .35rem 0 0; }
+.sub { color: var(--tinta-suave); margin: 0 0 var(--esp-6); }
+.pista { display: block; color: var(--tinta-suave); font-size: var(--txt-sm); margin: var(--esp-1) 0 0; }
 /* US-09 AC2: el motivo que dejó el validador, bajo el estado. */
-.motivo-rechazo { margin: .3rem 0 0; font-size: .8rem; color: var(--tinta-suave); max-width: 28rem; }
+.motivo-rechazo { margin: var(--esp-1) 0 0; font-size: var(--txt-sm); color: var(--tinta-suave); max-width: 28rem; }
 
-.hoja section { margin-bottom: 2rem; }
+.hoja section { margin-bottom: var(--esp-6); }
 
 /* --- Campos --- */
-.hoja label { display: block; font-weight: 500; font-size: .85rem; margin-bottom: .35rem; }
-.hoja label.tarjeta-bloque { display: flex; margin-bottom: 0; }
+.hoja label { display: block; font-weight: 500; margin-bottom: var(--esp-1); }
 .hoja input[type=text], .hoja input[type=email], .hoja input[type=number],
 .hoja select, .hoja textarea {
-  width: 100%; box-sizing: border-box; padding: .6rem .7rem; margin-bottom: 1.1rem;
-  border: 1px solid var(--borde); border-radius: 3px; font: inherit;
-  background: var(--superficie); color: var(--tinta);
+  width: 100%; box-sizing: border-box; min-height: 2.75rem; padding: var(--esp-2) var(--esp-3);
+  margin-bottom: var(--esp-4); font: inherit;
 }
 .hoja textarea { resize: vertical; }
 
-/* La cantidad de personas es un numero de un digito: un campo ancho invita a
+/* La cantidad de personas es un número de un dígito: un campo ancho invita a
  * escribir cosas que el tope no admite. */
-.cuenta { display: flex; align-items: baseline; gap: .75rem; }
+.cuenta { display: flex; align-items: baseline; gap: var(--esp-3); }
 .cuenta input[type=number] { width: 5rem; margin-bottom: 0; }
 .cuenta .pista { margin: 0; }
 
 /* --- Ficha de datos que no se editan --- */
-.ficha { margin: 0; display: grid; grid-template-columns: 8rem 1fr; gap: .4rem 1rem; font-size: .9rem; }
+.ficha { margin: 0; display: grid; grid-template-columns: 8rem 1fr; gap: var(--esp-2) var(--esp-4); }
 .ficha dt { color: var(--tinta-suave); }
 .ficha dd { margin: 0; }
 
-/* --- Acompanantes --- */
+/* --- Acompañantes --- */
 .acompanante {
-  margin: 1.5rem 0 1rem; padding: 1rem 1.1rem .1rem;
-  border: 1px solid var(--borde); border-radius: 3px; background: var(--fondo);
+  margin: var(--esp-5) 0 var(--esp-4); padding: var(--esp-4) var(--esp-4) 0;
+  border: 1px solid var(--borde); border-radius: var(--radio);
 }
 .acompanante legend {
-  padding: 0 .4rem; font-family: var(--fuente-titulo); font-weight: 700;
-  font-size: .75rem; text-transform: uppercase; color: var(--tinta-suave);
+  padding: 0 var(--esp-2); font-family: var(--fuente-titulo); font-weight: 700;
+  font-size: var(--txt-xs); text-transform: uppercase; letter-spacing: .04em; color: var(--tinta-suave);
 }
-.par { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+.par { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--esp-4); }
 @media (max-width: 34rem) { .par { grid-template-columns: 1fr; } }
 
-/* --- Terminos (AC10) --- */
+/* --- Términos (AC10) --- */
 .terminos {
-  max-height: 11rem; overflow-y: auto; margin-bottom: 1rem;
-  padding: .85rem 1rem; border: 1px solid var(--borde); border-radius: 3px;
-  background: var(--fondo); font-size: .85rem;
+  max-height: 11rem; overflow-y: auto; margin-bottom: var(--esp-4);
+  padding: var(--esp-3) var(--esp-4); border: 1px solid var(--borde); border-radius: var(--radio);
+  font-size: var(--txt-sm);
 }
-.terminos p { margin: 0 0 .7rem; }
-.acepto {
-  display: flex; align-items: flex-start; gap: .5rem;
-  font-weight: 400; font-size: .9rem; cursor: pointer;
-}
-.acepto input { width: auto; margin: .25rem 0 0; }
+.terminos p { margin: 0 0 var(--esp-3); }
+.acepto { display: flex; align-items: flex-start; gap: var(--esp-2); font-weight: 400; cursor: pointer; }
+.acepto input { width: 1.125rem; height: 1.125rem; margin: var(--esp-1) 0 0; flex: none; }
 
 /* --- Avisos --- */
-/* El error va en tinta con una marca naranja al costado: el naranja de marca da
- * 3.5:1 sobre el fondo, por debajo del 4.5:1 que exige el texto normal. */
-.error {
-  border-left: 3px solid var(--alerta); background: var(--fondo);
-  padding: .6rem .75rem; margin-bottom: 1.5rem; font-size: .9rem;
+/* Un filete de color junto a un texto en tinta: el texto dice qué pasa y el
+ * color lo refuerza: color vino para el error, celeste para la información. */
+.error, .aviso, .bloqueos, .nota-area {
+  padding: var(--esp-2) var(--esp-3); margin-bottom: var(--esp-5);
+  border-left: 3px solid var(--info);
 }
-.error p { margin: 0 0 .35rem; }
+.error { border-left-color: var(--alerta); }
+.error p { margin: 0 0 var(--esp-1); }
 .error p:last-child { margin-bottom: 0; }
-.campo-error { margin: -.85rem 0 1.1rem; font-size: .82rem; color: var(--tinta-suave); }
-.aviso {
-  border-left: 3px solid var(--info); background: var(--fondo);
-  padding: .6rem .75rem; margin-bottom: 1.5rem; font-size: .9rem;
-}
+.campo-error { margin: calc(-1 * var(--esp-3)) 0 var(--esp-4); font-size: var(--txt-sm); color: var(--alerta); }
+.lista { margin: 0 0 var(--esp-5); padding-left: var(--esp-4); }
 
-.lista { margin: 0 0 1.5rem; padding-left: 1.1rem; font-size: .9rem; }
+/* US-17 AC7. El mismo color que marca un bloqueo para el administrador y el validador. */
+.bloqueos { border-left-color: var(--alerta); margin-bottom: var(--esp-6); }
+.hoja .bloqueos h2 { margin: 0 0 var(--esp-1); padding: 0; border: 0; font-size: var(--txt-base); }
+.bloqueos ul { margin: 0; padding-left: var(--esp-4); }
+/* US-05: la nota del área elegida. */
+.nota-area { margin-bottom: var(--esp-6); }
 
-/* --- Envio y Navegación de Pasos --- */
-
-/* US-17 AC7. El filete es el mismo color que marca un bloqueo en el panel del
- * administrador y en el del validador. */
-.bloqueos {
-  border-left: 3px solid var(--destacado); background: var(--fondo);
-  padding: .6rem .75rem; margin-bottom: 1.75rem; font-size: .9rem;
-}
-.hoja .bloqueos h2 { margin: 0 0 .35rem; padding: 0; border: 0; font-size: .9rem; }
-.bloqueos ul { margin: 0; padding-left: 1.1rem; }
-
-/* --- Envio --- */
-.hoja button {
-  width: 100%; padding: .7rem; border: 0; border-radius: 3px; cursor: pointer;
-  background: var(--accion); color: var(--superficie);
-  font-family: var(--fuente-titulo); font-weight: 700; font-size: .9rem;
-  transition: background-color 0.15s ease;
-}
-.hoja button:hover:not(:disabled) { background: var(--tinta); }
-.hoja button:disabled { background: var(--tinta-suave); cursor: not-allowed; }
-
-/* Contenedor amplio para cuando el calendario vive en la hoja */
-.hoja.hoja-calendario {
-  max-width: 58rem;
-}
-
-/* --- Aislamiento y alineación de controles de calendario dentro de .hoja --- */
-.hoja .controles-calendario {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 0.85rem 1rem;
-  background: var(--fondo);
-  border: 1px solid var(--borde);
-  border-radius: 4px;
-}
-
-.hoja .controles-calendario .navegacion-meses {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.hoja .controles-calendario h2.mes-actual {
-  font-family: var(--fuente-titulo);
-  margin: 0;
-  padding: 0;
-  border-bottom: none;
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--tinta);
-  min-width: 11.5rem;
-  text-align: center;
-  line-height: 1.2;
-}
-
-.hoja .controles-calendario .selector-rapido {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-}
-
-.hoja .controles-calendario .selector-rapido label.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
-  display: inline;
-}
-
+/* --- Calendario dentro de la hoja --- */
+/* Los títulos y campos de .hoja son de formulario; acá van angostos y en línea. */
+.hoja .controles-calendario h2.mes-actual { margin: 0; padding: 0; border: 0; font-size: var(--txt-base); }
+.hoja .controles-calendario .selector-rapido label.sr-only { margin: -1px; }
 .hoja .controles-calendario .selector-rapido select,
 .hoja .controles-calendario select.select-personalizado {
-  width: auto;
-  max-width: 10rem;
-  margin: 0;
-  padding: 0.45rem 0.65rem;
-  height: 2.35rem;
-  line-height: 1.2;
-  box-sizing: border-box;
-  font-size: 0.85rem;
-  border: 1px solid var(--borde);
-  border-radius: 3px;
-  background-color: var(--superficie);
-  color: var(--tinta);
-  cursor: pointer;
+  width: auto; max-width: 10rem; min-height: var(--alto-control); margin: 0; padding: 0 var(--esp-3);
 }
-
-.hoja .controles-calendario .selector-rapido select:focus-visible,
-.hoja .controles-calendario select.select-personalizado:focus-visible {
-  outline: 2px solid var(--acento);
-  outline-offset: 1px;
-}
-
-.hoja .controles-calendario .selector-rapido button.btn-ir {
-  width: auto;
-  margin: 0;
-  padding: 0.45rem 0.85rem;
-  height: 2.35rem;
-  box-sizing: border-box;
-  font-size: 0.82rem;
-  font-weight: 700;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hoja .controles-calendario .btn-nav {
-  height: 2.35rem;
-  padding: 0.45rem 0.85rem;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 @media (max-width: 40rem) {
-  .hoja .controles-calendario {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  /* Mes arriba a todo el ancho y los dos botones debajo, mitad y mitad: en
-   * una sola fila el mes y los botones no caben en un celular. */
-  .hoja .controles-calendario .navegacion-meses {
-    flex-wrap: wrap;
-    gap: 0.6rem;
-  }
-
-  .hoja .controles-calendario h2.mes-actual {
-    order: -1;
-    flex: 1 0 100%;
-    min-width: 0;
-  }
-
-  .hoja .controles-calendario .btn-nav {
-    flex: 1 1 0;
-  }
-
-  .hoja .controles-calendario .selector-rapido {
-    justify-content: stretch;
-  }
-
   .hoja .controles-calendario .selector-rapido select,
-  .hoja .controles-calendario select.select-personalizado {
-    flex: 1;
-    min-width: 0;
-    max-width: none;
-  }
+  .hoja .controles-calendario select.select-personalizado { flex: 1; min-width: 0; max-width: none; }
 }
 
-/* --- Indicador de Pasos del Wizard --- */
-.indicador-pasos {
-  margin-bottom: 2rem;
-  border-bottom: 1px solid var(--borde);
-  padding-bottom: 1.25rem;
-}
-
-.pasos-lista {
-  display: flex;
-  justify-content: space-between;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  gap: 1rem;
-}
-
-.paso-item {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.85rem;
-  color: var(--tinta-suave);
-}
-
+/* --- Pasos del asistente --- */
+.indicador-pasos { margin-bottom: var(--esp-6); padding-bottom: var(--esp-5); border-bottom: 1px solid var(--borde); }
+.pasos-lista { display: flex; justify-content: space-between; gap: var(--esp-4); margin: 0; padding: 0; list-style: none; }
+.paso-item { display: flex; align-items: center; gap: var(--esp-2); font-size: var(--txt-sm); color: var(--tinta-suave); }
 .paso-num {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.7rem;
-  height: 1.7rem;
-  border-radius: 50%;
-  border: 1px solid var(--borde);
-  background: var(--fondo);
-  color: var(--tinta-suave);
-  font-family: var(--fuente-titulo);
-  font-weight: 700;
-  font-size: 0.8rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.75rem; height: 1.75rem; border-radius: 50%; border: 1px solid var(--borde-campo);
+  color: var(--tinta-suave); font-family: var(--fuente-titulo); font-weight: 700; font-size: var(--txt-xs);
 }
-
-.paso-item.activo {
-  color: var(--accion);
-  font-weight: 700;
-}
-
-.paso-item.activo .paso-num {
-  background: var(--accion);
-  color: var(--superficie);
-  border-color: var(--accion);
-}
-
-.paso-item.completado {
-  color: var(--tinta);
-}
-
-.paso-item.completado .paso-num {
-  background: var(--exito-suave);
-  color: var(--tinta);
-  border-color: var(--exito-suave);
-}
-
+.paso-item.activo { color: var(--tinta); font-weight: 500; }
+/* El número lleva texto encima: tinta, no naranjo. El naranjo marca el paso
+ * con el subrayado, como la pestaña activa. */
+.paso-item.activo .paso-num { background: var(--accion); border-color: var(--accion); color: var(--superficie); }
+.paso-item.activo .paso-texto { box-shadow: inset 0 -3px 0 var(--acento); }
+.paso-item.completado { color: var(--tinta); }
+.paso-item.completado .paso-num { background: var(--exito-suave); border-color: var(--exito-suave); color: var(--tinta); }
 @media (max-width: 36rem) {
   .paso-texto { display: none; }
   .pasos-lista { justify-content: space-around; }
 }
 
-
-/* --- Ficha Resumen de Horario (Paso 3) --- */
+/* --- Resumen del horario (paso 2) --- */
 .tarjeta-resumen-horario {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--fondo);
-  border: 1px solid var(--borde);
-  border-left: 4px solid var(--acento);
-  border-radius: 4px;
-  padding: 0.9rem 1.15rem;
-  margin-top: 0.75rem;
-  margin-bottom: 2rem;
-  gap: 1rem;
-  box-sizing: border-box;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--esp-4);
+  box-sizing: border-box; margin: var(--esp-3) 0 var(--esp-6); padding: var(--esp-3) var(--esp-4);
+  border: 1px solid var(--borde); border-left: 3px solid var(--acento); border-radius: var(--radio);
+}
+.horario-icono { display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--acento); }
+.horario-datos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--esp-1); }
+.horario-datos strong { font-family: var(--fuente-titulo); font-weight: 700; }
+.horario-datos span { color: var(--tinta-suave); font-size: var(--txt-sm); }
+@media (max-width: 40rem) {
+  .tarjeta-resumen-horario { flex-direction: column; align-items: stretch; gap: var(--esp-3); }
+  .tarjeta-resumen-horario .btn { width: 100%; }
 }
 
-.horario-icono {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--acento);
-}
-
-.horario-datos {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  line-height: 1.4;
-}
-
-.horario-datos strong {
-  color: var(--tinta);
-  font-size: 0.95rem;
-  font-family: var(--fuente-titulo);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.horario-datos span {
-  color: var(--tinta-suave);
-  font-size: 0.85rem;
-  font-family: var(--fuente-texto);
-  line-height: 1.4;
-}
-
-/* Botón secundario de modificación (Cambiar horario) */
-.btn-enlace-horario {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.95rem;
-  height: 2.25rem;
-  border: 1px solid var(--borde);
-  border-radius: 4px;
-  background-color: var(--superficie);
-  color: var(--tinta);
-  font-family: var(--fuente-titulo);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: none !important;
-  line-height: 1;
-  white-space: nowrap;
-  box-sizing: border-box;
-  box-shadow: 0 1px 2px rgba(42, 68, 81, 0.08);
-  flex-shrink: 0;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.btn-enlace-horario:hover {
-  background-color: var(--fondo);
-  color: var(--accion);
-  border-color: var(--accion);
-  box-shadow: 0 2px 4px rgba(42, 68, 81, 0.12);
-  text-decoration: none !important;
-}
-
-.btn-enlace-horario:focus-visible {
-  outline: 2px solid var(--acento);
-  outline-offset: 2px;
-}
-
-/* --- Acciones entre Pasos --- */
+/* --- Acciones entre pasos --- */
 .acciones-paso {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 2rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--borde);
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--esp-4);
+  margin-top: var(--esp-6); padding-top: var(--esp-5); border-top: 1px solid var(--borde);
 }
-
-.acciones-paso button,
-.btn-accion {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: auto;
-  min-width: 12rem;
-  padding: 0.75rem 1.25rem;
-  border-radius: 4px;
-}
-
-/* .btn-accion en un enlace: el mismo botón principal que `.hoja button`. */
-a.btn-accion {
-  border: 0; background: var(--accion); color: var(--superficie);
-  font-family: var(--fuente-titulo); font-weight: 700; font-size: .9rem;
-  text-decoration: none; transition: background-color 0.15s ease;
-}
-a.btn-accion:hover { background: var(--tinta); }
-a.btn-accion:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
-
+.acciones-paso .btn { min-height: 3rem; }
+.acciones-paso .btn.principal { min-width: 12rem; }
 /* Una sola acción al pie: va a la derecha, como el avance del formulario. */
 .acciones-paso.acciones-fin { justify-content: flex-end; }
-
-.btn-secundario {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.7rem 1.1rem;
-  border: 1px solid var(--borde);
-  border-radius: 4px;
-  background: var(--superficie);
-  color: var(--tinta);
-  text-decoration: none;
-  font-family: var(--fuente-titulo);
-  font-weight: 700;
-  font-size: 0.85rem;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.icono-btn {
-  flex-shrink: 0;
-}
-
-.btn-secundario:hover {
-  background: var(--fondo);
-  border-color: var(--accion);
-  color: var(--accion);
-}
-
-.btn-secundario:focus-visible {
-  outline: 2px solid var(--acento);
-  outline-offset: 2px;
+@media (max-width: 36rem) {
+  .acciones-paso { flex-direction: column-reverse; align-items: stretch; }
 }
 
 .subtitulo-resumen {
-  font-size: 0.9rem;
-  margin: 1.25rem 0 0.5rem;
-  color: var(--tinta-suave);
-  text-transform: uppercase;
-  font-family: var(--fuente-titulo);
-  letter-spacing: 0.04em;
+  margin: var(--esp-5) 0 var(--esp-2); color: var(--tinta-suave);
+  font-family: var(--fuente-titulo); font-size: var(--txt-sm); text-transform: uppercase; letter-spacing: .04em;
 }
 
-/* --- Sección Selección de Área (Paso 1) --- */
-.seccion-area {
-  margin-top: 1.5rem;
-  max-width: 32rem;
-}
+/* --- Elegir el área (paso 0) --- */
+.seccion-area { margin-top: var(--esp-5); max-width: 32rem; }
+.seccion-area label { font-family: var(--fuente-titulo); font-weight: 700; margin-bottom: var(--esp-2); }
+.seccion-area select { margin-bottom: var(--esp-5); cursor: pointer; }
 
-.seccion-area label {
-  font-family: var(--fuente-titulo);
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--tinta);
-  margin-bottom: 0.5rem;
-  display: block;
-}
-
-.seccion-area select {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.65rem 0.85rem;
-  border: 1px solid var(--borde);
-  border-radius: 4px;
-  background-color: var(--superficie);
-  color: var(--tinta);
-  font-family: var(--fuente-texto);
-  font-size: 0.95rem;
-  line-height: 1.4;
-  margin-bottom: 1.25rem;
-  transition: border-color 0.15s ease;
-  cursor: pointer;
-}
-
-.seccion-area select:focus-visible {
-  outline: 2px solid var(--acento);
-  outline-offset: 2px;
-  border-color: var(--acento);
-}
-
-@media (max-width: 40rem) {
-  .tarjeta-resumen-horario {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.85rem;
-  }
-
-  .btn-enlace-horario {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-
-
-
-/* --- Historial de solicitudes (US-09) --- */
-.hoja.hoja-historial { max-width: 52rem; }
-
-.historial { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: .9rem; }
+/* --- Mis solicitudes (US-09) --- */
+.historial { width: 100%; border-collapse: collapse; margin-bottom: var(--esp-5); font-size: var(--txt-sm); }
 .historial th {
-  text-align: left; padding: .5rem .6rem; border-bottom: 2px solid var(--borde);
-  font-family: var(--fuente-titulo); font-size: .75rem; text-transform: uppercase;
-  color: var(--tinta-suave);
+  text-align: left; padding: var(--esp-3); border-bottom: 1px solid var(--borde);
+  font-size: var(--txt-xs); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; color: var(--tinta-suave);
 }
-.historial td { padding: .65rem .6rem; border-bottom: 1px solid var(--borde); vertical-align: top; }
+.historial td { padding: var(--esp-3); border-bottom: 1px solid var(--borde); vertical-align: top; }
+.historial td .btn { margin: var(--esp-2) var(--esp-2) 0 0; }
+.form-retirar { display: inline; margin: 0; }
 
-.bloques-solicitados { margin: 0; padding: 0; list-style: none; }
-.bloques-solicitados li + li { margin-top: .2rem; }
+.bloques-solicitados { margin: 0; padding: 0; list-style: none; font-variant-numeric: tabular-nums; }
+.bloques-solicitados li + li { margin-top: var(--esp-1); }
 
-/* El color del estado va en la marca lateral, no detras del texto: los rellenos
- * de estado no alcanzan 4.5:1 con la tinta (mismo criterio que .error). */
+/* El color del estado va en el filete y el texto lo dice (1.4.1). */
 .estado {
-  display: inline-block; padding: .2rem .55rem; white-space: nowrap;
-  border-left: 3px solid var(--borde); background: var(--fondo);
-  font-size: .82rem; font-weight: 500;
+  display: inline-block; padding: 1px 0 1px var(--esp-2); white-space: nowrap;
+  border-left: 3px solid var(--borde); font-weight: 500;
 }
 .estado-revision      { border-left-color: var(--info); }
 .estado-por-confirmar { border-left-color: var(--precaucion); }
 .estado-aceptada      { border-left-color: var(--exito-suave); }
 .estado-confirmada    { border-left-color: var(--exito); }
 .estado-rechazada,
-.estado-cancelada     { border-left-color: var(--alerta); }
-/* La retiró quien la pidió: no es un problema, así que va sin color. */
+.estado-no-confirmada { border-left-color: var(--alerta); }
+/* La canceló o la retiró quien la pidió: no es un error. */
+.estado-cancelada     { border-left-color: var(--tinta-suave); }
 .estado-retirada      { border-left-color: var(--borde); color: var(--tinta-suave); }
-
-/* Retirar va bajo el estado, discreto: es una acción posible, no la esperada.
- * .hoja button pinta todos los botones de la hoja como principales. */
-.form-retirar { margin: .4rem 0 0; }
-.hoja .btn-retirar {
-  width: auto; padding: .3rem .65rem;
-  background: var(--superficie); color: var(--tinta);
-  border: 1px solid var(--borde); border-radius: 3px;
-  font-size: .78rem;
-}
-.hoja .btn-retirar:hover:not(:disabled) {
-  background: var(--fondo); border-color: var(--alerta); color: var(--tinta);
-}
-.hoja .btn-retirar:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
-
-/* US-03: confirmar sí es lo esperado de una aceptada, así que lleva el color
- * de acción; es un enlace a la página de confirmación, no confirma solo. */
-.hoja .btn-confirmar {
-  display: block; width: fit-content; margin: .4rem 0 0; padding: .3rem .65rem;
-  background: var(--accion); color: var(--superficie); border-radius: 3px;
-  font-size: .78rem; font-weight: 700; text-decoration: none;
-}
-.hoja .btn-confirmar:hover { background: var(--tinta); }
-.hoja .btn-confirmar:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 
 /* En pantallas angostas cada solicitud pasa a ser una ficha. */
 @media (max-width: 36rem) {
   .historial thead { display: none; }
-  .historial tr { display: block; padding: .75rem 0; border-bottom: 1px solid var(--borde); }
+  .historial tr { display: block; padding: var(--esp-3) 0; border-bottom: 1px solid var(--borde); }
   .historial td {
-    display: grid; grid-template-columns: 5rem 1fr; gap: 1rem;
-    padding: .2rem 0; border: 0;
+    display: grid; grid-template-columns: 5rem 1fr; gap: var(--esp-4);
+    padding: var(--esp-1) 0; border: 0;
   }
   .historial td::before { content: attr(data-titulo); color: var(--tinta-suave); }
   /* Sin esto la etiqueta se estira a todo el ancho de la celda. */
   .historial .estado { justify-self: start; }
-  .historial .form-retirar { grid-column: 2; margin: 0; }
+  .historial .form-retirar, .historial .pista, .historial .motivo-rechazo,
+  .historial td > .btn { grid-column: 2; justify-self: start; }
   /* Más alto para tocarlo con el dedo sin acertarle al estado. */
-  .hoja .btn-retirar { padding: .6rem 1rem; font-size: .85rem; }
+  .historial td .btn { min-height: 2.75rem; margin: 0; }
 }
 
-/* --- Paginacion del historial --- */
+/* --- Paginación --- */
 /* Tres columnas: las laterales iguales dejan el estado centrado aunque los
  * botones midan distinto. */
-.paginacion {
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
-  gap: 1rem; margin: 0 0 1.5rem;
-}
+.paginacion { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--esp-4); margin: 0 0 var(--esp-5); }
 .paginacion-anterior { justify-self: start; }
 .paginacion-siguiente { justify-self: end; }
-.paginacion-estado { color: var(--tinta-suave); font-size: .85rem; text-align: center; }
-
-/* Sin pagina a la que ir: el boton queda gris y no reacciona. */
-.btn-secundario.deshabilitado,
-.btn-secundario.deshabilitado:hover {
-  background: var(--fondo); border-color: var(--borde); color: var(--tinta-suave);
-  opacity: .55; cursor: not-allowed;
-}
-
-/* htmx pone esta clase mientras espera la página siguiente. */
-.historial-contenedor.htmx-request { opacity: .6; transition: opacity .15s ease; }
-
+.paginacion-estado { color: var(--tinta-suave); font-size: var(--txt-sm); text-align: center; }
 @media (max-width: 36rem) {
   .paginacion { grid-template-columns: 1fr 1fr; }
   .paginacion-estado { grid-column: 1 / -1; grid-row: 1; }
 }
+/* htmx pone esta clase mientras espera la página siguiente. */
+.historial-contenedor.htmx-request { opacity: .6; transition: opacity .15s ease; }
 
-/* --- Pestañas Próximas / Anteriores del historial --- */
-.pestanas-historial {
-  display: flex; gap: 1.5rem; margin-bottom: 1.25rem;
-  border-bottom: 1px solid var(--borde);
-}
+/* --- Próximas / Anteriores --- */
+.pestanas-historial { display: flex; gap: var(--esp-5); margin-bottom: var(--esp-4); border-bottom: 1px solid var(--borde); }
 .pestana-historial {
-  display: inline-flex; align-items: center; gap: .45rem;
-  padding: .5rem 0; margin-bottom: -1px;
-  border-bottom: 2px solid transparent;
-  font-family: var(--fuente-titulo); font-weight: 700; font-size: .875rem;
-  color: var(--tinta-suave); text-decoration: none;
+  display: inline-flex; align-items: center; gap: var(--esp-2);
+  padding: var(--esp-2) 0 calc(var(--esp-2) - 3px); margin-bottom: -1px; border-bottom: 3px solid transparent;
+  font-weight: 500; color: var(--tinta-suave); text-decoration: none;
 }
 .pestana-historial:hover { color: var(--tinta); }
 .pestana-historial.activa { color: var(--tinta); border-bottom-color: var(--acento); }
 .pestana-cuenta {
-  min-width: 1.4rem; padding: .05rem .4rem; border-radius: 999px;
-  background: var(--fondo); border: 1px solid var(--borde);
-  font-size: .75rem; text-align: center;
+  min-width: 1.5rem; padding: 0 var(--esp-2); border-radius: 999px; box-sizing: border-box;
+  background: var(--borde); color: var(--tinta); font-size: var(--txt-xs); text-align: center;
 }
 
-/* --- Nota de confirmación en Próximas --- */
-/* Informa una regla, no un problema: va sobria para no competir con la tabla
- * ni confundirse con los avisos de lista vacía. */
+/* Informa una regla, no un problema: sobria, para no competir con la tabla. */
 .nota-confirmacion {
-  margin: 0 0 1.25rem; padding: .7rem .85rem;
-  border: 1px solid var(--borde); border-radius: 4px; background: var(--fondo);
-  font-size: .85rem; line-height: 1.5; color: var(--tinta-suave);
+  margin: 0 0 var(--esp-4); padding: var(--esp-3) var(--esp-4);
+  border: 1px solid var(--borde); border-radius: var(--radio);
+  font-size: var(--txt-sm); color: var(--tinta-suave);
 }
-.nota-confirmacion strong { color: var(--tinta); font-weight: 700; }
+.nota-confirmacion strong { color: var(--tinta); }
 
-
-/* --- Diálogo de confirmación (Retirar) --- */
-.dialogo .btn-secundario { cursor: pointer; }
-.dialogo-confirmar {
-  padding: .7rem 1.1rem; border: 0; border-radius: 4px; cursor: pointer;
-  background: var(--accion); color: var(--superficie);
-  font-family: var(--fuente-titulo); font-weight: 700; font-size: .85rem;
-  transition: background-color .15s ease;
+/* --- US-10 y US-03 AC4: franjas bajo el encabezado --- */
+/* Avisan un impedimento, no un error: precaución y no alerta. */
+.franja-sancion,
+.franja-confirmar { border-bottom: 1px solid var(--borde); }
+.franja-sancion p,
+.franja-confirmar p {
+  box-sizing: border-box; max-width: 74rem; margin: 0 auto; padding: var(--esp-3) var(--esp-5);
 }
-.dialogo-confirmar:hover { background: var(--tinta); }
-.dialogo-confirmar:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
-
-
-
-
-/* --- US-10: franja de sanción bajo el encabezado --- */
-/* Avisa un impedimento, no un error: precaución y no alerta. */
-.franja-sancion {
-  border-bottom: 1px solid var(--borde); border-left: 4px solid var(--precaucion);
-  background: var(--superficie);
+.franja-sancion p::before,
+.franja-confirmar p::before {
+  content: ""; display: inline-block; width: 4px; height: 1.1em; margin-right: var(--esp-3);
+  vertical-align: -.15em; background: var(--precaucion);
 }
-.franja-sancion p {
-  max-width: 74rem; margin: 0 auto; padding: .7rem 1.5rem;
-  font-size: .88rem; line-height: 1.5;
+.franja-sancion a,
+.franja-confirmar a { white-space: nowrap; }
+@media (max-width: 40rem) {
+  .franja-sancion p, .franja-confirmar p { padding-inline: var(--esp-4); }
 }
-.franja-sancion a { color: var(--accion); white-space: nowrap; }
+
+/* .hoja label es de formulario; los bloques que se marcan son tarjetas en fila. */
+.hoja label.tarjeta-bloque { display: flex; margin-bottom: 0; font-weight: 400; }

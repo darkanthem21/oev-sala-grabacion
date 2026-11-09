@@ -8,6 +8,14 @@ archivos de compose y un `.env`.
 Al arrancar, el contenedor aplica las migraciones y crea el superusuario si no
 existe. No hay pasos manuales de base de datos.
 
+El check-out configurable añade la migración `uso/0001_initial` y requiere Pillow
+(incluido en `requirements.txt`). Fuera de Docker, instalar las dependencias y
+ejecutar `python src/manage.py migrate` antes de iniciar la aplicación.
+Las fotos se guardan en `MEDIA_ROOT` (por defecto `src/media`); Docker monta el
+volumen `checkoutmedia` en `/app/media` para conservarlas al recrear el contenedor.
+Respaldar ese volumen junto con la base. No se necesita publicar una ruta de medios:
+Django entrega las evidencias mediante una vista con control de acceso.
+
 ## Servidor del curso
 
 | Dato | Valor |
@@ -54,9 +62,12 @@ Ese archivo vive solo en el servidor y nunca entra a git.
 | `SECRET_KEY` | Aleatoria y larga: `python3 -c 'import secrets; print(secrets.token_urlsafe(50))'` |
 | `DJANGO_SUPERUSER_EMAIL` | Correo del administrador inicial |
 | `DJANGO_SUPERUSER_PASSWORD` | Su clave. Si el usuario ya existe, no se modifica |
-| `EMAIL_BACKEND` | Opcional. Sin él, los correos (recuperar clave) se escriben en el log del contenedor |
-| `DEFAULT_FROM_EMAIL` | Opcional. Remitente de los correos; por defecto `no-responder@uach.cl` |
+| `EMAIL_BACKEND` | Opcional. Sin él, los correos (recuperar clave) se escriben en el log del contenedor. Para enviarlos: `django.core.mail.backends.smtp.EmailBackend` |
+| `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | Solo con el backend SMTP: servidor, usuario y clave de la cuenta que envía |
+| `EMAIL_PORT`, `EMAIL_USE_TLS` | Opcionales; por defecto `587` y `1` (STARTTLS), lo que usan Gmail, Brevo y Ethereal |
+| `DEFAULT_FROM_EMAIL` | Opcional. Remitente de los correos; por defecto `no-responder@uach.cl`. Con una cuenta externa tiene que ser la dirección de esa cuenta, o el correo cae en spam |
 | `CSRF_ORIGINS` | Solo si el sitio pasa a servirse por HTTPS: `https://<dominio>` |
+| `URL_BASE` | Dominio de los enlaces del recordatorio de US-03: `https://oev.inf.uach.cl`. Por defecto `http://localhost:8000` |
 
 Compose lee el mismo `.env` dos veces: para elegir la imagen (`TAG`, `PUERTO`) y
 para pasarle las variables a los contenedores.
@@ -137,6 +148,28 @@ Para restaurar, sobre una base vacía:
 docker exec -i grupo6_db psql -U oev oev < respaldo-AAAA-MM-DD.sql
 ```
 
+### Exportar la estructura
+
+Para revisar las tablas, índices, restricciones y claves foráneas sin los datos,
+`pg_dump -s` exporta solo la estructura. `--no-owner --no-privileges` deja fuera
+los dueños y permisos, para que el archivo sirva en otra máquina.
+
+En el servidor:
+
+```sh
+docker exec grupo6_db pg_dump -U oev -s --no-owner --no-privileges oev > estructura-$(date +%F).sql
+```
+
+En desarrollo, con la base levantada y las migraciones aplicadas:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.desarrollo.yml exec -T db pg_dump -U oev -s --no-owner --no-privileges oev > estructura.sql
+```
+
+Ni el respaldo ni la estructura entran al repositorio (`CONTRIBUTING.md`). Las
+relaciones entre tablas también están dibujadas en `docs/diagramas.md`, en
+**Relaciones de la base de datos**.
+
 ## Solicitudes y panel del validador (US-02 y US-07)
 
 ### Antes de desplegar
@@ -191,6 +224,125 @@ No hay variables nuevas en el `.env`. Los correos de resolución salen por el
 - Entrar como el solicitante y ver el estado y el motivo en **Mis solicitudes**.
 - `docker logs grupo6_frontend` muestra el correo de la resolución si el
   backend de correo es la consola.
+
+## Recordatorio y cancelación (US-03)
+
+### Antes de desplegar
+
+Esta versión trae la migración `solicitudes.0006_solicitud_recordatorio_y_cancelacion`,
+que agrega a la solicitud cuándo salió su recordatorio y cuándo se canceló. Hacer el
+respaldo de la base antes de bajar la imagen.
+
+Agregar `URL_BASE` al `.env`. Sin ella, los enlaces del recordatorio apuntan a
+`localhost`.
+
+El stack suma un contenedor, `grupo6_tareas`: la misma imagen que
+`grupo6_frontend`, con un bucle que manda los recordatorios cada hora. `dc pull web`
+baja la imagen de los dos.
+
+### Rutas nuevas
+
+| Ruta | Quién entra |
+|---|---|
+| `/solicitar/mis-solicitudes/<id>/cancelar/` | El solicitante de esa reserva. El enlace llega en el recordatorio y en **Mis solicitudes** |
+
+### Verificar después de desplegar
+
+- `docker ps --filter name=grupo6` muestra `grupo6_tareas` corriendo.
+- Un minuto después de levantar, `docker logs grupo6_tareas` muestra
+  `recordatorios enviados: N`, y luego una línea por hora.
+- Correr una vuelta a mano: `docker exec grupo6_tareas python manage.py recordar_confirmaciones`.
+  Repetirla no manda nada nuevo.
+
+## Sanciones (US-10)
+
+### Antes de desplegar
+
+Esta versión trae la migración `personas.0003_sancion`, que crea la tabla de
+sanciones con sus tres claves foráneas a la persona: a quién se sanciona, quién
+la puso y quién la levantó. Hacer el respaldo de la base antes de bajar la
+imagen. No hay variables nuevas en el `.env` ni tareas programadas: la sanción
+deja de regir sola al día siguiente de su término.
+
+### Rutas nuevas
+
+| Ruta | Quién entra |
+|---|---|
+| `/solicitar/mis-sanciones/` | Pestaña **Mis sanciones** del solicitante. Cuentas del grupo **Solicitante** |
+| `/configuracion/sanciones/` | Pestaña **Sanciones** del administrador, para levantarlas. Rol **Administrador** (antes de US-08, `is_staff`) |
+| `/admin/personas/sancion/` | Crear y acortar sanciones. Solo el superusuario |
+
+### Verificar después de desplegar
+
+- En `/admin/` > **Personas › Sanciones**, crear una sanción de un día para una
+  cuenta de prueba.
+- Entrar con esa cuenta por `/solicitante/entrar/`: en vez del formulario sale
+  **No puedes solicitar por ahora**, y la franja de aviso aparece en **Mis
+  solicitudes**.
+- Levantarla en `/configuracion/sanciones/` con un motivo y ver que la cuenta
+  vuelve a ver el formulario.
+
+## Áreas académicas (US-05)
+
+### Antes de desplegar
+
+Esta versión trae la migración `personas.0004_area_nota_y_cambios`, que agrega
+la nota del área y su registro de cambios. Hacer el respaldo de la base antes de
+bajar la imagen. No hay variables nuevas en el `.env`.
+
+### Rutas nuevas
+
+| Ruta | Quién entra |
+|---|---|
+| `/configuracion/areas/` | Pestaña **Áreas** del administrador. Rol **Administrador** (antes de US-08, `is_staff`) |
+
+### Después de desplegar
+
+Las áreas no vienen cargadas. En la pestaña **Áreas**, crear **Educación
+Continua Online** y **Decanatura** (minuta del 27/10) y desactivar las que ya no
+correspondan. Un solicitante sin un área activa no puede pedir la sala.
+
+## Usuarios (US-08)
+
+### Antes de desplegar
+
+Esta versión trae la migración `personas.0005_cuentas_y_su_registro`, que crea el
+registro de cambios de cuentas. Hacer el respaldo de la base antes de bajar la
+imagen. No hay variables nuevas en el `.env`, pero las cuentas nuevas reciben su
+contraseña por correo: sin SMTP configurado, el enlace queda solo en
+`docker logs grupo6_frontend`.
+
+Desde esta versión el panel del administrador lo abre el rol **Administrador**,
+no solo `is_staff`. El superusuario que crea el arranque
+(`DJANGO_SUPERUSER_EMAIL`) es la cuenta de soporte de la Oficina: es la única
+que da y quita el rol **Administrador**.
+
+### Rutas nuevas
+
+| Ruta | Quién entra |
+|---|---|
+| `/configuracion/usuarios/` | Pestaña **Usuarios**: lista, búsqueda y filtros. Rol **Administrador** |
+| `/configuracion/usuarios/nueva/`, `/configuracion/usuarios/<id>/` | Crear y editar una cuenta. Rol **Administrador** |
+| `/configuracion/usuarios/cargar/` | Carga en lote desde un CSV. Rol **Administrador** |
+| `/configuracion/usuarios/plantilla.csv` | Plantilla de la carga. Rol **Administrador** |
+
+### Verificar después de desplegar
+
+- Entrar con el superusuario por `/configuracion/entrar/` y abrir **Usuarios**.
+- Crear una cuenta de prueba con el rol **Validador** y ver que le llega el
+  correo (o que el enlace aparece en el log) y que entra por
+  `/validacion/entrar/` después de crear su contraseña.
+- Desactivarla y ver que ya no entra.
+
+## Diagramas de la documentación
+
+`docs/` no viaja en la imagen (`.dockerignore`), así que los diagramas no se
+despliegan: se compilan en la máquina de quien los cambia y se commitean con su
+fuente. Todos incluyen `docs/diagramas/estilo.iuml`, que fija la resolución, las
+fuentes y el color de cada capa. Para compilarlos hacen falta PlantUML y las
+fuentes **Noto Sans** y **JetBrainsMono NF** instaladas. El detalle está en
+`docs/diagramas.md`, en
+[Cómo se dibujan y se compilan](diagramas.md#cómo-se-dibujan-y-se-compilan).
 
 ## Problemas conocidos
 

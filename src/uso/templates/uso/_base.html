@@ -9,17 +9,10 @@
 
 {% block contenido %}
 <header class="techo">
-  <div class="dentro">
-    <div class="fila">
-      <img class="sello" src="{% static 'img/Facultad-color-negro.png' %}"
-           alt="Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile">
-      <h1>Personal de apoyo</h1>
-      <div class="quien">
-        <span class="correo">{{ user.get_full_name|default:user.email }}</span>
-        <form method="post" action="{% url 'logout' %}">
-          {% csrf_token %}<button class="btn" type="submit">Cerrar sesión</button>
-        </form>
-      </div>
+  {% include "_banda.html" %}
+  <div class="riel">
+    <div class="dentro">
+      {% include "_rol.html" with rol="apoyo" nombre="Personal de apoyo" %}
     </div>
   </div>
 </header>

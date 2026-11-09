@@ -3,7 +3,6 @@ from collections import Counter
 from datetime import date, time, timedelta
 
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ValidationError
 from django.db.models.functions import Coalesce
 from django.http import HttpResponseBadRequest
@@ -13,9 +12,13 @@ from django.utils import timezone
 from django.utils.formats import date_format
 from django.views.decorators.http import require_POST
 
+from personas.permisos import solo_administradores
+
 from . import services
-from .forms import MODOS, BloqueForm, BloqueoForm, LevantarForm
-from .models import JORNADA_MINIMA, Bloque, Bloqueo, Dia, Motivo, bloqueos_por_fecha, minutos, plantilla_semanal
+from .forms import MODOS, BloqueForm, BloqueoForm, HorasForm, LevantarForm
+from .models import (
+    JORNADA_MINIMA, Bloque, Bloqueo, Dia, Motivo, bloqueos_por_fecha, jornada, minutos, plantilla_semanal,
+)
 
 # Cuántas acciones muestra el registro de bloqueos. El historial completo está
 # en la administración de Django, igual que el de los parámetros.
@@ -181,7 +184,8 @@ def _dia(fecha, plantilla, foco=None, bloqueos=None, hoy=None):
         # US-17. La mensual los dibuja en la celda; la semanal raya los bloques
         # que dejan fuera, y para eso le basta con los `pk`.
         "bloqueos": del_dia,
-        "bloqueados": {b.pk for b in bloques if any(x.cubre(fecha, b.inicio) for x in del_dia)},
+        "bloqueados": {b.pk for b in bloques if not getattr(b, "omitido", None)
+                       and any(x.cubre(fecha, b.inicio, b.pk) for x in del_dia)},
         "entero": any(b.bloque_id is None for b in del_dia),
         "pasado": hoy is not None and fecha < hoy,
     }
@@ -256,7 +260,7 @@ def _registro():
 
 # Lo que la plantilla mete en el x-data de Alpine. Sin nada elegido va la palabra
 # `null`, para que el objeto de JavaScript se escriba igual en los dos casos.
-SIN_ELEGIR = {"pk": "null", "dian": "null", "dia": "", "ini": "", "fin": ""}
+SIN_ELEGIR = {"pk": "null", "dian": "null", "dia": "", "ini": "", "fin": "", "propio": "false"}
 
 
 def _elegido(bloque):
@@ -272,11 +276,12 @@ def _elegido(bloque):
         # va vacío.
         "ini": f"{bloque.inicio:%H:%M}" if bloque.inicio else "",
         "fin": f"{bloque.termino:%H:%M}" if bloque.termino else "",
+        "propio": "true" if bloque.fecha else "false",
     }
 
 
-def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
-              bloqueo=None, afectadas=(), levantando=None, error_levantar=None):
+def _contexto(datos, error=None, elegido=None, quitado=None, choca=None, bloqueo=None,
+              afectadas=(), levantando=None, error_levantar=None, confirmando=None):
     """Todo lo que necesita el calendario. Lo comparten la vista que lo muestra
     y las que guardan un bloque o un bloqueo, porque todas dibujan la misma
     rejilla."""
@@ -293,15 +298,24 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
     foco = _fecha(datos.get("desde"), por_defecto)
 
     plantilla = plantilla_semanal()
-    desde, hasta = _ventana(plantilla)
-    largo = hasta - desde
-    _ubicar(plantilla, desde, largo)
     fechas = _semana(foco)
     mes = _mes(foco)
     if vista == "mes":
         bloqueos = bloqueos_por_fecha(mes[0][0], mes[-1][-1])
+        rejilla = plantilla
     else:
         bloqueos = bloqueos_por_fecha(fechas[0], fechas[-1])
+        # La semanal dibuja esa semana: la plantilla con lo que se agregó o se
+        # sacó solo en ella.
+        del_rango = jornada(fechas[0], fechas[-1])
+        rejilla = {f.weekday(): del_rango.get(f, []) for f in fechas}
+        for f in fechas:
+            for b in rejilla[f.weekday()]:
+                b.omitido = next((x for x in bloqueos.get(f, ()) if x.bloque_id == b.pk
+                                  and x.motivo == Motivo.FUERA_DE_JORNADA), None)
+    desde, hasta = _ventana(rejilla)
+    largo = hasta - desde
+    _ubicar(rejilla, desde, largo)
 
     return {
         "pestana": "bloques",
@@ -317,7 +331,7 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
         "desde_min": desde,
         "largo_min": largo,
         "cabeceras": _cabeceras(plantilla),
-        "dias": [_dia(fecha, plantilla, None, bloqueos, hoy) for fecha in fechas],
+        "dias": [_dia(fecha, rejilla, None, bloqueos, hoy) for fecha in fechas],
         "mini": _mini(foco, hoy) if vista == "semana" else None,
         "semanas": [[_dia(f, plantilla, foco, bloqueos, hoy) for f in s] for s in mes],
         "anterior": _correr(foco, vista, -1),
@@ -332,12 +346,18 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
         # de cada uno; uno de varios días aparece en varias celdas.
         "bloqueos_mes": list({b.pk: b for bs in bloqueos.values() for b in bs}.values()) if vista == "mes" else [],
         "jornada": [{"numero": d, "bloques": plantilla[d]} for d in Dia.values],
-        "motivos": Motivo.choices,
+        # «Fuera de jornada» lo pone el editor del bloque, no se elige.
+        "motivos": [(v, e) for v, e in Motivo.choices if v != Motivo.FUERA_DE_JORNADA],
         "modos": MODOS,
         "bq": _estado_bloqueo(bloqueo),
         "bq_errores": _mensaje(bloqueo) if bloqueo is not None and bloqueo.is_bound else None,
         "afectadas": afectadas,
+        "se_rechazan": [p for p in afectadas if p.pendiente],
+        "se_cancelan": [p for p in afectadas if not p.pendiente],
         "confirmadas": ",".join(r.codigo for r in afectadas),
+        # Qué acción del editor del bloque espera la confirmación de la lista.
+        "confirmando": confirmando or "",
+        "alcance": "semana" if datos.get("alcance") == "semana" else "todas",
         "levantando": levantando,
         # Lo que no dejó levantar un bloqueo: va dentro de su pop-up.
         "error_levantar": error_levantar,
@@ -346,7 +366,7 @@ def _contexto(datos, error=None, elegido=None, quitado=None, choca=None,
     }
 
 
-@staff_member_required(login_url="login_gestion")
+@solo_administradores
 def bloques(request):
     contexto = _contexto(request.GET)
     # htmx pide solo la rejilla. El navegador sin htmx pide la página entera y
@@ -365,37 +385,96 @@ def _mensaje(formulario):
 def _responder(request, **extra):
     """htmx recibe la rejilla ya redibujada. El navegador sin htmx recibe una
     redirección, para que recargar no reenvíe el formulario, y el error va como
-    aviso porque no hay pop-up que lo muestre."""
+    aviso porque no hay pop-up que lo muestre. La lista de afectadas no cabe en
+    una redirección: sin htmx se dibuja la página entera."""
     if request.headers.get("HX-Request"):
         return render(request, "agenda/_calendario.html", _contexto(request.POST, **extra))
+    if extra.get("afectadas"):
+        return render(request, "agenda/bloques.html", _contexto(request.POST, **extra))
     if extra.get("error"):
         messages.error(request, extra["error"])
     destino = f"{reverse('panel_bloques')}?vista=semana&desde={request.POST.get('desde', '')}"
     return redirect(destino)
 
 
-@staff_member_required(login_url="login_gestion")
+def _semana_de(request, bloque):
+    """La fecha de la semana que se mira en que cae el bloque, si el cambio es
+    solo para esa semana. Uno que ya es de una fecha solo puede ser de esa."""
+    if bloque.fecha is not None:
+        return bloque.fecha
+    if request.POST.get("alcance") != "semana":
+        return None
+    return _semana(_fecha(request.POST.get("desde"), timezone.localdate()))[bloque.dia]
+
+
+def _afectadas(bloque, fecha):
+    """Quién pierde el horario si el bloque sale: solo esa fecha (por el bloqueo
+    que lo saca, si es de plantilla) o en todas las que vienen."""
+    if fecha is not None and bloque.fecha is None:
+        return services.afectadas(services.fuera_de_jornada(bloque, fecha))
+    return services.afectadas_bloque(bloque, fecha)
+
+
+def _sin_confirmar(request, afectadas):
+    """Si hay afectadas que el administrador todavía no vio (AC4): la primera
+    vez, o si la lista cambió desde que se le mostró."""
+    vistas = {c for c in request.POST.get("confirmadas", "").split(",") if c}
+    return bool(afectadas) and {p.codigo for p in afectadas} != vistas
+
+
+def _quienes(afectadas):
+    """Lo que les pasó a quienes perdieron el horario, para el aviso."""
+    rechazadas = len({p.solicitud for p in afectadas if p.pendiente})
+    canceladas = len({p.solicitud for p in afectadas if not p.pendiente})
+    partes = []
+    if rechazadas:
+        partes.append("se rechazó 1 solicitud" if rechazadas == 1 else f"se rechazaron {rechazadas} solicitudes")
+    if canceladas:
+        partes.append("se canceló 1 reserva" if canceladas == 1 else f"se cancelaron {canceladas} reservas")
+    if not partes:
+        return ""
+    return " " + " y ".join(partes).capitalize() + "; se les avisó por correo."
+
+
+@solo_administradores
 @require_POST
 def editar_bloque(request):
-    """Agrega, cambia, quita o repone un bloque de la plantilla.
+    """Agrega, cambia, quita o repone un bloque, en todas las semanas o solo en
+    la que se mira (`alcance`).
 
-    Las cuatro acciones comparten vista porque devuelven la misma rejilla. El
-    cambio vale para ese día de la semana, todas las semanas.
+    Comparten vista porque devuelven la misma rejilla. Quitar y cambiar con
+    pedidos encima van en dos tiempos, como un bloqueo (US-17 AC4): primero la
+    lista de afectadas sin guardar nada; al confirmar se guarda, las pendientes
+    se rechazan y las aprobadas se cancelan.
     """
     accion = request.POST.get("accion", "guardar")
 
-    if accion in ("quitar", "reponer"):
-        bloque = get_object_or_404(Bloque, pk=request.POST.get("bloque"))
-        if accion == "quitar":
-            bloque.activo = False
-            bloque.save(update_fields=["activo"])
-            # Con htmx, el aviso con «Reponerlo» lo dibuja la rejilla, porque lleva
-            # un formulario. Sin htmx queda solo el mensaje.
-            if not request.headers.get("HX-Request"):
-                messages.success(request, f"Quitaste el bloque de los {_nombre(bloque)}.")
-            return _responder(request, quitado=bloque)
+    if accion == "reponer_semana":
+        bloqueo = get_object_or_404(Bloqueo, pk=request.POST.get("bloqueo"), motivo=Motivo.FUERA_DE_JORNADA)
+        try:
+            services.reponer_semana(bloqueo, request.user)
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
+        else:
+            messages.success(request, f"Repusiste {services.nombre(bloqueo.bloque, bloqueo.desde)}.")
+        return _responder(request)
+
+    pk = request.POST.get("bloque")
+    if pk:
+        bloque = get_object_or_404(Bloque, pk=pk)
+    else:
+        dia = request.POST.get("dia")
+        if dia not in {str(d) for d in Dia.values}:
+            return HttpResponseBadRequest("Día fuera de la semana laboral")
+        bloque = Bloque(dia=int(dia))
+    fecha = _semana_de(request, bloque)
+    if fecha is not None and fecha < timezone.localdate():
+        return _responder(request, error="Esa fecha ya pasó: elige «Siguientes semanas» u otra semana.",
+                          elegido=bloque)
+
+    if accion == "reponer":
         # Reponer puede chocar, porque mientras estuvo fuera alguien pudo
-        # ocupar la hora.
+        # ocupar la hora. Lo que se rechazó o canceló al quitarlo no vuelve.
         bloque.activo = True
         try:
             bloque.full_clean(exclude=["dia"])
@@ -406,23 +485,61 @@ def editar_bloque(request):
         messages.success(request, f"Repusiste el bloque de los {_nombre(bloque)}.")
         return _responder(request)
 
-    # Guardar y agregar usan el mismo formulario; lo que cambia es la instancia.
-    pk = request.POST.get("bloque")
-    if pk:
-        bloque = get_object_or_404(Bloque, pk=pk)
-    else:
-        dia = request.POST.get("dia")
-        if dia not in {str(d) for d in Dia.values}:
-            return HttpResponseBadRequest("Día fuera de la semana laboral")
-        bloque = Bloque(dia=int(dia))
+    if accion == "quitar":
+        afectadas = _afectadas(bloque, fecha)
+        if _sin_confirmar(request, afectadas):
+            return _responder(request, elegido=bloque, afectadas=afectadas, confirmando="quitar")
+        try:
+            services.quitar(bloque, request.user, afectadas, fecha)
+        except ValidationError as error:
+            return _responder(request, error=" ".join(error.messages), elegido=bloque)
+        if bloque.fecha is None and fecha is not None:
+            messages.success(request, f"Sacaste {services.nombre(bloque, fecha)}, solo esa semana.{_quienes(afectadas)}")
+            return _responder(request)
+        # Sin afectadas, con htmx, el aviso con «Reponerlo» lo dibuja la rejilla,
+        # porque lleva un formulario. Con afectadas no se ofrece: reponer no
+        # devuelve lo rechazado ni lo cancelado.
+        if afectadas or not request.headers.get("HX-Request"):
+            messages.success(request, f"Quitaste {services.nombre(bloque, bloque.fecha)}.{_quienes(afectadas)}")
+            return _responder(request)
+        return _responder(request, quitado=bloque)
 
-    formulario = BloqueForm(request.POST, instance=bloque)
-    if formulario.is_valid():
-        formulario.save()
-        messages.success(request, f"Guardaste el bloque de los {_nombre(bloque)}. Vale para todas las semanas.")
+    if bloque.pk is None:
+        bloque.fecha = fecha
+        formulario = BloqueForm(request.POST, instance=bloque)
+        if formulario.is_valid():
+            formulario.save()
+            vale = "" if fecha else " Vale para las siguientes semanas."
+            messages.success(request, f"Agregaste {services.nombre(bloque, fecha)}.{vale}")
+            return _responder(request)
+        # `cruce()` de nuevo solo en el camino del error, para señalar el otro.
+        return _responder(request, error=_mensaje(formulario), elegido=bloque, choca=bloque.cruce())
+
+    # Cambiar el horario: nunca en el lugar (services.cambiar).
+    horas = HorasForm(request.POST)
+    if not horas.is_valid():
+        return _responder(request, error=_mensaje(horas), elegido=bloque)
+    inicio, termino = horas.cleaned_data["inicio"], horas.cleaned_data["termino"]
+    if (inicio, termino) == (bloque.inicio, bloque.termino):
+        messages.info(request, "No había nada que cambiar.")
         return _responder(request)
-    # `cruce()` de nuevo solo en el camino del error, para señalar el otro.
-    return _responder(request, error=_mensaje(formulario), elegido=bloque, choca=bloque.cruce())
+    # Lo que vuelve al editor si falta confirmar o algo choca: las horas pedidas.
+    propuesto = Bloque(pk=bloque.pk, dia=bloque.dia, fecha=bloque.fecha, inicio=inicio, termino=termino)
+    try:
+        services.validar_cambio(bloque, inicio, termino, fecha)
+    except ValidationError as error:
+        return _responder(request, error=" ".join(error.messages), elegido=propuesto)
+    afectadas = _afectadas(bloque, fecha)
+    if _sin_confirmar(request, afectadas):
+        return _responder(request, elegido=propuesto, afectadas=afectadas, confirmando="guardar")
+    try:
+        services.cambiar(bloque, inicio, termino, request.user, afectadas, fecha)
+    except ValidationError as error:
+        return _responder(request, error=" ".join(error.messages), elegido=propuesto)
+    donde = "" if bloque.fecha else (", solo esa semana" if fecha else ", en las siguientes semanas")
+    messages.success(request, f"Cambiaste {services.nombre(bloque, fecha)}: ahora es de {inicio:%H:%M} a "
+                              f"{termino:%H:%M}{donde}.{_quienes(afectadas)}")
+    return _responder(request)
 
 
 def _responder_mes(request, listo=False, **extra):
@@ -454,18 +571,13 @@ def _nombre(bloque):
     return f"{bloque.get_dia_display()}, {bloque.inicio:%H:%M}–{bloque.termino:%H:%M}"
 
 
-def _personas(reservas):
-    cuantas = len({r.correo for r in reservas})
-    return "1 persona" if cuantas == 1 else f"{cuantas} personas"
-
-
-@staff_member_required(login_url="login_gestion")
+@solo_administradores
 @require_POST
 def editar_bloqueo(request):
     """Bloquea la sala en unas fechas, o levanta un bloqueo (US-17).
 
-    Si el bloqueo le quita la sala a reservas aprobadas, la primera vez no se
-    guarda: vuelve con la lista para que el administrador la vea (AC4). Al
+    Si el bloqueo le quita la sala a alguien (pendiente o aprobada), la primera
+    vez no se guarda: vuelve con la lista para que el administrador la vea (AC4). Al
     confirmar, el navegador devuelve los códigos que se le mostraron, y si ya no
     son los mismos se le vuelve a mostrar la lista antes de avisar a nadie.
     """
@@ -492,13 +604,12 @@ def editar_bloqueo(request):
 
     bloqueo = formulario.save(commit=False)
     afectadas = services.afectadas(bloqueo)
-    vistas = {c for c in request.POST.get("confirmadas", "").split(",") if c}
-    if afectadas and {r.codigo for r in afectadas} != vistas:
+    if _sin_confirmar(request, afectadas):
         return _responder_mes(request, bloqueo=formulario, afectadas=afectadas)
 
     services.bloquear(bloqueo, request.user, afectadas)
-    hecho = f"Bloqueaste la sala {bloqueo.periodo}, {bloqueo.alcance} ({bloqueo.razon})."
-    if afectadas:
-        hecho += f" Se le avisó por correo a {_personas(afectadas)}."
-    messages.success(request, hecho)
+    messages.success(
+        request,
+        f"Bloqueaste la sala {bloqueo.periodo}, {bloqueo.alcance} ({bloqueo.razon}).{_quienes(afectadas)}",
+    )
     return _responder_mes(request, listo=True)

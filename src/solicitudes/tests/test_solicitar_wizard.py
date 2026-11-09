@@ -553,7 +553,8 @@ class HorarioInvalidoEnElAsistenteTestCase(TestCase):
         otra_fecha = self.fecha + timedelta(days=7)
         self._bloquear(self.siguiente)
         self._bloquear(self.bloque, fecha=otra_fecha)
-        self._reservar(self.bloque, solicitante=self.otro, fecha=otra_fecha)
+        # Cada una en su fecha: un bloque bloqueado ya no se puede reservar (impedimento).
+        self._reservar(self.bloque, solicitante=self.otro, fecha=otra_fecha + timedelta(days=14))
         self._solicitud_con(self.bloque, solicitante=self.usuario, fecha=otra_fecha + timedelta(days=7))
 
         self._cargar_sesion()

@@ -1,0 +1,134 @@
+@startuml editar-checkout
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Listado configurable y registro del check-out (US-20)
+
+actor Administrador as A
+actor "Personal de apoyo" as P
+boundary "Editor visual\nuso/checkout/editor.js" as E <<presentación>>
+participant "uso.checkout.views" as V <<presentación>>
+participant "uso.checkout.forms" as F <<presentación>>
+participant "uso.checkout.services" as S <<dominio>>
+participant "uso.services\nConsulta de bloques" as B <<dominio>>
+database "Base de datos" as DB
+collections "Archivos privados" as FS
+
+note over A,V
+  El editor exige una sesión de administración.
+  El check-out exige el rol Personal de apoyo.
+  Los POST se protegen con CSRF.
+end note
+
+== Editar y publicar el listado ==
+A -> V: GET /configuracion/checkout/
+V -> DB: FormularioCheckout.cargar()
+DB --> V: Secciones, preguntas y revisión vigente
+V --> A: 200 · uso/checkout/editor.html
+loop Preparar cambios sin publicar
+  A -> E: Añadir, editar, eliminar o reordenar
+  E -> E: Actualizar secciones y preguntas en memoria
+end
+A -> V: POST /configuracion/checkout/\nJSON del listado + revisión
+V -> F: EditorCheckoutForm.is_valid()
+F -> F: validar_secciones(): títulos, preguntas\ne identificadores únicos
+F --> V: Listado validado o errores
+alt Estructura inválida o listado vacío
+  V --> A: 200 · Errores; no se publica
+else Estructura válida
+  group transaction.atomic()
+    V -> DB: Bloquear FormularioCheckout\nselect_for_update()
+    DB --> V: Revisión actual
+    alt La revisión enviada quedó desactualizada
+      V -> F: Añadir error de edición concurrente
+    else La revisión coincide
+      V -> DB: Guardar secciones, revisión + 1,\nadministrador y fecha de actualización
+    end
+  end
+  alt Hubo conflicto de revisión
+    V --> A: 200 · Solicitar recargar antes de publicar
+  else Publicación correcta
+    V --> A: 302 · Volver al editor con confirmación
+  end
+end
+
+== Responder el check-out del bloque ==
+P -> V: GET /apoyo/checkout/{codigo}/
+V -> B: buscar(codigo)
+B -> DB: Consultar ticket aceptado y check-out existente
+B --> V: Bloque con estado de check-out
+alt No existe, no terminó o se canceló sin check-out
+  V --> P: 404 · Check-out no disponible
+else Bloque terminado con check-out pendiente
+  V -> DB: FormularioCheckout.cargar()
+  DB --> V: Listado vigente y revisión
+  V -> F: CheckoutForm(listado=listado)
+  V --> P: 200 · Preguntas obligatorias y cierre
+end
+
+P -> V: POST /apoyo/checkout/{codigo}/\nRespuestas + observaciones + fotos + hora + revisión
+V -> B: buscar(codigo)
+B -> DB: Consultar disponibilidad del ticket
+B --> V: Estado de check-out
+alt Check-out no disponible
+  V --> P: 404 · No se registra
+else Check-out disponible o ya completado
+  group transaction.atomic()
+    V -> DB: Bloquear ticket y FormularioCheckout\nselect_for_update()
+    V -> DB: Consultar si ya existe Checkout del ticket
+    alt Ya existe un reporte
+      note right of V: No se modifica ni se duplica el reporte.
+    else No existe reporte
+      V -> B: buscar(codigo): comprobar que sigue pendiente
+      B -> DB: Consultar estado actual del ticket
+      B --> V: Estado actualizado
+      alt El ticket dejó de estar disponible
+        V -> V: Interrumpir con Http404
+      else Sigue pendiente
+        V -> F: CheckoutForm(POST, FILES, listado).is_valid()
+        F -> F: Verificar revisión, respuestas y hora de salida
+        loop Cada respuesta No
+          F -> F: Exigir observación de al menos 10 caracteres\ny foto válida JPEG, PNG o WebP de hasta 5 MB
+        end
+        F --> V: Datos válidos o errores
+        alt Revisión desactualizada o datos incompletos
+          note right of V
+            No se crea Checkout ni se guardan fotos.
+            Las preguntas nuevas conservan estas reglas.
+          end note
+        else Formulario válido
+          V -> S: guardar_reporte(ticket, listado, datos, usuario)
+          S -> DB: Crear Checkout único con respuestas, hora, autor,\nfecha, revisión y copia del listado
+          loop Cada respuesta No validada
+            S -> FS: Guardar imagen de integridad
+            FS --> S: Ruta del archivo
+            S -> DB: Crear FotoIntegridad asociada al reporte y pregunta
+          end
+          S --> V: Reporte registrado
+        end
+      end
+    end
+  end
+  alt Ticket dejó de estar disponible
+    V --> P: 404 · No se registra
+  else Errores de validación
+    V --> P: 200 · Mostrar errores y solicitar volver a seleccionar fotos
+  else Registrado o ya existente
+    V --> P: 302 · Volver a bloques con check-out completado
+  end
+end
+
+== Consultar el historial ==
+P -> V: GET /apoyo/checkout/{codigo}/ de un reporte completado
+V -> B: buscar(codigo)
+B -> DB: Consultar ticket y estado completado
+B --> V: Bloque completado
+V -> DB: Consultar Checkout, respuestas y FotoIntegridad
+DB --> V: Copia original del listado y evidencias
+V --> P: 200 · Reporte de solo lectura con sus preguntas originales
+note over V,DB
+  Publicar otro listado no altera los reportes anteriores.
+  El estado completado es compartido por todo el personal de apoyo.
+  Las fotos se descargan mediante una vista con control de acceso.
+end note
+@enduml

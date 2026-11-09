@@ -9,12 +9,17 @@ from personas import views
 from personas.models import Rol
 from solicitudes import views as solicitudes
 from uso import views as uso
+from uso.checkout import views as checkout
 
 urlpatterns = [
     path("", views.panel, name="panel"),
     path("solicitar/", include("solicitudes.urls")),
     path("validador/", solicitudes.panel_validador, name="panel_validador"),
     path("validador/resolver/", solicitudes.resolver_solicitud, name="resolver_solicitud"),
+    # US-11: el validador y el administrador comparten historial, así que no
+    # cuelga de /validador/ ni de /configuracion/.
+    path("validacion/historial/", solicitudes.historial_validacion, name="historial_validacion"),
+    path("validacion/historial/<int:solicitud_id>/", solicitudes.resolucion, name="historial_resolucion"),
     # La puerta del solicitante vivió acá; se redirige para no romper enlaces.
     path("login/", RedirectView.as_view(pattern_name="login_solicitante", permanent=True)),
     path("logout/", auth.LogoutView.as_view(next_page="login_solicitante"), name="logout"),
@@ -69,12 +74,19 @@ urlpatterns = [
         name="login_apoyo",
     ),
     path("apoyo/", uso.bloques, name="panel_apoyo"),
-    path("apoyo/checkout/<str:codigo>/", uso.checkout, name="checkout_apoyo"),
+    path("apoyo/checkout/<str:codigo>/", checkout.checkout, name="checkout_apoyo"),
+    path("apoyo/evidencia/<int:pk>/", checkout.foto_integridad, name="foto_integridad"),
+    path("configuracion/checkout/", checkout.editor_checkout, name="panel_checkout"),
     path("configuracion/", RedirectView.as_view(pattern_name="panel_bloques")),
     path("configuracion/bloques/", agenda.bloques, name="panel_bloques"),
     path("configuracion/bloques/editar/", agenda.editar_bloque, name="editar_bloque"),
     path("configuracion/bloqueos/", agenda.editar_bloqueo, name="editar_bloqueo"),
-    path("configuracion/areas/", configuracion.seccion, {"pestana": "areas"}, name="panel_areas"),
+    path("configuracion/areas/", views.areas, name="panel_areas"),
+    path("configuracion/usuarios/", views.usuarios, name="panel_usuarios"),
+    path("configuracion/usuarios/nueva/", views.usuario, name="panel_usuario_nuevo"),
+    path("configuracion/usuarios/cargar/", views.cargar_usuarios, name="panel_usuarios_cargar"),
+    path("configuracion/usuarios/plantilla.csv", views.plantilla_usuarios, name="panel_usuarios_plantilla"),
+    path("configuracion/usuarios/<int:pk>/", views.usuario, name="panel_usuario"),
     path("configuracion/reglas/", configuracion.reglas, name="panel_reglas"),
     path("configuracion/validacion/", solicitudes.panel_validacion_admin, name="panel_validacion"),
     path("configuracion/sanciones/", views.sanciones, name="panel_sanciones"),

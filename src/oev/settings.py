@@ -89,6 +89,7 @@ LANGUAGE_CODE = "es-cl"
 TIME_ZONE = "America/Santiago"
 USE_TZ = True
 STATIC_URL = "static/"
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", str(BASE_DIR / "media")))
 # Estáticos compartidos por todos los módulos; los propios van en <modulo>/static/.
 STATICFILES_DIRS = [BASE_DIR / "static"]
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -99,9 +100,19 @@ LOGIN_REDIRECT_URL = "/"
 
 # US-01 AC6. Todavía no hay relay institucional, así que por defecto el correo
 # se imprime en consola y no se pierde en silencio. En el servidor se cambia por
-# variable de entorno.
+# variable de entorno; puerto y TLS por defecto son los de cualquier proveedor
+# actual (587 con STARTTLS).
 EMAIL_BACKEND = os.environ.get(
     "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
 )
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "1") == "1"
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-responder@uach.cl")
+
+# US-03: el recordatorio lo manda la tarea, sin una petición de donde sacar el
+# dominio para sus enlaces. En el servidor, https://oev.inf.uach.cl.
+URL_BASE = os.environ.get("URL_BASE", "http://localhost:8000").rstrip("/")
 

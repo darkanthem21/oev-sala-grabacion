@@ -1,0 +1,46 @@
+@startuml desactivar-area
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Desactivar o reactivar un área (US-05)
+
+actor "Administrador" as A
+participant "<b>personas.views</b>\n<size:11>personas/views.py</size>" as N <<presentación>>
+participant "<b>personas.services</b>\n<size:11>personas/services.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : $comentario("«Desactivar» o «Reactivar» en la fila del área")\nPOST /configuracion/areas/ (accion=desactivar | reactivar, area) → areas(request)
+N -> D ++ : $comentario("get_object_or_404(Area, pk=request.POST['area'])")\nSELECT personas_area
+return fila
+break inexistente
+  N --> A : 404
+end
+N -> V ++ : cambiar_estado(area, activa=(accion == "reactivar"), request.user)
+group @transaction.atomic
+  V -> D ++ : $comentario("SET activa = valor WHERE id y activa = el contrario")\nUPDATE personas_area
+  return filas
+  alt cambió
+    V -> D ++ : $comentario("campo activa: Sí → No, o No → Sí")\nINSERT personas_cambioarea
+    deactivate D
+    V --> N : True
+  else ya estaba así
+    V --> N -- : False
+  end
+end
+note right of V
+  UPDATE condicionado: dos clics seguidos o dos
+  administradores a la vez dejan un solo registro.
+  Nada se borra (AC3).
+end note
+alt True
+  N -> N : messages.success(request, "Desactivaste «…». Ya no se ofrece al pedir; …")
+else False
+  N -> N : messages.info(request, "«…» ya estaba inactiva.")
+end
+N --> A : 302 · /configuracion/areas/
+deactivate N
+note over A, D
+  Al pedir, el solicitante solo ve sus áreas activas: request.user.areas.filter(activa=True).
+  Las solicitudes que ya usan el área la siguen mostrando, y el validador las resuelve como siempre.
+end note
+@enduml

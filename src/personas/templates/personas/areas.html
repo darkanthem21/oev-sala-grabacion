@@ -1,0 +1,114 @@
+{% extends "panel.html" %}
+{% load static %}
+{% comment %}
+  US-05. Las áreas no se borran: se desactivan y dejan de ofrecerse al pedir.
+  Cada una se edita en su propio diálogo. La nota es lo que ve el validador
+  junto a cada solicitud del área. Las personas se asignan desde la pestaña
+  Usuarios (US-08).
+{% endcomment %}
+{% block estilos_seccion %}<link rel="stylesheet" href="{% static 'personas/areas.css' %}">{% endblock %}
+
+{% block seccion %}
+<section class="marco areas">
+  <h2>Áreas académicas</h2>
+  <p class="detalle">
+    Cada solicitud queda ligada a un área. La nota la ve quien pide con esa área,
+    antes de elegir bloques, y el validador junto a cada solicitud. Un área
+    desactivada deja de ofrecerse al pedir; las solicitudes que ya la usan no
+    cambian.
+  </p>
+
+  {% if areas %}
+    <table>
+      <thead>
+        <tr><th>Área</th><th>Nota</th><th>Personas</th><th>Estado</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        {% for area in areas %}
+          <tr{% if not area.activa %} class="inactiva"{% endif %}>
+            <td class="nombre">{{ area.nombre }}</td>
+            <td class="nota">{{ area.nota|default:"—"|linebreaksbr }}</td>
+            <td class="cifra">{{ area.cuantos }}</td>
+            <td>{% if area.activa %}Activa{% else %}Inactiva{% endif %}</td>
+            <td>
+              <form method="post" class="grupo">
+                {% csrf_token %}
+                <input type="hidden" name="area" value="{{ area.pk }}">
+                <button class="btn" type="button" data-abre="editar-area-{{ area.pk }}">Editar</button>
+                {% if area.activa %}
+                  <button class="btn" type="submit" name="accion" value="desactivar">Desactivar</button>
+                {% else %}
+                  <button class="btn" type="submit" name="accion" value="reactivar">Reactivar</button>
+                {% endif %}
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="vacio">Todavía no hay áreas. Sin un área activa, nadie puede solicitar la sala.</p>
+  {% endif %}
+</section>
+
+<div class="barra">
+  <button class="btn" type="button" data-abre="ultimos-cambios">Últimos cambios{% if historial %} ({{ historial|length }}){% endif %}</button>
+  <button class="btn principal" type="button" data-abre="nueva-area">Nueva área</button>
+</div>
+
+<dialog id="nueva-area" class="dialogo" aria-labelledby="nueva-area-titulo">
+  <h2 id="nueva-area-titulo" class="dialogo-titulo">Nueva área</h2>
+  <form method="post" class="campos-area">
+    {% csrf_token %}
+    <input type="hidden" name="accion" value="crear">
+    <label>Nombre<input type="text" name="nombre" maxlength="120" required></label>
+    <label>Nota del área (la ven quien pide y el validador)<textarea name="nota" rows="3"
+      placeholder="Por ejemplo: no graba en horario laboral."></textarea></label>
+    <div class="dialogo-acciones">
+      <button class="btn" type="submit" formmethod="dialog" formnovalidate>Cancelar</button>
+      <button class="btn activa" type="submit">Crear el área</button>
+    </div>
+  </form>
+</dialog>
+
+{% for area in areas %}
+  <dialog id="editar-area-{{ area.pk }}" class="dialogo" aria-labelledby="editar-area-{{ area.pk }}-titulo">
+    <h2 id="editar-area-{{ area.pk }}-titulo" class="dialogo-titulo">Editar «{{ area.nombre }}»</h2>
+    <form method="post" class="campos-area">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="editar">
+      <input type="hidden" name="area" value="{{ area.pk }}">
+      <label>Nombre<input type="text" name="nombre" maxlength="120" required value="{{ area.nombre }}"></label>
+      <label>Nota del área (la ven quien pide y el validador)<textarea name="nota" rows="3">{{ area.nota }}</textarea></label>
+      <div class="dialogo-acciones">
+        <button class="btn" type="submit" formmethod="dialog" formnovalidate>Cancelar</button>
+        <button class="btn activa" type="submit">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+{% endfor %}
+
+<dialog id="ultimos-cambios" class="dialogo ancho" aria-labelledby="ultimos-cambios-titulo">
+  <h2 id="ultimos-cambios-titulo" class="dialogo-titulo">Últimos cambios</h2>
+  {% if historial %}
+    <div class="historial">
+    <table>
+      <thead><tr><th>Cuándo</th><th>Área</th><th>Cambio</th><th>Quién</th></tr></thead>
+      <tbody>
+        {% for cambio in historial %}
+          <tr>
+            <td class="cifra">{{ cambio.cuando|date:"d/m/Y H:i" }}</td>
+            <td>{{ cambio.area.nombre }}</td>
+            <td class="cambio">{{ cambio.etiqueta|capfirst }}: {{ cambio.antes|default:"—"|truncatechars:40 }} → {{ cambio.despues|default:"—"|truncatechars:40 }}</td>
+            <td>{{ cambio.quien.email|default:"—" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% else %}
+    <p class="vacio">Nadie ha cambiado un área todavía.</p>
+  {% endif %}
+  <form method="dialog" class="dialogo-acciones"><button class="btn">Cerrar</button></form>
+</dialog>
+{% endblock %}
