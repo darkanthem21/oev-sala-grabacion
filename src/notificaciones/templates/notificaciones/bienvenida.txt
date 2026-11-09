@@ -1,0 +1,14 @@
+{% autoescape off %}Hola, {{ nombre }}:
+
+La Oficina de Educación Virtual te creó una cuenta en el sistema de la sala de grabación. Para empezar, crea tu contraseña aquí:
+
+{{ enlace }}
+
+El enlace vale {{ dias }} días. Si vence, pide otro en "¿Olvidaste tu contraseña?" de la pantalla de ingreso.
+
+Después entras con tu correo ({{ correo }}) por:
+{% for rol, url in puertas %}  - {{ rol|capfirst }}: {{ url }}
+{% endfor %}
+Oficina de Educación Virtual
+Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile
+{% endautoescape %}
