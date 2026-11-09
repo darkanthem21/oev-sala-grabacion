@@ -1,0 +1,137 @@
+{% extends "panel.html" %}
+{% load static %}
+{% comment %}
+  US-08. Las cuentas no se borran: se desactivan y conservan su historial. Crear
+  y editar van en su propia página (usuario.html).
+{% endcomment %}
+{% block estilos_seccion %}
+  <link rel="stylesheet" href="{% static 'personas/areas.css' %}">
+  <link rel="stylesheet" href="{% static 'personas/usuarios.css' %}">
+{% endblock %}
+
+{% block seccion %}
+<section class="marco usuarios">
+  <h2>Usuarios</h2>
+  <p class="detalle">
+    Cada cuenta entra solo por las puertas de sus roles. Una cuenta desactivada
+    ya no puede entrar, pero sus solicitudes y sanciones se conservan.
+  </p>
+
+  <form method="get" class="filtros" role="search">
+    <label class="buscar">Buscar
+      <input type="search" name="q" value="{{ filtros.q }}" placeholder="Nombre, apellido o correo">
+    </label>
+    <label>Rol
+      <select name="rol">
+        <option value="">Todos</option>
+        {% for valor, etiqueta in roles %}
+          <option value="{{ valor }}"{% if filtros.rol == valor %} selected{% endif %}>{{ etiqueta|capfirst }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Área
+      <select name="area">
+        <option value="">Todas</option>
+        {% for area in areas %}
+          <option value="{{ area.pk }}"{% if filtros.area == area.pk|stringformat:"d" %} selected{% endif %}>
+            {{ area.nombre }}{% if not area.activa %} (inactiva){% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Estado
+      <select name="estado">
+        <option value="">Todos</option>
+        <option value="activas"{% if filtros.estado == "activas" %} selected{% endif %}>Activas</option>
+        <option value="desactivadas"{% if filtros.estado == "desactivadas" %} selected{% endif %}>Desactivadas</option>
+      </select>
+    </label>
+    <div class="grupo">
+      <button class="btn lleno" type="submit">Filtrar</button>
+      {% if filtrando %}<a class="btn" href="{% url 'panel_usuarios' %}">Quitar filtros</a>{% endif %}
+    </div>
+  </form>
+
+  {% if pagina.object_list %}
+    <table>
+      <thead>
+        <tr><th>Persona</th><th>Roles</th><th>Áreas</th><th>Estado</th><th><span class="sr-only">Acciones</span></th></tr>
+      </thead>
+      <tbody>
+        {% for cuenta in pagina %}
+          <tr{% if not cuenta.is_active %} class="inactiva"{% endif %}>
+            <td class="persona">
+              <span class="nombre">{{ cuenta.get_full_name|default:"Sin nombre" }}</span>
+              <span class="correo">{{ cuenta.email }}</span>
+            </td>
+            <td>
+              <ul class="roles">
+                {% for puerta, etiqueta in cuenta.lista_roles %}
+                  <li data-rol="{{ puerta }}">
+                    <svg class="icono-rol" aria-hidden="true" focusable="false"><use href="{% static 'img/roles/'|add:puerta|add:'.svg' %}#icono"></use></svg>
+                    {{ etiqueta|capfirst }}
+                  </li>
+                {% empty %}
+                  <li class="sin-rol">Sin rol</li>
+                {% endfor %}
+              </ul>
+            </td>
+            <td class="de-areas">{% for area in cuenta.areas.all %}{{ area.nombre }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
+            <td>{% if cuenta.is_active %}Activa{% else %}Desactivada{% endif %}</td>
+            <td class="acciones"><a class="btn" href="{% url 'panel_usuario' cuenta.pk %}">Editar</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if pagina.has_other_pages %}
+      <nav class="paginas" aria-label="Páginas de cuentas">
+        {% if pagina.has_previous %}
+          <a class="btn" rel="prev" href="{{ url_pagina }}{{ pagina.previous_page_number }}">&larr; Anterior</a>
+        {% else %}
+          <span class="btn deshabilitado" aria-disabled="true">&larr; Anterior</span>
+        {% endif %}
+        <span class="suave">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }} · {{ pagina.paginator.count }} cuentas</span>
+        {% if pagina.has_next %}
+          <a class="btn" rel="next" href="{{ url_pagina }}{{ pagina.next_page_number }}">Siguiente &rarr;</a>
+        {% else %}
+          <span class="btn deshabilitado" aria-disabled="true">Siguiente &rarr;</span>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% elif filtrando %}
+    <p class="vacio">Ninguna cuenta coincide con la búsqueda.</p>
+  {% else %}
+    <p class="vacio">Todavía no hay cuentas.</p>
+  {% endif %}
+</section>
+
+<div class="barra">
+  <button class="btn" type="button" data-abre="ultimos-cambios">Últimos cambios{% if historial %} ({{ historial|length }}){% endif %}</button>
+  <a class="btn" href="{% url 'panel_usuarios_cargar' %}">Cargar planilla</a>
+  <a class="btn principal" href="{% url 'panel_usuario_nuevo' %}">Nueva cuenta</a>
+</div>
+
+<dialog id="ultimos-cambios" class="dialogo ancho" aria-labelledby="ultimos-cambios-titulo">
+  <h2 id="ultimos-cambios-titulo" class="dialogo-titulo">Últimos cambios</h2>
+  {% if historial %}
+    <div class="historial">
+    <table>
+      <thead><tr><th>Cuándo</th><th>Cuenta</th><th>Cambio</th><th>Quién</th></tr></thead>
+      <tbody>
+        {% for cambio in historial %}
+          <tr>
+            <td class="cifra">{{ cambio.cuando|date:"d/m/Y H:i" }}</td>
+            <td>{{ cambio.usuario.email }}</td>
+            <td class="cambio">{{ cambio.etiqueta|capfirst }}: {{ cambio.antes|default:"—"|truncatechars:40 }} → {{ cambio.despues|default:"—"|truncatechars:40 }}</td>
+            <td>{{ cambio.quien.email|default:"—" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% else %}
+    <p class="vacio">Nadie ha cambiado una cuenta todavía.</p>
+  {% endif %}
+  <form method="dialog" class="dialogo-acciones"><button class="btn">Cerrar</button></form>
+</dialog>
+{% endblock %}

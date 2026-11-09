@@ -269,7 +269,7 @@ deja de regir sola al día siguiente de su término.
 | Ruta | Quién entra |
 |---|---|
 | `/solicitar/mis-sanciones/` | Pestaña **Mis sanciones** del solicitante. Cuentas del grupo **Solicitante** |
-| `/configuracion/sanciones/` | Pestaña **Sanciones** del administrador, para levantarlas. Cuentas con `is_staff` |
+| `/configuracion/sanciones/` | Pestaña **Sanciones** del administrador, para levantarlas. Rol **Administrador** (antes de US-08, `is_staff`) |
 | `/admin/personas/sancion/` | Crear y acortar sanciones. Solo el superusuario |
 
 ### Verificar después de desplegar
@@ -353,13 +353,45 @@ bajar la imagen. No hay variables nuevas en el `.env`.
 
 | Ruta | Quién entra |
 |---|---|
-| `/configuracion/areas/` | Pestaña **Áreas** del administrador. Cuentas con `is_staff` |
+| `/configuracion/areas/` | Pestaña **Áreas** del administrador. Rol **Administrador** (antes de US-08, `is_staff`) |
 
 ### Después de desplegar
 
 Las áreas no vienen cargadas. En la pestaña **Áreas**, crear **Educación
 Continua Online** y **Decanatura** (minuta del 27/10) y desactivar las que ya no
 correspondan. Un solicitante sin un área activa no puede pedir la sala.
+
+## Usuarios (US-08)
+
+### Antes de desplegar
+
+Esta versión trae la migración `personas.0005_cuentas_y_su_registro`, que crea el
+registro de cambios de cuentas. Hacer el respaldo de la base antes de bajar la
+imagen. No hay variables nuevas en el `.env`, pero las cuentas nuevas reciben su
+contraseña por correo: sin SMTP configurado, el enlace queda solo en
+`docker logs grupo6_frontend`.
+
+Desde esta versión el panel del administrador lo abre el rol **Administrador**,
+no solo `is_staff`. El superusuario que crea el arranque
+(`DJANGO_SUPERUSER_EMAIL`) es la cuenta de soporte de la Oficina: es la única
+que da y quita el rol **Administrador**.
+
+### Rutas nuevas
+
+| Ruta | Quién entra |
+|---|---|
+| `/configuracion/usuarios/` | Pestaña **Usuarios**: lista, búsqueda y filtros. Rol **Administrador** |
+| `/configuracion/usuarios/nueva/`, `/configuracion/usuarios/<id>/` | Crear y editar una cuenta. Rol **Administrador** |
+| `/configuracion/usuarios/cargar/` | Carga en lote desde un CSV. Rol **Administrador** |
+| `/configuracion/usuarios/plantilla.csv` | Plantilla de la carga. Rol **Administrador** |
+
+### Verificar después de desplegar
+
+- Entrar con el superusuario por `/configuracion/entrar/` y abrir **Usuarios**.
+- Crear una cuenta de prueba con el rol **Validador** y ver que le llega el
+  correo (o que el enlace aparece en el log) y que entra por
+  `/validacion/entrar/` después de crear su contraseña.
+- Desactivarla y ver que ya no entra.
 
 ## Diagramas de la documentación
 

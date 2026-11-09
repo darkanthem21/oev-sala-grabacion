@@ -1,0 +1,125 @@
+{% extends "panel.html" %}
+{% load static %}
+{% comment %}
+  US-08 AC2 a AC4. Crear y editar comparten la página. Desactivar, reactivar y
+  reenviar el correo van en un formulario aparte porque no tocan los datos.
+{% endcomment %}
+{% block estilos_seccion %}<link rel="stylesheet" href="{% static 'personas/usuarios.css' %}">{% endblock %}
+
+{% block seccion %}
+<p class="volver"><a href="{% url 'panel_usuarios' %}">&larr; Usuarios</a></p>
+
+<form method="post" class="marco cuenta" novalidate x-data="{ solicitante: {{ solicitante|yesno:'true,false' }} }">
+  {% csrf_token %}
+  <input type="hidden" name="accion" value="guardar">
+  <h2>{% if cuenta.pk %}Cuenta de {{ nombre }}{% else %}Nueva cuenta{% endif %}</h2>
+  {% if not cuenta.pk %}
+    <p class="detalle">Al crearla le llega un correo para crear su contraseña. Nadie más la conoce.</p>
+  {% endif %}
+  {% if bloqueada %}
+    <p class="detalle">Es una cuenta de administrador: solo el superusuario la cambia.</p>
+  {% endif %}
+  {% for error in form.non_field_errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}
+
+  <fieldset class="todo"{% if bloqueada %} disabled{% endif %}>
+  <div class="datos">
+    {% for campo in form %}{% if campo.name != "roles" and campo.name != "areas" %}
+      <label class="campo{% if campo.errors %} con-error{% endif %}">{{ campo.label }}
+        {{ campo }}
+        {% for error in campo.errors %}<span class="error">{{ error }}</span>{% endfor %}
+      </label>
+    {% endif %}{% endfor %}
+  </div>
+
+  <fieldset class="opciones{% if form.roles.errors %} con-error{% endif %}">
+    <legend>Roles</legend>
+    <p class="detalle">Cada rol abre su puerta de ingreso. Se puede tener más de uno.</p>
+    {% if form.admin_fijo %}
+      <p class="fijo" data-rol="gestion">
+        <svg class="icono-rol" aria-hidden="true" focusable="false"><use href="{% static 'img/roles/gestion.svg' %}#icono"></use></svg>
+        Administrador (solo el superusuario lo da o lo quita)
+      </p>
+    {% endif %}
+    {% for valor, etiqueta, puerta in roles %}
+      <label data-rol="{{ puerta }}">
+        <input type="checkbox" name="roles" value="{{ valor }}"{% if valor in form.roles.value %} checked{% endif %}
+               {% if puerta == "solicitante" %}x-model="solicitante"{% endif %}>
+        <svg class="icono-rol" aria-hidden="true" focusable="false"><use href="{% static 'img/roles/'|add:puerta|add:'.svg' %}#icono"></use></svg>
+        {{ etiqueta|capfirst }}
+      </label>
+    {% endfor %}
+    {% for error in form.roles.errors %}<p class="error">{{ error }}</p>{% endfor %}
+  </fieldset>
+
+  <fieldset class="opciones{% if form.areas.errors %} con-error{% endif %}" x-show="solicitante"
+            {% if not solicitante %}style="display: none"{% endif %}>
+    <legend>Áreas</legend>
+    <p class="detalle">Las que puede elegir al pedir la sala. Solo los solicitantes tienen área.</p>
+    {% for opcion in form.areas %}
+      <label>{{ opcion.tag }} {{ opcion.choice_label }}</label>
+    {% empty %}
+      <p class="vacio">No hay áreas activas: créalas en la pestaña Áreas.</p>
+    {% endfor %}
+    {% for error in form.areas.errors %}<p class="error">{{ error }}</p>{% endfor %}
+  </fieldset>
+
+  </fieldset>
+
+  {% if not bloqueada %}
+    <div class="acciones-form">
+      <a class="btn" href="{% url 'panel_usuarios' %}">Cancelar</a>
+      <button class="btn principal" type="submit">{% if cuenta.pk %}Guardar{% else %}Crear la cuenta{% endif %}</button>
+    </div>
+  {% endif %}
+</form>
+
+{% if cuenta.pk and not bloqueada %}
+<section class="marco acceso">
+  <h2>Acceso</h2>
+  <p class="detalle">
+    {% if not cuenta.is_active %}
+      Desactivada: no entra por ninguna puerta. Sus solicitudes y sanciones se conservan.
+    {% elif cuenta.last_login %}
+      Activa. Entró por última vez el {{ cuenta.last_login|date:"j \d\e F \a \l\a\s H:i" }}.
+    {% else %}
+      Todavía no entra: no ha creado su contraseña o no la ha usado.
+    {% endif %}
+    {% if cuenta.pk == user.pk %}No puedes desactivar tu propia cuenta.{% endif %}
+  </p>
+  <form method="post" class="grupo">
+    {% csrf_token %}
+    {% if not cuenta.is_active %}
+      <button class="btn" type="submit" name="accion" value="reactivar">Reactivar cuenta</button>
+    {% else %}
+      {% if not cuenta.last_login %}
+        <button class="btn" type="submit" name="accion" value="reenviar">Reenviar el correo de la contraseña</button>
+      {% endif %}
+      {% if cuenta.pk != user.pk %}
+        {% if en_curso.pendientes or en_curso.reservas %}
+          <button class="btn peligro" type="button" data-abre="desactivar-cuenta">Desactivar cuenta</button>
+        {% else %}
+          <button class="btn peligro" type="submit" name="accion" value="desactivar">Desactivar cuenta</button>
+        {% endif %}
+      {% endif %}
+    {% endif %}
+  </form>
+</section>
+
+{% if en_curso.pendientes or en_curso.reservas %}
+{# AC5: lo que tiene abierto, antes de desactivar, para que el administrador decida. #}
+<dialog id="desactivar-cuenta" class="dialogo" aria-labelledby="desactivar-cuenta-titulo">
+  <h2 id="desactivar-cuenta-titulo" class="dialogo-titulo">¿Desactivar la cuenta de {{ nombre }}?</h2>
+  <p>
+    De hoy en adelante tiene
+    {% with n=en_curso.pendientes %}{% if n %}{{ n }} solicitud{{ n|pluralize:"es" }} pendiente{{ n|pluralize }}{% endif %}{% endwith %}{% if en_curso.pendientes and en_curso.reservas %} y {% endif %}{% with n=en_curso.reservas %}{% if n %}{{ n }} reserva{{ n|pluralize }} aceptada{{ n|pluralize }}{% endif %}{% endwith %}.
+    Desactivarla no las cancela: siguen en la agenda del validador y del personal de apoyo.
+  </p>
+  <form method="post" class="dialogo-acciones">
+    {% csrf_token %}
+    <button class="btn" type="submit" formmethod="dialog" formnovalidate>Volver</button>
+    <button class="btn peligro" type="submit" name="accion" value="desactivar">Desactivar igual</button>
+  </form>
+</dialog>
+{% endif %}
+{% endif %}
+{% endblock %}

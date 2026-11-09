@@ -6,11 +6,15 @@
 {% block contenido %}
 {% comment %}
   Las cuatro puertas comparten esta plantilla y se reconocen por el panel de la
-  izquierda: el color del rol (ingreso.css, por data-puerta) y su nombre.
+  izquierda: el color y el ícono del rol (base.css, por data-rol) y su nombre.
+  Son los mismos del encabezado una vez adentro (US-08 AC7).
 {% endcomment %}
-<div class="ingreso" data-puerta="{{ puerta }}">
+<div class="ingreso" data-rol="{{ puerta }}">
   <aside class="panel-rol">
-    <p class="rol">{{ nombre }}</p>
+    <div>
+      <svg class="icono-rol" aria-hidden="true" focusable="false"><use href="{% static 'img/roles/'|add:puerta|add:'.svg' %}#icono"></use></svg>
+      <p class="rol">{{ nombre }}</p>
+    </div>
     <p class="sala">Sala de grabación · Oficina de Educación Virtual</p>
   </aside>
   <main class="lado-form">

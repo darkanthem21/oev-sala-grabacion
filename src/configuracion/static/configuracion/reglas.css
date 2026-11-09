@@ -1,68 +1,67 @@
 /* Pestaña Reglas. Solo variables de marca.css, ningún color literal (docs/estilo.md). */
 
-/* En pantalla ancha las tarjetas caben de a dos y la pestaña entra entera. */
-.reglas { display: grid; grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr)); gap: 1rem; }
-.reglas .marco { padding: .9rem 1.1rem 1.1rem; }
+/* En pantalla ancha los grupos caben de a dos y la pestaña entra entera. Sin
+ * marco alrededor: los separa el filete de arriba, como las secciones de la hoja. */
+.reglas { display: grid; grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr)); gap: var(--esp-5) var(--esp-6); }
+.reglas .marco { padding: var(--esp-4) 0 var(--esp-2); border-width: 2px 0 0; border-color: var(--borde); border-radius: 0; overflow: visible; }
 .reglas .ancha { grid-column: 1 / -1; }
-.reglas h2 { margin: 0 0 .2rem; font-size: .85rem; }
+.reglas h2 { margin: 0 0 var(--esp-1); font-size: var(--txt-base); }
 
 /* El control ocupa las dos líneas de la izquierda para quedar alineado con los
  * demás, así se revisan todos los valores sin leer cada descripción. */
 .regla {
-  display: grid; grid-template-columns: 1fr auto; gap: .1rem .9rem;
-  padding: .7rem 0; border-top: 1px solid var(--borde);
+  display: grid; grid-template-columns: 1fr auto; gap: .1rem var(--esp-4);
+  padding: var(--esp-3) 0; border-top: 1px solid var(--borde);
 }
 .regla:first-of-type { border-top: 0; }
-.regla .que { font-size: .9rem; font-weight: 500; }
+.regla .que { font-size: var(--txt-sm); font-weight: 500; }
 /* Flex porque una fila puede llevar dos controles, y pegados se leen como uno
  * solo roto. */
 .regla .control {
   grid-column: 2; grid-row: 1 / span 2; align-self: center;
-  display: flex; align-items: center; justify-content: flex-end; gap: .4rem;
+  display: flex; align-items: center; justify-content: flex-end; gap: var(--esp-2);
 }
 .regla .detalle {
   grid-column: 1; margin: 0;
-  font-size: .8rem; line-height: 1.45; color: var(--tinta-suave); max-width: 46ch;
+  font-size: var(--txt-sm); line-height: 1.45; color: var(--tinta-suave); max-width: 46ch;
 }
-.regla .error { grid-column: 1 / -1; margin: .3rem 0 0; color: var(--alerta); font-size: .8rem; }
+.regla .error { grid-column: 1 / -1; margin: var(--esp-1) 0 0; color: var(--alerta); font-size: var(--txt-sm); }
 
 .regla input, .regla select {
-  border: 1px solid var(--borde); background: var(--superficie); color: var(--tinta);
-  font-family: var(--fuente-texto); font-size: .9rem; font-weight: 500;
-  padding: .2rem .35rem;
+  font-family: var(--fuente-texto); font-size: var(--txt-sm); font-weight: 500;
+  padding: var(--esp-1) var(--esp-1);
 }
 /* Ancho fijo por dígito, o el ojo no alinea las cifras. */
 .regla input { font-variant-numeric: tabular-nums; text-align: center; }
 .regla input[type="number"] { width: 3.6rem; }
 .regla input[type="time"] { width: 6.4rem; }
-.regla .unidad { font-size: .8rem; color: var(--tinta-suave); white-space: nowrap; }
+.regla .unidad { font-size: var(--txt-sm); color: var(--tinta-suave); white-space: nowrap; }
 .regla.con-error input, .regla.con-error select { border-color: var(--alerta); }
 
 .ancha textarea {
-  width: 100%; box-sizing: border-box; margin-top: .5rem;
-  border: 1px solid var(--borde); background: var(--superficie); color: var(--tinta);
-  font-family: var(--fuente-texto); font-size: .85rem; line-height: 1.6; padding: .5rem .6rem;
+  width: 100%; box-sizing: border-box; margin-top: var(--esp-2);
+  font-family: var(--fuente-texto); font-size: var(--txt-sm); line-height: 1.6; padding: var(--esp-2) var(--esp-2);
 }
 .ancha .regla { padding-bottom: 0; }
-.ancha .error { margin-top: .4rem; color: var(--alerta); font-size: .8rem; }
+.ancha .error { margin-top: var(--esp-2); color: var(--alerta); font-size: var(--txt-sm); }
 
 /* A la vista mientras se recorre la pestaña, para no salir a buscar guardar. */
 .barra {
   position: sticky; bottom: 0; z-index: 2;
-  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-  margin-top: 1rem; padding: .7rem 0;
+  display: flex; align-items: center; gap: var(--esp-4); flex-wrap: wrap;
+  margin-top: var(--esp-4); padding: var(--esp-3) 0;
   background: var(--fondo); border-top: 1px solid var(--borde);
 }
-.barra .btn.activa { margin-left: auto; }
+.barra .btn.principal { margin-left: auto; }
 
 /* Últimos cambios, en un diálogo desde la barra. */
-.historial { max-height: 60vh; overflow: auto; margin-bottom: 1rem; }
-.historial table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.historial { max-height: 60vh; overflow: auto; margin-bottom: var(--esp-4); }
+.historial table { width: 100%; border-collapse: collapse; font-size: var(--txt-sm); }
 .historial th {
-  text-align: left; font-weight: 500; font-size: .8rem; color: var(--tinta-suave);
-  padding: .3rem .6rem .3rem 0; border-bottom: 1px solid var(--borde);
+  text-align: left; font-weight: 500; font-size: var(--txt-sm); color: var(--tinta-suave);
+  padding: var(--esp-1) var(--esp-2) var(--esp-1) 0; border-bottom: 1px solid var(--borde);
 }
-.historial td { padding: .35rem .6rem .35rem 0; border-bottom: 1px solid var(--borde); }
+.historial td { padding: var(--esp-1) var(--esp-2) var(--esp-1) 0; border-bottom: 1px solid var(--borde); }
 .historial tr:last-child td { border-bottom: 0; }
 .historial .cifra, .historial .cambio { font-variant-numeric: tabular-nums; }
 .historial .cambio { color: var(--tinta-suave); }

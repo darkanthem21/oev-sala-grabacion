@@ -1,0 +1,10 @@
+{% load static %}{% comment %}
+  US-08 AC7: el rol de la sesión con el mismo ícono y color de su puerta.
+  `rol` es el de la puerta (solicitante, validacion, gestion, apoyo) y `nombre`
+  lo que se lee.
+{% endcomment %}
+<p class="rol-sesion" data-rol="{{ rol }}">
+  <svg class="icono-rol" aria-hidden="true" focusable="false"><use href="{% static 'img/roles/'|add:rol|add:'.svg' %}#icono"></use></svg>
+  <span>{{ nombre }}</span>
+  <span class="quien">· {{ user.get_full_name|default:user.email }}</span>
+</p>

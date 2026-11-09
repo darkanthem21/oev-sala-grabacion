@@ -3,8 +3,8 @@
 {% comment %}
   US-05. Las áreas no se borran: se desactivan y dejan de ofrecerse al pedir.
   Cada una se edita en su propio diálogo. La nota es lo que ve el validador
-  junto a cada solicitud del área. Las personas se asignan desde /admin/ hasta
-  que exista la pestaña Usuarios (US-08).
+  junto a cada solicitud del área. Las personas se asignan desde la pestaña
+  Usuarios (US-08).
 {% endcomment %}
 {% block estilos_seccion %}<link rel="stylesheet" href="{% static 'personas/areas.css' %}">{% endblock %}
 
@@ -53,7 +53,7 @@
 
 <div class="barra">
   <button class="btn" type="button" data-abre="ultimos-cambios">Últimos cambios{% if historial %} ({{ historial|length }}){% endif %}</button>
-  <button class="btn activa" type="button" data-abre="nueva-area">Nueva área</button>
+  <button class="btn principal" type="button" data-abre="nueva-area">Nueva área</button>
 </div>
 
 <dialog id="nueva-area" class="dialogo" aria-labelledby="nueva-area-titulo">

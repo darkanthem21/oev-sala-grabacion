@@ -1,80 +1,75 @@
-/* Solo variables de marca.css, ningún color literal (docs/estilo.md). */
-
-/* Cada puerta se reconoce por el color de su rol. Son los únicos cuatro colores
- * del manual que admiten texto blanco con 4.5:1 o más, así que la línea chica
- * de la sala también se lee. */
-[data-puerta="solicitante"] { --rol: var(--accion); }       /* 6.3:1 */
-[data-puerta="validacion"]  { --rol: var(--destacado); }    /* 5.8:1 */
-[data-puerta="gestion"]     { --rol: var(--tinta); }        /* 10.3:1 */
-[data-puerta="apoyo"]       { --rol: var(--tinta-suave); }  /* 5.4:1 */
+/* Puertas de ingreso y recuperación de clave. Solo variables de marca.css.
+ * El color de cada puerta es el de su rol (base.css, por data-rol). */
 
 .ingreso {
   min-height: 100vh; display: grid; grid-template-columns: minmax(18rem, 32.5rem) 1fr;
   background: var(--fondo);
 }
-/* El nombre del rol arriba y la sala abajo; el color hace el resto. */
+/* El ícono y el nombre del rol arriba, la sala abajo. Sobre 021 C y 320 C el
+ * blanco solo alcanza el 3:1 de texto grande, así que nada baja de 20 px en negrita. */
 .panel-rol {
   background: var(--rol); color: var(--superficie); padding: 4rem 3.5rem 3.5rem;
-  display: flex; flex-direction: column; justify-content: space-between; gap: 2rem;
+  display: flex; flex-direction: column; justify-content: space-between; gap: var(--esp-6);
 }
+.panel-rol .icono-rol { width: 2.75rem; height: 2.75rem; color: var(--superficie); }
 .panel-rol .rol {
-  font-family: var(--fuente-titulo); font-weight: 700; font-size: clamp(2.25rem, 4vw, 3.25rem);
-  line-height: 1.05; letter-spacing: -.01em; margin: 0;
+  margin: var(--esp-4) 0 0; font-family: var(--fuente-titulo); font-weight: 700;
+  font-size: clamp(2.25rem, 4vw, 3.25rem); line-height: 1.05; letter-spacing: -.01em;
 }
-.panel-rol .sala { margin: 0; font-size: 1.05rem; line-height: 1.45; max-width: 24ch; }
-.lado-form { display: grid; place-items: center; padding: 2rem 1rem; }
+.panel-rol .sala {
+  margin: 0; max-width: 24ch;
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: var(--txt-lg); line-height: 1.4;
+}
+.lado-form { display: grid; place-items: center; padding: var(--esp-6) var(--esp-4); }
 
+/* Sin marco: la página es blanca y el panel del rol ya ordena la pantalla. */
 .tarjeta {
   width: 100%; max-width: 23rem; box-sizing: border-box;
-  background: var(--superficie); border: 1px solid var(--borde); border-radius: 4px;
-  padding: 2rem 1.75rem;
-  /* Las etiquetas son de bloque y ocupan el ancho entero de la tarjeta, así que
-   * sin esto la franja vacía a la derecha de "Correo electrónico" muestra el
-   * cursor de escritura. Los controles se lo vuelven a poner más abajo. */
+  /* Las etiquetas son de bloque y ocupan el ancho entero, así que sin esto la
+   * franja vacía a la derecha de "Correo electrónico" muestra el cursor de
+   * escritura. Los controles se lo vuelven a poner más abajo. */
   cursor: default;
 }
-.logo {
-  display: block; width: 100%; max-width: 16rem; height: auto;
-  margin: 2rem auto 0;
-}
-.tarjeta h1 { font-size: 1.35rem; margin: 0 0 1.75rem; }
+/* Recuperar la clave no tiene panel de rol: la tarjeta va sola y centrada. */
+main.tarjeta { margin: 4rem auto; padding-inline: var(--esp-4); }
+.logo { display: block; width: 100%; max-width: 16rem; height: auto; margin: var(--esp-7) auto 0; }
+.tarjeta h1 { font-size: var(--txt-xl); margin: 0 0 var(--esp-6); }
+.sub { margin: calc(-1 * var(--esp-4)) 0 var(--esp-5); color: var(--tinta-suave); }
 
-label { display: block; font-weight: 500; font-size: .85rem; margin-bottom: .35rem; }
+label { display: block; font-weight: 500; margin-bottom: var(--esp-2); }
 input[type=email], input[type=password], input[type=text] {
-  width: 100%; box-sizing: border-box; padding: .6rem .7rem; margin-bottom: 1.1rem;
-  cursor: text;
-  border: 1px solid var(--borde); border-radius: 3px; font: inherit;
-  background: var(--superficie); color: var(--tinta);
+  width: 100%; box-sizing: border-box; min-height: 2.75rem; padding: 0 var(--esp-3);
+  margin-bottom: var(--esp-5); font: inherit; cursor: text;
 }
 
-button {
-  width: 100%; padding: .7rem; border: 0; border-radius: 3px; cursor: pointer;
-  background: var(--rol); color: var(--superficie);
-  font-family: var(--fuente-titulo); font-weight: 700; font-size: .9rem;
+/* El botón de la puerta va en el color del rol; en recuperar la clave, que no
+ * tiene rol, en el naranjo de la marca. */
+.tarjeta button {
+  width: 100%; min-height: 3rem; padding: 0 var(--esp-4); border: 0; border-radius: var(--radio); cursor: pointer;
+  background: var(--rol, var(--marca)); color: var(--superficie);
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: var(--txt-lg);
 }
-button:hover { background: var(--tinta); }
-/* En administración el botón ya es del color de la tinta. */
-[data-puerta="gestion"] button:hover { background: var(--tinta-suave); }
-.ingreso a { color: var(--rol); }
+.tarjeta button:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .2em; }
 
-/* El error va en tinta con una marca naranja al costado, porque el naranja da
- * 3.5:1 sobre el fondo y el texto normal exige 4.5:1. */
 .error {
-  border-left: 3px solid var(--alerta); background: var(--fondo);
-  padding: .6rem .75rem; margin-bottom: 1.1rem; font-size: .9rem;
+  border-left: 3px solid var(--alerta); padding: var(--esp-2) var(--esp-3);
+  margin: 0 0 var(--esp-5);
 }
 
-.ver { display: flex; align-items: center; gap: .4rem; margin: -.6rem 0 1.1rem;
-       font-size: .85rem; color: var(--tinta-suave); cursor: pointer; }
-.ver input { width: auto; margin: 0; }
+.ver {
+  display: flex; align-items: center; gap: var(--esp-2); margin: calc(-1 * var(--esp-3)) 0 var(--esp-5);
+  font-weight: 400; color: var(--tinta-suave); cursor: pointer;
+}
+.ver input { width: 1.125rem; height: 1.125rem; margin: 0; }
 
-.pie { margin-top: 1.25rem; font-size: .85rem; text-align: center; }
+.pie { margin-top: var(--esp-5); text-align: center; }
 
 /* En pantallas angostas el panel pasa a ser una franja arriba del formulario. */
 @media (max-width: 52rem) {
   .ingreso { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
-  .panel-rol { padding: 1.75rem 1.5rem 1.5rem; gap: .4rem; }
-  .panel-rol .rol { font-size: 1.85rem; }
-  .panel-rol .sala { font-size: .9rem; max-width: none; }
-  .lado-form { place-items: start center; padding: 1.25rem 1rem 2rem; }
+  .panel-rol { padding: var(--esp-5) var(--esp-5) var(--esp-5); gap: var(--esp-2); }
+  .panel-rol .icono-rol { width: 2rem; height: 2rem; }
+  .panel-rol .rol { margin-top: var(--esp-2); font-size: var(--txt-2xl); }
+  .panel-rol .sala { max-width: none; }
+  .lado-form { place-items: start center; padding: var(--esp-6) var(--esp-4); }
 }

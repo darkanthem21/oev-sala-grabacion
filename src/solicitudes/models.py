@@ -39,6 +39,16 @@ class SolicitudQuerySet(models.QuerySet):
         confirmar. Sin argumentos para que la plantilla la llame desde el usuario."""
         return self.filter(estado_confirmacion=Solicitud.EstadoConfirmacion.PENDIENTE, fecha__gt=timezone.localdate())
 
+    def en_curso(self, hoy):
+        """US-08 AC5: cuántas pendientes y cuántas reservas aceptadas sin cancelar
+        quedan de hoy en adelante. La pestaña Usuarios lo pide por la relación
+        inversa (`cuenta.solicitudes`), sin importar este módulo."""
+        return self.proximas(hoy).aggregate(
+            pendientes=models.Count("id", filter=models.Q(estado_validacion=Solicitud.EstadoValidacion.PENDIENTE)),
+            reservas=models.Count("id", filter=models.Q(estado_validacion=Solicitud.EstadoValidacion.ACEPTADA)
+                                  & ~models.Q(estado_confirmacion=Solicitud.EstadoConfirmacion.CANCELADA)),
+        )
+
     def resueltas(self):
         """US-11: lo que alguien aprobó o rechazó, sea validador o administrador.
 

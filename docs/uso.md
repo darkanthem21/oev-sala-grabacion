@@ -16,6 +16,7 @@ Este manual cubre lo que hoy está disponible en el sistema, ordenado por rol:
 | US-04 Panel de administrador | Administrador | [Jornada semanal](#jornada-semanal) y [Reglas](#reglas-los-parámetros-del-sistema) |
 | US-17 Bloquear fechas de la sala | Administrador | [Bloquear fechas de la sala](#bloquear-fechas-de-la-sala) |
 | US-05 Áreas académicas | Administrador | [Áreas](#áreas) |
+| US-08 Gestión de roles y usuarios | Administrador | [Usuarios](#usuarios) |
 | US-14 Bloques del personal de apoyo | Personal de apoyo | [Bloques del día](#bloques-del-día) |
 | US-15 Checklist de cierre (prototipo) | Personal de apoyo | [Checklist de cierre de la sala](#checklist-de-cierre-de-la-sala) |
 
@@ -23,24 +24,22 @@ Este manual cubre lo que hoy está disponible en el sistema, ordenado por rol:
 
 Cada rol entra por su propia dirección. Solo la del solicitante está enlazada
 desde el sitio; las otras tres las conoce quien las usa. Cada puerta se reconoce
-por el panel de la izquierda, con el nombre y el color del rol.
+por el panel de la izquierda, con el nombre, el ícono y el color del rol. Una vez
+adentro, el mismo ícono y color aparecen junto al nombre, bajo la banda naranja.
 
 | Rol | Dirección | Panel |
 |---|---|---|
-| Solicitante | `/solicitante/entrar/` | Azul, **Solicitantes** |
+| Solicitante | `/solicitante/entrar/` | Naranjo, **Solicitantes** |
 | Administrador | `/configuracion/entrar/` | Azul petróleo, **Administración** |
-| Validador | `/validacion/entrar/` | Vino, **Validación** |
+| Validador | `/validacion/entrar/` | Turquesa, **Validación** |
 | Personal de apoyo | `/apoyo/entrar/` | Gris azulado, **Personal de apoyo** |
 
 ### Dar un rol a alguien
 
-Mientras no exista la pestaña **Usuarios** (US-08), los roles y las áreas de
-cada persona se asignan desde `/admin` con la cuenta de administrador: en
-**Usuarios**, abre la cuenta de la persona, agrégale el grupo de su rol
-(**Solicitante**, **Validador**, **Personal de apoyo** o **Administrador**) y
-sus áreas, y guarda. Un solicitante necesita al menos un área activa; las áreas
-se crean en la pestaña [Áreas](#áreas). Una persona puede tener más de un rol y
-más de un área a la vez.
+Los roles y las áreas de cada persona se asignan en la pestaña
+[Usuarios](#usuarios) del administrador. Una persona puede tener más de un rol y
+más de un área a la vez. Un solicitante necesita al menos un área activa; las
+áreas se crean en la pestaña [Áreas](#áreas).
 
 ---
 
@@ -360,8 +359,8 @@ por resolver; **←**, **Hoy** y **→** cambian de semana.
 | Bloque | Qué indica |
 |---|---|
 | Con un nombre | Una solicitud pendiente lo pide |
-| Borde rojo, con dos nombres o más | Tope: varias solicitudes piden ese bloque |
-| Celeste, con el nombre en gris | Reservado: ya está aprobado para esa persona |
+| Borde color vino, con dos nombres o más | Tope: varias solicitudes piden ese bloque |
+| Filete celeste, con el nombre en gris | Reservado: ya está aprobado para esa persona |
 | Rayado | Bloqueado por el administrador: no se puede aprobar |
 | Borde punteado | Quitado de la jornada, pero con pedidos de antes |
 
@@ -467,8 +466,8 @@ una solicitud resuelta tampoco se puede editar ni borrar.
 
 ## 4. Administrador
 
-El panel del administrador tiene seis pestañas: **Check-out**, **Bloques**,
-**Áreas**, **Reglas**, **Validación** y **Sanciones**. Se entra por
+El panel del administrador tiene siete pestañas: **Check-out**, **Bloques**,
+**Áreas**, **Usuarios**, **Reglas**, **Validación** y **Sanciones**. Se entra por
 `/configuracion/entrar/`.
 
 ![Puerta de la administración](uso/us-04/puerta-administracion.png)
@@ -608,8 +607,58 @@ y el validador en la ficha de cada solicitud, como **Nota del área**.
 campo, de qué valor a cuál, quién y cuándo. Lo que se cambie desde `/admin`
 también queda ahí.
 
-Las personas se asignan a un área desde `/admin` (ver [Dar un rol a
-alguien](#dar-un-rol-a-alguien)).
+Las personas se asignan a un área desde la pestaña [Usuarios](#usuarios).
+
+### Usuarios
+
+La pestaña **Usuarios** lista cada cuenta con su nombre, correo, roles, áreas y
+estado. Se busca por nombre, apellido o correo, y se filtra por rol, área y
+estado. Cada rol aparece con el ícono y el color de su puerta.
+
+![Usuarios](uso/us-08/usuarios.png)
+
+| Acción | Qué pasa |
+|---|---|
+| **Nueva cuenta** | Pide nombre, apellido, correo, al menos un rol y, si es solicitante, sus áreas. El correo no se puede repetir. A la persona le llega un correo para crear su contraseña; nadie más la conoce |
+| **Editar** | Cambia los datos, los roles y las áreas. Validadores y personal de apoyo no tienen área |
+| **Reenviar el correo de la contraseña** | Aparece mientras la persona no haya entrado nunca, por ejemplo si el enlace venció |
+| **Desactivar cuenta** | La persona ya no entra por ninguna puerta y pierde la sesión abierta. Su historial se conserva. Si tiene solicitudes pendientes o reservas aceptadas de hoy en adelante, el sistema las cuenta y pide confirmar: desactivar no las cancela |
+| **Reactivar cuenta** | Vuelve a entrar con su contraseña |
+
+![Ficha de una cuenta](uso/us-08/cuenta.png)
+
+Las cuentas no se borran, ni siquiera desde `/admin`. Siempre queda al menos un
+administrador activo, y nadie se quita a sí mismo el rol ni desactiva su propia
+cuenta.
+
+El rol **Administrador** lo da y lo quita solo el **superusuario**, la cuenta de
+soporte de la Oficina que se crea al instalar el sistema (ver
+[despliegue](despliegue.md)). Un administrador que no es superusuario no ve esa
+casilla, y la cuenta de otro administrador le aparece de solo lectura.
+
+#### Cargar una planilla
+
+**Cargar planilla** crea o actualiza muchas cuentas a la vez, por ejemplo los
+docentes de una unidad.
+
+1. **Descargar plantilla** baja un CSV con las columnas `correo`, `nombre`,
+   `apellido`, `roles` y `areas`. Se completa una fila por persona. Varios roles
+   o áreas van en la misma celda, separados por coma.
+2. Se guarda como CSV (en Excel: *Guardar como → CSV*) y se sube con **Revisar**.
+3. La vista previa dice, fila por fila, si la cuenta **se crea**, **se le suma**
+   algo, queda **sin cambios** o tiene un **error**. Todavía no se guarda nada.
+4. Si ninguna fila tiene errores, **Confirmar la carga** guarda todo. Si alguna
+   tiene, no se puede confirmar: se corrige la planilla y se vuelve a subir.
+
+![Vista previa de la carga](uso/us-08/carga.png)
+
+A una cuenta que ya existe solo se le suman los roles y las áreas de la planilla;
+nunca se le quita nada, y su nombre no cambia. Las cuentas nuevas reciben el
+correo para crear su contraseña.
+
+**Últimos cambios (…)**, al pie de la lista, abre los últimos 15: qué cuenta
+cambió, qué campo, de qué valor a cuál, quién y cuándo. Lo que se cambie desde
+`/admin` y lo que entre por planilla también queda ahí.
 
 ### Reglas: los parámetros del sistema
 

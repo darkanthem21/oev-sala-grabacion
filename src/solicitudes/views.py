@@ -1,7 +1,6 @@
 from urllib.parse import urlencode
 
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -15,6 +14,7 @@ from django.views.decorators.http import require_POST, require_safe
 from agenda.models import Bloqueo, primera_fecha_pedible
 from configuracion.models import Parametros
 from personas.models import Area, Rol, Sancion
+from personas.permisos import solo_administradores
 
 from . import validacion
 from .calendar import construir_calendario_contexto
@@ -69,7 +69,7 @@ def panel_validador(request):
     return render(request, "solicitudes/validador.html", _datos_validacion())
 
 
-@staff_member_required(login_url="login_gestion")
+@solo_administradores
 def panel_validacion_admin(request):
     """La misma bandeja como pestaña del panel del administrador."""
     return render(request, "solicitudes/validacion_admin.html", {**_datos_validacion(), "pestana": "validacion"})
