@@ -1,0 +1,32 @@
+{% extends "uso/_base.html" %}
+{% load static %}
+{% block estilos %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'uso/checkout/checkout.css' %}">
+{% endblock %}
+{% block seccion %}
+<p><a href="{% url 'checkout_apoyo' bloque.ticket %}">‹ Volver al check-out completo</a></p>
+<h2>Reporte de faltas de integridad · {{ bloque.ticket }}</h2>
+{% if registro.editado_en %}<p class="checkout-editado">Editado por {{ registro.editado_por|default:"Usuario eliminado" }} el {{ registro.editado_en|date:"j \d\e F \a \l\a\s H:i:s" }}.</p>{% endif %}
+<p>{{ bloque.fecha|date:"j \d\e F \d\e Y" }} · {{ bloque.inicio|time:"H:i" }}–{{ bloque.termino|time:"H:i" }} · {{ bloque.solicitante }}</p>
+<p>Este reporte incluye únicamente las preguntas respondidas «No» y sus antecedentes.</p>
+{% for caso in casos %}
+  <section class="checkout-seccion checkout-incidencia">
+    <p class="checkout-ayuda">{{ caso.seccion }}</p>
+    <h3>{{ caso.texto }}</h3>
+    <p><span class="checkout-estado">No cumple</span></p>
+    <h4>Observación</h4><p>{{ caso.observacion|linebreaksbr }}</p>
+    {% if caso.foto %}<p><a class="btn" href="{% url 'foto_integridad' caso.foto.pk %}">Descargar foto de integridad</a></p>{% else %}<p>Sin fotografía registrada en el reporte original.</p>{% endif %}
+  </section>
+{% empty %}
+  <p class="checkout-regla">{% if registro.asistio %}No se registraron faltas de integridad en este check-out.{% else %}Inasistencia registrada. No se realizó una revisión de integridad de la sala.{% endif %}</p>
+{% endfor %}
+{% if casos %}
+  <section class="checkout-seccion">
+    <h3>Antecedentes del cierre</h3>
+    <p>{{ registro.observaciones|linebreaksbr }}</p>
+    {% if registro.foto_final %}<p><a href="{% url 'foto_cierre' registro.pk %}">Descargar fotografía final</a></p>{% endif %}
+    {% if registro.recomendaciones %}<p><strong>Recomendaciones finales:</strong> {{ registro.recomendaciones|linebreaksbr }}</p>{% endif %}
+  </section>
+{% endif %}
+{% endblock %}

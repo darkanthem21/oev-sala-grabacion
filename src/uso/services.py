@@ -9,6 +9,7 @@ día. Es el supuesto del equipo ("siempre hay personal de apoyo, no se modela su
 disponibilidad") y el modelo de datos no tiene a quién asignarlos.
 """
 from datetime import date, datetime
+import re
 
 from django.contrib.auth.models import Group
 from django.contrib.postgres.expressions import ArraySubquery
@@ -77,16 +78,15 @@ def _armar(t, enviados, ahora):
     return {**t, "checkout": checkout}
 
 
-def bloques_del_dia(fecha, enviados=None, ahora=None):
+def bloques_del_dia(fecha, ahora=None):
     """Los bloques de esa fecha que le importan al personal de apoyo.
 
-    `enviados` permite indicar códigos explícitos; por defecto se leen de la base.
+    Los check-outs completados se consultan siempre en la base de datos.
     Cada bloque trae además el bloqueo que le quitó la sala, si hay uno (US-17
     AC2), para que nadie la prepare para una grabación que no va a ocurrir.
     """
     ahora = timezone.localtime(ahora)
-    if enviados is None:
-        enviados = {f"T-{pk:02d}" for pk in Checkout.objects.filter(ticket__solicitud__fecha=fecha).values_list("ticket_id", flat=True)}
+    enviados = {f"T-{pk:02d}" for pk in Checkout.objects.filter(ticket__solicitud__fecha=fecha).values_list("ticket_id", flat=True)}
     bloqueos = bloqueos_por_fecha(fecha, fecha).get(fecha, [])
     bloques = [_armar(t, enviados, ahora) for t in _tickets(solicitud__fecha=fecha)]
     for bloque in bloques:
@@ -95,15 +95,17 @@ def bloques_del_dia(fecha, enviados=None, ahora=None):
     return sorted(bloques, key=lambda b: b["inicio"])
 
 
-def buscar(codigo, enviados=None, ahora=None):
+def buscar(codigo, ahora=None):
     """Un ticket visible por su código («T-07»), o None."""
-    numero = codigo.removeprefix("T-")
-    if not numero.isdigit():
+    coincidencia = re.fullmatch(r"T-([0-9]{2,19})", codigo)
+    if coincidencia is None:
         return None
-    if enviados is None:
-        enviados = [codigo] if Checkout.objects.filter(ticket_id=int(numero)).exists() else []
+    numero = int(coincidencia.group(1))
+    if not 1 <= numero <= 2**63 - 1:
+        return None
+    enviados = [codigo] if Checkout.objects.filter(ticket_id=numero).exists() else []
     # El código se compara entero para que «T-7» no sea otra forma de «T-07».
-    t = next((t for t in _tickets(pk=int(numero)) if t["ticket"] == codigo), None)
+    t = next((t for t in _tickets(pk=numero) if t["ticket"] == codigo), None)
     return _armar(t, enviados, timezone.localtime(ahora)) if t else None
 
 

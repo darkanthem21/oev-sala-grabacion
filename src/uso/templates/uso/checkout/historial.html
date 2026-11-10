@@ -1,0 +1,48 @@
+{% extends "panel.html" %}
+{% load static %}
+{% block estilos_seccion %}<link rel="stylesheet" href="{% static 'uso/checkout/checkout.css' %}">{% endblock %}
+{% block seccion %}
+{% include "uso/checkout/_navegacion.html" %}
+<h2>Historial de check-outs</h2>
+<p>Registros del {{ desde|date:"j \d\e F \d\e Y" }} al {{ hasta|date:"j \d\e F \d\e Y" }}, del más reciente al más antiguo.</p>
+<p class="checkout-ayuda">«Con reporte» indica que se registraron incumplimientos de integridad. El documento PDF contiene el formulario completo y sus evidencias.</p>
+<nav class="checkout-semanas" aria-label="Semanas del historial">
+  {% for item in semanas %}
+    <a href="?semana={{ item.lunes|date:'Y-m-d' }}" {% if item.activa %}class="activa" aria-current="page"{% endif %}>
+      {% if forloop.first %}Esta semana{% elif forloop.counter == 2 %}Semana anterior{% else %}{{ item.desde|date:"d/m" }}–{{ item.hasta|date:"d/m" }}{% endif %}
+      <span>{{ item.desde|date:"d/m/Y" }}–{{ item.hasta|date:"d/m/Y" }}</span>
+    </a>
+  {% endfor %}
+</nav>
+{% for dia in dias %}
+  <section class="checkout-dia">
+    <h3>{{ dia.fecha|date:"l j \d\e F \d\e Y" }}</h3>
+    <div class="checkout-tabla-contenedor">
+      <table class="checkout-tabla">
+        <thead><tr><th scope="col">Usuario solicitante</th><th scope="col">Fecha de registro</th><th scope="col">Bloque reservado</th><th scope="col">Registrado por</th><th scope="col">Reporte</th><th scope="col">Documento</th></tr></thead>
+        <tbody>
+        {% for registro in dia.registros %}
+          <tr>
+            <td>{{ registro.ticket.solicitud.solicitante.get_full_name|default:registro.ticket.solicitud.solicitante.email }}<br><span class="checkout-ayuda">{{ registro.ticket.ticket }}</span></td>
+            <td>{{ registro.registrado_en|date:"d/m/Y H:i" }}{% if registro.editado_en %}<br><span class="checkout-editado">Editado · {{ registro.editado_en|date:"d/m H:i" }}</span>{% endif %}</td>
+            <td>{{ registro.ticket.fecha|date:"d/m/Y" }}<br>{{ registro.ticket.inicio|time:"H:i" }}–{{ registro.ticket.termino|time:"H:i" }}</td>
+            <td>{{ registro.registrado_por|default:"Usuario eliminado" }}</td>
+            <td>{% if not registro.asistio %}<span class="checkout-etiqueta">No · Inasistencia</span>{% elif registro.tiene_reporte %}<span class="checkout-etiqueta checkout-con-reporte">Sí · Con reporte</span>{% else %}<span class="checkout-etiqueta">No · Sin incumplimientos</span>{% endif %}</td>
+            <td><a class="btn checkout-pdf" href="{% url 'pdf_checkout' registro.pk %}" target="_blank" rel="noopener" aria-label="Abrir PDF del check-out {{ registro.ticket.ticket }} (otra pestaña)"><svg viewBox="0 0 24 24" width="20" height="24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 2h9l5 5v15H5zM14 2v6h5M8 12h8M8 16h8"/></svg><span>PDF</span></a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% empty %}
+  <p class="checkout-regla">No hay check-outs registrados en esta semana.</p>
+{% endfor %}
+{% if pagina.has_other_pages %}
+  <nav class="checkout-acciones" aria-label="Páginas de esta semana">
+    {% if pagina.has_previous %}<a class="btn" href="?semana={{ semana.lunes|date:'Y-m-d' }}&amp;pagina={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
+    <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+    {% if pagina.has_next %}<a class="btn" href="?semana={{ semana.lunes|date:'Y-m-d' }}&amp;pagina={{ pagina.next_page_number }}">Siguiente</a>{% endif %}
+  </nav>
+{% endif %}
+{% endblock %}

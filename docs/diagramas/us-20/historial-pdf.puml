@@ -1,0 +1,44 @@
+@startuml historial-pdf
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Historial administrativo de dos meses y formulario PDF
+actor Administrador as A
+participant "uso.checkout.views" as V <<presentación>>
+participant "uso.checkout.historial" as H <<dominio>>
+participant "uso.checkout.pdf" as P <<presentación>>
+participant "uso.checkout.services" as S <<dominio>>
+database "Base de datos" as DB
+collections "Fuentes, marca y evidencias" as FS
+
+A -> V: GET /configuracion/checkout/historial/?semana=...
+V -> V: Exigir sesión de administración
+V -> H: historial_semanal(semana, pagina)
+H -> H: Calcular dos meses calendario en hora local\ny semanas de lunes a domingo
+H -> DB: Consultar registros de la semana dentro de la ventana\nOrden descendente, paginar y detectar incumplimientos
+DB --> H: Check-outs, usuario, reserva y estado del reporte
+H -> H: Agrupar por día, del más reciente al más antiguo
+H --> V: Semanas, días y página de resultados
+V --> A: Historial con icono PDF por registro
+
+A -> V: GET /configuracion/checkout/historial/{pk}/pdf/
+V -> V: Exigir sesión de administración
+V -> H: registros_recientes()
+H -> DB: Buscar registro dentro de los dos meses
+alt No existe o está fuera de la ventana
+  V --> A: 404
+else Registro disponible
+  V -> P: generar_pdf(registro)
+  P -> S: resumen_respuestas(registro)
+  S --> P: Preguntas originales, respuestas y fotografías asociadas
+  P -> FS: Leer fuentes locales, marca, logo y fotos
+  P -> P: Componer formulario completo en memoria\nIncluir respuestas, observaciones, asistencia y edición
+  P --> V: PDF
+  V --> A: application/pdf · abrir en otra pestaña
+end
+note over H,DB
+  La ventana no borra registros anteriores.
+  Con reporte indica al menos un incumplimiento vigente.
+  La fecha usada es la del registro original del check-out.
+end note
+@enduml
