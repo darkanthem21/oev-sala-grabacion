@@ -1,6 +1,6 @@
 {% extends "panel.html" %}
 {% load static %}
-{% block titulo %}Vista previa del check-out{% endblock %}
+{% block titulo %}Vista previa del check-out · Configuración{% endblock %}
 {% block estilos_seccion %}<link rel="stylesheet" href="{% static 'uso/checkout/checkout.css' %}">{% endblock %}
 {% block seccion %}
 <h2>Vista previa del listado</h2>
@@ -19,11 +19,11 @@
   <input type="hidden" name="asistencia" value="si">
   {{ form.non_field_errors }}
   {% include "uso/checkout/_listado.html" %}
-  <button type="submit" class="btn activa" name="accion" value="probar">Probar respuestas</button>
+  <button type="submit" class="btn principal" name="accion" value="probar">Probar respuestas</button>
   <button type="submit" class="btn" name="accion" value="cambiar_asistencia" formnovalidate>Cambiar asistencia</button>
   {% else %}
   {% include "uso/checkout/_asistencia.html" %}
-  <button type="submit" class="btn activa" name="accion" value="{% if inasistencia %}probar{% else %}asistencia{% endif %}" id="continuar-asistencia">{% if inasistencia %}Probar inasistencia{% else %}Continuar{% endif %}</button>
+  <button type="submit" class="btn principal" name="accion" value="{% if inasistencia %}probar{% else %}asistencia{% endif %}" id="continuar-asistencia">{% if inasistencia %}Probar inasistencia{% else %}Continuar{% endif %}</button>
   {% endif %}
 </form>
 {% endblock %}

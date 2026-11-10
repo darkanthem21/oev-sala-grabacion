@@ -1,12 +1,13 @@
 {% extends "uso/_base.html" %}
 {% load static %}
+{% block titulo %}Check-out{% endblock %}
 {% block estilos %}
   {{ block.super }}
   <link rel="stylesheet" href="{% static 'uso/checkout/checkout.css' %}">
 {% endblock %}
 
 {% block seccion %}
-<p><a href="{{ volver }}">‹ Volver a los bloques</a></p>
+<p><a href="{{ volver }}"><span class="chevron izq" aria-hidden="true"></span>Volver a los bloques</a></p>
 
 <h2>Check-out · {{ bloque.fecha|date:"l j \d\e F" }}, <span class="num">{{ bloque.inicio|time:"H:i" }}–{{ bloque.termino|time:"H:i" }}</span></h2>
 <dl class="ficha">
@@ -24,7 +25,7 @@
   {% elif registro.registrado_por_id == user.pk %}
     <p class="checkout-ayuda">El plazo de 10 minutos para modificar este check-out ha finalizado.</p>
   {% endif %}
-  <p><a class="btn activa" href="{% url 'reporte_integridad' bloque.ticket %}">Ver reporte de faltas de integridad</a></p>
+  <p><a class="btn lleno" href="{% url 'reporte_integridad' bloque.ticket %}">Ver reporte de faltas de integridad</a></p>
   {% if registro %}
     <p>Lo registró {{ registro.registrado_por|default:"Usuario eliminado" }} el {{ registro.registrado_en|date:"j \d\e F \a \l\a\s H:i" }}.</p>
     {% if registro.asistio %}
@@ -67,7 +68,7 @@
   <form method="post" id="asistencia-form">
     {% csrf_token %}
     {% include "uso/checkout/_asistencia.html" %}
-    <button class="btn activa" type="submit" name="accion" value="asistencia" id="continuar-asistencia">Continuar</button>
+    <button class="btn principal" type="submit" name="accion" value="asistencia" id="continuar-asistencia">Continuar</button>
   </form>
   {% endif %}
 {% endif %}

@@ -1,10 +1,11 @@
 {% extends "uso/_base.html" %}
 {% load static %}
+{% block titulo %}Modificar check-out{% endblock %}
 {% block estilos %}
   {{ block.super }}<link rel="stylesheet" href="{% static 'uso/checkout/checkout.css' %}">
 {% endblock %}
 {% block seccion %}
-<p><a href="{% url 'checkout_apoyo' bloque.ticket %}">‹ Volver al check-out</a></p>
+<p><a href="{% url 'checkout_apoyo' bloque.ticket %}"><span class="chevron izq" aria-hidden="true"></span>Volver al check-out</a></p>
 <h2>Modificar check-out · {{ bloque.ticket }}</h2>
 <p class="checkout-regla">Puedes guardar cambios hasta las {{ registro.limite_edicion|date:"H:i:s" }}. El plazo de 10 minutos cuenta desde el registro original y no se reinicia al editar.</p>
 <p>Al guardar se mostrará «Editado», junto con tu nombre y la fecha de la modificación.</p>
@@ -18,7 +19,7 @@
   </fieldset>
   <noscript><button type="submit" class="btn" name="accion" value="asistencia" formnovalidate>Confirmar asistencia y continuar</button></noscript>
   <div class="checkout-acciones">
-    <button type="submit" class="btn activa">Guardar cambios</button>
+    <button type="submit" class="btn principal">Guardar cambios</button>
     <a class="btn" href="{% url 'checkout_apoyo' bloque.ticket %}">Cancelar</a>
   </div>
 </form>
