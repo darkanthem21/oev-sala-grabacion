@@ -237,7 +237,9 @@ Caddy (`produccion/Caddyfile`) saca y renueva el certificado de Let's Encrypt,
 redirige http a https, agrega HSTS y comprime. gunicorn queda detrás, sin
 recibir conexiones directas de internet. Para que Caddy obtenga el certificado,
 `DOMINIO` tiene que resolver a la IP del servidor y los puertos 80 y 443 tienen
-que estar abiertos.
+que estar abiertos. Un cambio en el `Caddyfile` se aplica en el despliegue
+siguiente, porque el script recarga Caddy; si el archivo es inválido, avisa y
+Caddy sigue con el anterior.
 
 ### Primera instalación
 

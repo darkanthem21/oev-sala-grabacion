@@ -64,7 +64,10 @@ services:
     environment:
       DOMINIO: ${DOMINIO:?falta DOMINIO en el .env}
     volumes:
-      - ./produccion/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Se monta la carpeta y no el archivo: un archivo suelto queda atado a
+      # su inodo, y editarlo con sed o vim (que lo reemplazan) no llegaría al
+      # contenedor.
+      - ./produccion:/etc/caddy:ro
       # Certificados y claves de ACME: perderlos obliga a pedirlos de nuevo, y
       # Let's Encrypt limita cuántos se pueden pedir por semana.
       - caddy_data:/data

@@ -27,6 +27,11 @@ $c pull web tareas || docker image inspect "$repo:$TAG" >/dev/null
 levantar() { $c up -d --remove-orphans --wait --wait-timeout 180; }
 
 if levantar; then
+  # Compose no nota los cambios de un archivo montado: Caddy se recarga para
+  # tomar el Caddyfile nuevo, sin cortar conexiones. Si es inválido, sigue con
+  # el anterior.
+  $c exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 \
+    || echo "aviso: Caddy no pudo recargar el Caddyfile; sigue con el anterior" >&2
   echo "$(date -Iseconds) $TAG" >> desplegados.log
   # Un `docker compose up` a mano tiene que levantar esta misma versión.
   if grep -q '^TAG=' .env; then sed -i "s|^TAG=.*|TAG=$TAG|" .env; else echo "TAG=$TAG" >> .env; fi
