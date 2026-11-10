@@ -25,6 +25,8 @@ levantar() { $c up -d --remove-orphans --wait --wait-timeout 180; }
 
 if levantar; then
   echo "$(date -Iseconds) $TAG" >> desplegados.log
+  # Un `docker compose up` a mano tiene que levantar esta misma versión.
+  if grep -q '^TAG=' .env; then sed -i "s|^TAG=.*|TAG=$TAG|" .env; else echo "TAG=$TAG" >> .env; fi
   docker images ghcr.io/darkanthem21/oev-sala-grabacion -f dangling=true -q | xargs -r docker rmi >/dev/null 2>&1 || true
   echo "desplegado: $TAG"
   exit 0

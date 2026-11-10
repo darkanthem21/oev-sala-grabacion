@@ -267,7 +267,8 @@ El script hace primero el [respaldo](#respaldos) de la base y las fotos, baja
 la imagen, levanta el stack y espera a que `web` esté sano: su healthcheck
 pide la página de ingreso, así que solo pasa con la configuración revisada, las
 migraciones aplicadas y gunicorn respondiendo. Cada despliegue que funcionó
-queda anotado en `~/oev/desplegados.log`. Con compose v2 `up -d` recrea los
+queda anotado en `~/oev/desplegados.log` y en el `TAG` del `.env`, para que un
+`docker compose up -d` a mano levante esa misma versión. Con compose v2 `up -d` recrea los
 contenedores sin el `KeyError` del servidor del curso, así que no hace falta el
 `down`.
 
