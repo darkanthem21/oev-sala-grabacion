@@ -410,6 +410,7 @@ docker exec grupo6_db psql -U oev oev -c "
 | `web` se reinicia en bucle y el log muestra `SystemCheckError` | `check --deploy` encontró la configuración insegura: el log dice qué (`security.W009` es la `SECRET_KEY`) | Corregir `.env` y redesplegar |
 | `PermissionError` al guardar una foto del check-out | El volumen de fotos es de root, de antes de la imagen sin root | El `chown` de [Usuario del contenedor](#usuario-del-contenedor) |
 | Caddy no obtiene el certificado | `DOMINIO` no resuelve a la IP del servidor, o el 80 o el 443 están cerrados | `docker compose ... logs caddy`; revisar el DNS y el firewall |
+| 413 al enviar un check-out | El formulario pasa de los 50 MB que acepta Caddy en el servidor propio | Subir fotos más livianas, o subir `max_size` en `produccion/Caddyfile` |
 | Error 500 sin detalle en el navegador | Con `DEBUG=0` el traceback no se muestra | `docker logs grupo6_frontend` |
 | 500 al enviar el login, pero la página de login carga | Falló la base: la página no la consulta, autenticar sí | Revisar que `grupo6_db` esté *healthy* y que `POSTGRES_PASSWORD` sea la del volumen |
 | 400 *Bad Request* | El dominio no está en `ALLOWED_HOSTS` | Corregir `.env` y redesplegar |

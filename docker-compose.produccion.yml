@@ -47,7 +47,7 @@ services:
       - "443:443"
       - "443:443/udp"
     environment:
-      DOMINIO: ${DOMINIO}
+      DOMINIO: ${DOMINIO:?falta DOMINIO en el .env}
     volumes:
       - ./produccion/Caddyfile:/etc/caddy/Caddyfile:ro
       # Certificados y claves de ACME: perderlos obliga a pedirlos de nuevo, y
