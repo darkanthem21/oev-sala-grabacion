@@ -11,3 +11,6 @@ simulacion
 __pycache__/
 *.py[cod]
 .venv/
+# Lo que genera o sube la app en local no viaja en la imagen.
+src/staticfiles/
+src/media/

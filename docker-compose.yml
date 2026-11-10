@@ -19,16 +19,20 @@ services:
     # TAG es la rama publicada, o el sha de un commit para fijar una version
     # exacta. Por defecto `main`: desplegar otra cosa hay que pedirlo a proposito.
     image: ghcr.io/darkanthem21/oev-sala-grabacion:${TAG:-main}
-    # runserver sostiene la carga prevista —decenas de personas en horario habil—
-    # y el paso a gunicorn queda pendiente. El --insecure es lo que le permite
-    # servir los estaticos con DEBUG=0.
+    # check --deploy corta el arranque si la configuracion es insegura (clave
+    # debil, DEBUG, cookies sin Secure). gunicorn va detras de un proxy: sus
+    # workers sincronos no deben recibir conexiones directas de internet.
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py createsuperuser --noinput 2>/dev/null;
-             python manage.py runserver --insecure 0.0.0.0:${PUERTO:-3006}"
+      sh -c "python manage.py check --deploy --fail-level WARNING &&
+             python manage.py migrate &&
+             { python manage.py createsuperuser --noinput 2>/dev/null || true; } &&
+             exec gunicorn oev.wsgi --bind 0.0.0.0:${PUERTO:-3006} --workers ${WEB_CONCURRENCY:-2}"
     environment:
-      # Unico valor fijo del stack: el resto lo pone el entorno que corresponda.
+      # Unicos valores fijos del stack: el resto lo pone el entorno que corresponda.
       DB_HOST: db
+      # gunicorn las lee de aqui. Van fuera del command porque YAML conserva cada
+      # salto de linea de ese bloque y partiria la orden.
+      GUNICORN_CMD_ARGS: --worker-tmp-dir /dev/shm --access-logfile -
     volumes:
       - checkoutmedia:/app/media
     depends_on:

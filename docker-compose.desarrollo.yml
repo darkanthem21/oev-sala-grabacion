@@ -21,8 +21,15 @@ services:
       network: host
     ports:
       - "8000:${PUERTO:-3006}"
+    # runserver recarga al editar; el codigo montado tapa los estaticos que la
+    # imagen junto con collectstatic, asi que se sirven sin comprimir.
+    command: >
+      sh -c "python manage.py migrate &&
+             { python manage.py createsuperuser --noinput 2>/dev/null || true; } &&
+             exec python manage.py runserver 0.0.0.0:${PUERTO:-3006}"
     environment:
       DEBUG: "1"
+      ESTATICOS_COMPRIMIDOS: "0"
       POSTGRES_PASSWORD: oev
       DJANGO_SUPERUSER_EMAIL: admin@uach.cl
       DJANGO_SUPERUSER_PASSWORD: admin
@@ -33,5 +40,6 @@ services:
   tareas:
     environment:
       POSTGRES_PASSWORD: oev
+      ESTATICOS_COMPRIMIDOS: "0"
     volumes:
       - ./src:/app
