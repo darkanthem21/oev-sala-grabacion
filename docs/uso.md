@@ -84,7 +84,7 @@ cuántos minutos lo decide el administrador (ver
 
 ![Recuperar contraseña](uso/us-01/recuperar-clave.png)
 
-El enlace sirve una sola vez y vence en unas horas. Si ya no funciona, la
+El enlace sirve una sola vez y vence a los tres días. Si ya no funciona, la
 pantalla ofrece **Pedir otro enlace**.
 
 ### Avisos
@@ -476,6 +476,32 @@ El panel del administrador tiene siete pestañas: **Bloques**, **Validación**,
 **Validación** es el panel del validador (ver [Validador](#3-validador)): el
 administrador también aprueba y rechaza, y la resolución queda a su nombre.
 
+### Primeros pasos en un sistema recién instalado
+
+Un sistema nuevo tiene una sola cuenta, el
+[superusuario](#superusuario-y-panel-de-django), y ninguna área. Para dejarlo
+listo, en este orden:
+
+1. El superusuario entra por `/configuracion/entrar/`.
+2. En [Áreas](#áreas), crea las áreas. Sin un área activa un solicitante no
+   puede pedir la sala.
+3. En [Usuarios](#usuarios), crea las cuentas de los administradores. Es el
+   único que puede dar ese rol.
+4. Un administrador, o el mismo superusuario, crea el resto: validadores,
+   personal de apoyo y solicitantes, de a una o con una
+   [planilla](#cargar-una-planilla).
+5. Cada persona crea su contraseña con el enlace que le llega por correo y
+   entra por la [puerta de su rol](#puertas-de-acceso).
+
+La [jornada semanal](#jornada-semanal), las
+[reglas](#reglas-los-parámetros-del-sistema) y el
+[listado de check-out](#administrar-el-listado-de-check-out) vienen con
+valores por defecto. Conviene revisarlos antes de abrir el sistema a los
+solicitantes.
+
+Si el servidor todavía no envía correos, los enlaces no llegan: quien lo
+administra los saca del log (ver [despliegue](despliegue.md#correo)).
+
 ### Jornada semanal
 
 Un bloque es un tramo horario de un día de la semana, por ejemplo *lunes de
@@ -660,6 +686,32 @@ correo para crear su contraseña.
 **Últimos cambios (…)**, al pie de la lista, abre los últimos 15: qué cuenta
 cambió, qué campo, de qué valor a cuál, quién y cuándo. Lo que se cambie desde
 `/admin` y lo que entre por planilla también queda ahí.
+
+### Superusuario y panel de Django
+
+El **superusuario** es la cuenta de soporte de la Oficina. No se crea desde el
+sistema: nace con la instalación (ver
+[despliegue](despliegue.md#puesta-en-marcha)). Entra por
+`/configuracion/entrar/` y llega al mismo panel que un administrador. Además:
+
+- Da y quita el rol **Administrador**, y edita o desactiva la cuenta de otro
+  administrador.
+- Entra al panel de Django, en `/admin/`, donde también crea y acorta
+  [sanciones](#sanciones).
+
+`/admin/` muestra los datos tal como están guardados: cuentas, áreas, bloques,
+bloqueos, solicitudes, sanciones y parámetros, cada uno con su registro de
+cambios. Es para soporte, cuando hay que corregir o revisar algo que las
+pestañas no muestran. El trabajo diario se hace en las pestañas.
+
+- Sin sesión iniciada, `/admin/` lleva a la puerta de administración y vuelve
+  al panel después de entrar. No tiene formulario de ingreso propio.
+- Lo que se cambie ahí en cuentas y áreas queda en los mismos **Últimos
+  cambios** de cada pestaña.
+- Ni las cuentas ni las sanciones se borran, y una solicitud resuelta no se
+  edita ni se borra.
+- La casilla **Es staff** de una cuenta la deja entrar a este panel y al de
+  administración. No se marca salvo para otra cuenta de soporte.
 
 ### Reglas: los parámetros del sistema
 

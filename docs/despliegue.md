@@ -227,7 +227,8 @@ stack trae el suyo.
 |---|---|
 | Máquina | `45.79.193.250` (VPS de Linode, Ubuntu 24.04, 1 CPU, 1 GB de RAM) |
 | URL | La de `DOMINIO`. Mientras `oev.inf.uach.cl` apunte al servidor del curso, `45-79-193-250.sslip.io` |
-| Carpeta de despliegue | `~/oev` del usuario que despliega |
+| Acceso | Usuario `despliegue` por SSH, solo con clave. Ni `root` ni las contraseñas entran |
+| Carpeta de despliegue | `~/oev` de ese usuario |
 | Compose | v2 (`docker compose`), proyecto `oev` fijado en `docker-compose.produccion.yml` |
 | Volúmenes | `oev_pgdata`, `oev_checkoutmedia` y `oev_caddy_data` (certificados) |
 | Puertos públicos | 80 y 443, de Caddy. La aplicación y la base no publican puertos |
@@ -241,16 +242,77 @@ que estar abiertos. Un cambio en el `Caddyfile` se aplica en el despliegue
 siguiente, porque el script recarga Caddy; si el archivo es inválido, avisa y
 Caddy sigue con el anterior.
 
-### Primera instalación
+### Preparación del servidor
 
-Requiere Docker Engine con el plugin de compose v2 y un usuario en el grupo
-`docker`. Desde la raíz del repositorio:
+Se hizo una vez, el 10/11, sobre el Ubuntu recién entregado. Queda escrito para
+saber cómo está la máquina y para repetirlo si se reinstala.
+
+| Qué | Cómo quedó |
+|---|---|
+| Usuario | `despliegue`, con `sudo` (pide su contraseña) y en el grupo `docker` |
+| SSH | Solo con clave y solo `despliegue`, en `/etc/ssh/sshd_config.d/00-oev.conf` |
+| Firewall | `ufw`: lo entrante cerrado salvo `22/tcp`, `80/tcp`, `443/tcp` y `443/udp` |
+| Docker | Engine y plugin de compose del repositorio oficial de Docker, no los de Ubuntu |
+| Actualizaciones | Las de seguridad se instalan solas, como trae Ubuntu. El reinicio no es automático |
+| Swap | 495 MB, la partición que trae la máquina |
+
+Como `root`, el usuario; después, desde la máquina propia, su clave pública:
 
 ```sh
-ssh USUARIO@45.79.193.250 'mkdir -p ~/oev/produccion'
-scp docker-compose.yml docker-compose.produccion.yml USUARIO@45.79.193.250:~/oev/
-scp produccion/* USUARIO@45.79.193.250:~/oev/produccion/
-scp .env.ejemplo USUARIO@45.79.193.250:~/oev/.env
+adduser despliegue && usermod -aG sudo despliegue
+ssh-copy-id -i ~/.ssh/id_ed25519.pub despliegue@45.79.193.250    # en la máquina propia
+```
+
+Con la entrada por clave ya probada, como `despliegue`:
+
+```sh
+printf '%s\n' 'PermitRootLogin no' 'PasswordAuthentication no' \
+  'KbdInteractiveAuthentication no' 'AllowUsers despliegue' \
+  | sudo tee /etc/ssh/sshd_config.d/00-oev.conf
+sudo sshd -t && sudo systemctl restart ssh
+
+sudo ufw default deny incoming && sudo ufw default allow outgoing
+sudo ufw allow 22/tcp && sudo ufw allow 80/tcp && sudo ufw allow 443/tcp && sudo ufw allow 443/udp
+sudo ufw enable
+```
+
+Docker se instala con los pasos de
+<https://docs.docker.com/engine/install/ubuntu/> (`docker-ce`, `docker-ce-cli`,
+`containerd.io` y `docker-compose-plugin`), y después
+`sudo usermod -aG docker despliegue`.
+
+- El archivo de sshd empieza con `00-` porque sshd se queda con el primer valor
+  que lee de cada opción. Después de cambiarlo, y antes de cerrar la sesión
+  abierta, se prueba desde otra terminal que se sigue entrando.
+- Los puertos que publica Docker no pasan por `ufw`. Lo que deja a la base y a
+  gunicorn fuera de internet es que el compose no les publica puertos.
+- El grupo `docker` equivale a `root` en la máquina, y vale recién en una
+  sesión nueva: en la que estaba abierta, `docker` responde `permission denied`.
+- Cuando una actualización pide reiniciar existe `/var/run/reboot-required`. Se
+  reinicia con `sudo reboot`; los contenedores vuelven solos
+  (`restart: unless-stopped`).
+
+**Dar acceso a otra persona** es agregar su clave pública, y quitárselo es
+borrar esa línea del archivo:
+
+```sh
+ssh despliegue@45.79.193.250 'cat >> ~/.ssh/authorized_keys' < clave-de-la-persona.pub
+```
+
+**Si se pierde el acceso** (la única clave autorizada, o un cambio de sshd o de
+`ufw` que deja a todos afuera), queda la consola Lish del panel de Linode, que
+maneja quien administra la cuenta. Entra por fuera de SSH, así que ahí `root`
+sí puede usar su contraseña.
+
+### Primera instalación
+
+Requiere el servidor preparado como arriba. Desde la raíz del repositorio:
+
+```sh
+ssh despliegue@45.79.193.250 'mkdir -p ~/oev/produccion'
+scp docker-compose.yml docker-compose.produccion.yml despliegue@45.79.193.250:~/oev/
+scp produccion/* despliegue@45.79.193.250:~/oev/produccion/
+scp .env.ejemplo despliegue@45.79.193.250:~/oev/.env
 ```
 
 En el servidor, `chmod 600 ~/oev/.env` y completar las mismas variables de
@@ -260,7 +322,124 @@ dominio. `PUERTO` no se cambia: es interno. Compose v2 interpreta el `$` dentro
 del `.env`, así que `POSTGRES_PASSWORD` se genera igual que `SECRET_KEY`, con
 el comando de la tabla, que no produce ese carácter.
 
-Después, el primer despliegue y la [carga de las áreas](#5-cargar-las-áreas).
+Después, el primer [despliegue](#desplegar) y la
+[puesta en marcha](#puesta-en-marcha).
+
+### Puesta en marcha
+
+Con el primer despliegue arriba el sistema tiene una sola cuenta, el
+**superusuario**, que el contenedor crea al arrancar con
+`DJANGO_SUPERUSER_EMAIL` y `DJANGO_SUPERUSER_PASSWORD` del `.env`.
+
+1. Entrar con esa cuenta por `/configuracion/entrar/`.
+2. Crear las áreas, como en [Cargar las áreas](#5-cargar-las-áreas).
+3. Crear las cuentas en la pestaña **Usuarios**, partiendo por los
+   administradores: ese rol solo lo da el superusuario.
+4. Cada cuenta nueva crea su contraseña con el enlace que le llega por correo.
+   Sin correo configurado el enlace no llega: ver [Correo](#correo).
+
+El resto (jornada, reglas, listado de check-out) viene con valores por defecto
+y se ajusta desde el panel; el detalle está en el
+[manual de uso](uso.md#primeros-pasos-en-un-sistema-recién-instalado).
+
+Sobre el superusuario:
+
+- Las dos variables del `.env` se leen solo si la cuenta no existe. Cambiarlas
+  después no cambia el correo ni la contraseña de la cuenta.
+- Su contraseña se cambia con **¿Olvidaste tu contraseña?**, o sin correo:
+
+  ```sh
+  docker compose -f docker-compose.yml -f docker-compose.produccion.yml exec web python manage.py changepassword CORREO
+  ```
+
+- No tiene ningún rol. Pasa por la puerta de administración porque es
+  `is_staff`, y es la única cuenta que entra al panel de Django (`/admin/`),
+  salvo que desde ahí se le marque `is_staff` a otra. `/admin/` no tiene
+  formulario de ingreso propio: manda a la puerta de administración, que es la
+  que bloquea por intentos fallidos. Para qué sirve ese panel está en el
+  [manual de uso](uso.md#superusuario-y-panel-de-django).
+
+### Correo
+
+Sin `EMAIL_BACKEND` en el `.env` no sale ningún correo. La bienvenida con el
+enlace para crear la contraseña, la recuperación de contraseña y los
+recordatorios de confirmación se escriben en el log del contenedor que los
+genera (`web` o `tareas`). **Al 10/11 el servidor propio está así.**
+
+Mientras tanto, el enlace de cada cuenta se saca del log, en `~/oev`:
+
+```sh
+alias dc='docker compose -f docker-compose.yml -f docker-compose.produccion.yml'
+dc logs --no-log-prefix web | grep -E '^To: |/clave/'
+```
+
+Sale el destinatario y, debajo, su enlace. Sirve tres días y una sola vez; si
+una cuenta aparece más de una vez, vale el último. Quien tiene el enlace fija
+la contraseña de esa cuenta, así que no se pega en canales abiertos. Si el
+enlace venció, **Reenviar el correo de la contraseña**, en la ficha de la
+cuenta, escribe otro.
+
+Para enviar de verdad se agregan al `.env` las variables `EMAIL_*` de
+[Completar el `.env`](#2-completar-el-env) y se recrean los contenedores:
+
+```sh
+dc up -d
+dc exec web python manage.py sendtestemail CORREO_PROPIO
+```
+
+La segunda línea manda un correo de prueba: si no llega, el error queda en la
+terminal.
+
+### Operación
+
+En el servidor, en `~/oev`:
+
+```sh
+alias dc='docker compose -f docker-compose.yml -f docker-compose.produccion.yml'
+dc ps                         # web y db tienen que decir (healthy)
+dc logs --tail 100 web        # accesos y errores de la aplicación
+dc logs --tail 20 tareas      # una línea por hora: recordatorios enviados
+dc logs --tail 50 caddy       # certificado y proxy
+docker stats --no-stream      # memoria de cada contenedor contra su tope
+dc restart web                # reiniciar sin cambiar de versión
+dc exec web python manage.py shell
+```
+
+Cada acceso del log de `web` trae dos direcciones: la de Caddy, que es quien se
+conecta, y la del navegador, que informa Caddy. **Nunca `dc down -v`**: borra
+la base, las fotos y los certificados.
+
+### Cambiar de dominio
+
+Cuando `oev.inf.uach.cl` apunte a esta máquina, se cambian en el `.env` las
+cuatro variables que llevan el dominio (`DOMINIO`, `ALLOWED_HOSTS`,
+`CSRF_ORIGINS` y `URL_BASE`) y se corre `dc up -d`. Caddy pide el certificado
+del dominio nuevo al arrancar; antes el DNS ya tiene que resolver a
+`45.79.193.250`, o no lo obtiene.
+
+### Probar el check-out en una instalación nueva
+
+El check-out de un bloque se habilita cuando el bloque ya terminó, y la fecha
+más cercana que se puede pedir es un lunes futuro. En una instalación nueva no
+hay, entonces, nada que cerrar. Para probarlo sin esperar se pide una reserva,
+se acepta como validador y se mueve a la misma hora de una semana pasada:
+
+```sh
+dc exec -T web python manage.py shell -c '
+from datetime import timedelta
+from django.utils import timezone
+from solicitudes.models import Solicitud
+s = Solicitud.objects.filter(estado_validacion="ACEPTADA").latest("pk")
+f = s.fecha
+while f >= timezone.localdate(): f -= timedelta(weeks=1)
+Solicitud.objects.filter(pk=s.pk).update(fecha=f, estado_confirmacion="CONFIRMADA")
+print("solicitud", s.pk, "movida al", f)
+'
+```
+
+El bloque aparece en `/apoyo/?fecha=AAAA-MM-DD` con el check-out pendiente.
+**Solo con datos de prueba**: cambia la última solicitud aceptada sin pasar por
+las reglas del sistema.
 
 ### Desplegar
 
@@ -302,7 +481,7 @@ migración mala o un volumen borrado, no contra la pérdida del servidor. Para e
 hay que traerlos cada cierto tiempo a otra máquina:
 
 ```sh
-rsync -a USUARIO@45.79.193.250:oev/respaldos/ respaldos-oev/
+rsync -a despliegue@45.79.193.250:oev/respaldos/ respaldos-oev/
 ```
 
 ### Volver atrás
@@ -413,7 +592,9 @@ docker exec grupo6_db psql -U oev oev -c "
 | `PermissionError` al guardar una foto del check-out | El volumen de fotos es de root, de antes de la imagen sin root | El `chown` de [Usuario del contenedor](#usuario-del-contenedor) |
 | Caddy no obtiene el certificado | `DOMINIO` no resuelve a la IP del servidor, o el 80 o el 443 están cerrados | `docker compose ... logs caddy`; revisar el DNS y el firewall |
 | 413 al enviar un check-out | El formulario pasa de los 50 MB que acepta Caddy en el servidor propio | Subir fotos más livianas, o subir `max_size` en `produccion/Caddyfile` |
-| Error 500 sin detalle en el navegador | Con `DEBUG=0` el traceback no se muestra | `docker logs grupo6_frontend` |
+| Error 500 sin detalle en el navegador | Con `DEBUG=0` el traceback no se muestra | `docker logs grupo6_frontend`; en el servidor propio, `dc logs web` |
+| Una cuenta nueva no recibe el correo para crear su contraseña | No hay SMTP configurado y el correo se escribió en el log | [Correo](#correo) |
+| `permission denied` al conectar con `docker.sock` en el servidor propio | La sesión se abrió antes de agregar el usuario al grupo `docker` | Salir y volver a entrar |
 | 500 al enviar el login, pero la página de login carga | Falló la base: la página no la consulta, autenticar sí | Revisar que `grupo6_db` esté *healthy* y que `POSTGRES_PASSWORD` sea la del volumen |
 | 400 *Bad Request* | El dominio no está en `ALLOWED_HOSTS` | Corregir `.env` y redesplegar |
 | 403 *CSRF verification failed* al enviar un formulario | Falta el dominio con `https://` en `CSRF_ORIGINS` | Corregir `.env` y redesplegar |
