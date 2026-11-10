@@ -1,10 +1,13 @@
 # Construye la imagen y la publica en GHCR, para que el servidor compartido del
 # curso no tenga que correr pip: solo baja el artefacto ya construido.
+#
+# Solo main se publica sola. Una rama se publica a mano desde Actions > imagen >
+# Run workflow, cuando hay que probarla en el servidor.
 name: imagen
 
 on:
   push:
-    branches: [main, "feat/**", "fix/**"]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -36,3 +39,12 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:${{ steps.etiqueta.outputs.nombre }}
             ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+      # Sin esto el paquete crece con cada push. Se conservan `main` y las 15
+      # versiones mas recientes: bastan para volver atras por SHA.
+      - uses: actions/delete-package-versions@v5
+        with:
+          package-name: oev-sala-grabacion
+          package-type: container
+          min-versions-to-keep: 15
+          ignore-versions: '^main$'
