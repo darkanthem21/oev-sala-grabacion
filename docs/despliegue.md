@@ -249,7 +249,7 @@ Requiere Docker Engine con el plugin de compose v2 y un usuario en el grupo
 ```sh
 ssh USUARIO@45.79.193.250 'mkdir -p ~/oev/produccion'
 scp docker-compose.yml docker-compose.produccion.yml USUARIO@45.79.193.250:~/oev/
-scp produccion/Caddyfile produccion/desplegar.sh USUARIO@45.79.193.250:~/oev/produccion/
+scp produccion/* USUARIO@45.79.193.250:~/oev/produccion/
 scp .env.ejemplo USUARIO@45.79.193.250:~/oev/.env
 ```
 

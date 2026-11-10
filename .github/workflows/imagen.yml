@@ -123,5 +123,5 @@ jobs:
           DESTINO: ${{ secrets.SSH_USUARIO }}@${{ secrets.SSH_HOST }}
         run: |
           scp -q docker-compose.yml docker-compose.produccion.yml "$DESTINO:oev/"
-          scp -q produccion/Caddyfile produccion/desplegar.sh "$DESTINO:oev/produccion/"
+          scp -q produccion/* "$DESTINO:oev/produccion/"
           ssh "$DESTINO" "sh oev/produccion/desplegar.sh ${{ github.sha }}"
