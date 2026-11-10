@@ -263,8 +263,8 @@ Después, el primer despliegue y la [carga de las áreas](#5-cargar-las-áreas).
 sh ~/oev/produccion/desplegar.sh <SHA completo del commit>
 ```
 
-El script respalda la base en `~/oev/respaldos/` (quedan los 20 más recientes),
-baja la imagen, levanta el stack y espera a que `web` lleve 20 segundos arriba
+El script hace primero el [respaldo](#respaldos) de la base y las fotos, baja
+la imagen, levanta el stack y espera a que `web` lleve 20 segundos arriba
 sin reiniciarse. Si no lo logra, muestra el log y termina con error. Cada
 despliegue que funcionó queda anotado en `~/oev/desplegados.log`. Con compose v2
 `up -d` recrea los contenedores sin el `KeyError` del servidor del curso, así que
@@ -279,6 +279,30 @@ gunzip -c respaldos/oev-AAAAMMDD-HHMMSS.sql.gz | docker compose -f docker-compos
 
 sobre una base vacía. Las fotos del check-out no entran en ese respaldo: se
 copian con `docker cp` desde el contenedor `web`, como en el servidor del curso.
+
+### Respaldos
+
+`produccion/respaldar.sh` deja en `~/oev/respaldos/`, legible solo para el
+usuario que despliega:
+
+- `oev-AAAAMMDD-HHMMSS.sql.gz`: la base. Quedan los 30 más recientes.
+- `fotos.tar`: las fotos del check-out, que no entran en el respaldo de la
+  base. Una sola copia, porque una foto no cambia después de subida.
+
+Lo corre `desplegar.sh` antes de cada despliegue. Para que además corra todos
+los días, se agrega al cron del usuario que despliega (`crontab -e`):
+
+```
+15 3 * * * sh $HOME/oev/produccion/respaldar.sh >> $HOME/oev/respaldos/cron.log 2>&1
+```
+
+Esos respaldos están en el mismo disco que los datos: sirven contra una
+migración mala o un volumen borrado, no contra la pérdida del servidor. Para eso
+hay que traerlos cada cierto tiempo a otra máquina:
+
+```sh
+rsync -a USUARIO@45.79.193.250:oev/respaldos/ respaldos-oev/
+```
 
 ### Despliegue automático
 
