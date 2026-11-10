@@ -20,6 +20,15 @@ services:
 
   web:
     env_file: .env
+    # La página de ingreso no consulta la base: prueba que gunicorn responde, es
+    # decir, que el arranque pasó la revisión y las migraciones. desplegar.sh
+    # espera este resultado. Hasta estar sano se revisa cada 2 s.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, urllib.request as u; u.urlopen(u.Request('http://127.0.0.1:3006/solicitante/entrar/', headers={'Host': os.environ['ALLOWED_HOSTS'].split(',')[0]}), timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      start_interval: 2s
     <<: *logs
 
   tareas:

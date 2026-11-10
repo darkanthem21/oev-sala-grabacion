@@ -264,11 +264,16 @@ sh ~/oev/produccion/desplegar.sh <SHA completo del commit>
 ```
 
 El script hace primero el [respaldo](#respaldos) de la base y las fotos, baja
-la imagen, levanta el stack y espera a que `web` lleve 20 segundos arriba
-sin reiniciarse. Si no lo logra, muestra el log y termina con error. Cada
-despliegue que funcionó queda anotado en `~/oev/desplegados.log`. Con compose v2
-`up -d` recrea los contenedores sin el `KeyError` del servidor del curso, así que
-no hace falta el `down`.
+la imagen, levanta el stack y espera a que `web` esté sano: su healthcheck
+pide la página de ingreso, así que solo pasa con la configuración revisada, las
+migraciones aplicadas y gunicorn respondiendo. Cada despliegue que funcionó
+queda anotado en `~/oev/desplegados.log`. Con compose v2 `up -d` recrea los
+contenedores sin el `KeyError` del servidor del curso, así que no hace falta el
+`down`.
+
+Si la versión no levanta, el script muestra el log, **vuelve solo a la última
+versión de `desplegados.log`** y termina con error. Las migraciones que haya
+alcanzado a aplicar la versión fallida no se revierten.
 
 **Volver atrás** es lo mismo con el SHA anterior de `desplegados.log`. Si la
 versión nueva traía migraciones, antes se restaura el respaldo:
