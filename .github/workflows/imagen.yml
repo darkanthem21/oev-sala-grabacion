@@ -15,6 +15,13 @@ on:
 permissions:
   contents: read
 
+# Las corridas de una misma rama van en fila. Si dos merges seguidos publicaran
+# a la vez, la del commit viejo podría terminar última: `main` y el servidor
+# quedarían en la versión anterior. En un PR, la corrida nueva cancela la vieja.
+concurrency:
+  group: imagen-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   pruebas:
     runs-on: ubuntu-latest
