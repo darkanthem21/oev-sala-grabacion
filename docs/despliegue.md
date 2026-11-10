@@ -312,6 +312,9 @@ SHA, que está en `~/oev/desplegados.log`:
 sh ~/oev/produccion/desplegar.sh <SHA anterior>
 ```
 
+El servidor guarda las 5 imágenes más recientes, así que esas se pueden
+desplegar aunque GHCR ya las haya borrado.
+
 Si entre las dos versiones cambiaron los `docker-compose*.yml` o `produccion/`,
 antes se copian los del commit al que se vuelve: `git switch --detach <SHA>` en
 la máquina propia y el `scp` de la primera instalación, sin el `.env`.
