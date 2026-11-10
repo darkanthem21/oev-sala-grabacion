@@ -1,0 +1,49 @@
+# Servidor propio (no el del curso): Caddy en el mismo stack termina el TLS.
+# Requiere Compose v2. Va encima del base, con el .env al lado:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.produccion.yml up -d
+#
+# El nombre del proyecto queda fijo en `oev`, así que los volúmenes son
+# oev_pgdata y oev_checkoutmedia sin importar la carpeta.
+name: oev
+
+# Sin límite, los logs de Docker crecen hasta llenar el disco.
+x-logs: &logs
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  db:
+    env_file: .env
+    <<: *logs
+
+  web:
+    env_file: .env
+    <<: *logs
+
+  tareas:
+    env_file: .env
+    <<: *logs
+
+  caddy:
+    image: caddy:2.10-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMINIO: ${DOMINIO}
+    volumes:
+      - ./produccion/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificados y claves de ACME: perderlos obliga a pedirlos de nuevo, y
+      # Let's Encrypt limita cuántos se pueden pedir por semana.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web]
+    restart: unless-stopped
+    <<: *logs
+
+volumes:
+  caddy_data:
+  caddy_config:

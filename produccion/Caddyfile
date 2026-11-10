@@ -1,0 +1,8 @@
+# Termina el TLS (certificado de Let's Encrypt, renovado solo), redirige http a
+# https y deja a gunicorn detrás, lejos de las conexiones lentas de internet.
+{$DOMINIO} {
+	encode zstd gzip
+	# Sin includeSubDomains: el dominio padre no es nuestro.
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy web:3006
+}
