@@ -13,8 +13,10 @@ Al arrancar, el contenedor:
    queda en el log.
 2. Aplica las migraciones y crea el superusuario si no existe. No hay pasos
    manuales de base de datos.
-3. Levanta gunicorn con `WEB_CONCURRENCY` workers (2 por defecto). Los
-   estáticos los sirve whitenoise, con nombre con hash y comprimidos.
+3. Levanta gunicorn con `WEB_CONCURRENCY` workers (2 por defecto) de 4 hilos
+   cada uno, para que una subida lenta de fotos no deje a un worker sin
+   responder. Los estáticos los sirve whitenoise, con nombre con hash y
+   comprimidos.
 
 El contenedor corre con el usuario `oev` (UID 1000), no como root. Solo puede
 escribir en `/app/media`, las fotos del check-out.
