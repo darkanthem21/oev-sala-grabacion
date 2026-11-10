@@ -88,8 +88,11 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ github.sha }}
 
       # Sin esto el paquete crece con cada push. Se conservan `main` y las 15
-      # versiones mas recientes: bastan para volver atras por SHA.
+      # versiones mas recientes: bastan para volver atras por SHA. Si la limpieza
+      # falla no detiene nada: la imagen ya esta publicada y el despliegue no
+      # depende de ella.
       - uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5
+        continue-on-error: true
         with:
           package-name: oev-sala-grabacion
           package-type: container
