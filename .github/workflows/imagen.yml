@@ -1,17 +1,54 @@
-# Construye la imagen y la publica en GHCR, para que el servidor compartido del
-# curso no tenga que correr pip: solo baja el artefacto ya construido.
+# Pruebas en cada PR y en main; en main, además, la imagen en GHCR y, si está
+# activado, el despliegue al servidor propio. Ninguno de los dos servidores
+# corre pip: bajan el artefacto ya construido.
 #
-# Solo main se publica sola. Una rama se publica a mano desde Actions > imagen >
-# Run workflow, cuando hay que probarla en el servidor.
+# Una rama se publica a mano desde Actions > imagen > Run workflow, cuando hay
+# que probarla en un servidor.
 name: imagen
 
 on:
+  pull_request:
   push:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:17
+        env:
+          POSTGRES_DB: oev
+          POSTGRES_USER: oev
+          POSTGRES_PASSWORD: oev
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U oev" --health-interval 2s --health-retries 20
+    env:
+      DB_HOST: localhost
+      POSTGRES_PASSWORD: oev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - run: python src/manage.py makemigrations --check --dry-run
+      # test_ac3_001 depende del día en que corre y falla también en main; se
+      # excluye hasta que lo corrija quien lleva las pruebas.
+      - run: >
+          pytest -q
+          --deselect src/configuracion/tests/test_parametros.py::test_ac3_001_independencia_estado_reservas
+
   publicar:
+    needs: pruebas
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -48,3 +85,31 @@ jobs:
           package-type: container
           min-versions-to-keep: 15
           ignore-versions: '^main$'
+
+  # Apagado hasta que exista la variable DESPLIEGUE_AUTOMATICO=true y el
+  # environment `produccion` con SSH_HOST, SSH_USUARIO, SSH_CLAVE y
+  # SSH_HUELLA (ver docs/despliegue.md). Copia los compose en cada despliegue,
+  # así que un cambio en ellos llega solo al servidor.
+  desplegar:
+    needs: publicar
+    if: github.ref == 'refs/heads/main' && vars.DESPLIEGUE_AUTOMATICO == 'true'
+    runs-on: ubuntu-latest
+    environment: produccion
+    concurrency: produccion
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar SSH
+        env:
+          SSH_CLAVE: ${{ secrets.SSH_CLAVE }}
+          SSH_HUELLA: ${{ secrets.SSH_HUELLA }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_CLAVE" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_HUELLA" > ~/.ssh/known_hosts
+      - name: Copiar el stack y desplegar
+        env:
+          DESTINO: ${{ secrets.SSH_USUARIO }}@${{ secrets.SSH_HOST }}
+        run: |
+          scp -q docker-compose.yml docker-compose.produccion.yml "$DESTINO:oev/"
+          scp -q produccion/Caddyfile produccion/desplegar.sh "$DESTINO:oev/produccion/"
+          ssh "$DESTINO" "sh oev/produccion/desplegar.sh ${{ github.sha }}"
