@@ -1,0 +1,72 @@
+@startuml asistencia-edicion
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Asistencia y corrección del check-out durante 10 minutos
+actor "Personal de apoyo" as P
+participant "uso.checkout.views" as V <<presentación>>
+participant "uso.checkout.forms" as F <<presentación>>
+participant "uso.checkout.services" as S <<dominio>>
+database "Base de datos" as DB
+
+== Asistencia antes del listado ==
+P -> V: GET /apoyo/checkout/{codigo}/
+V -> DB: Comprobar ticket y check-out pendiente
+V --> P: Registro de asistencia
+P -> V: POST asistencia
+V -> F: Validar elección obligatoria
+alt No asistió
+  V -> DB: Bloquear ticket y configuración
+  V -> S: guardar_reporte(..., asistio=False)
+  S -> DB: Checkout sin respuestas ni evidencias de cierre
+  V --> P: Inasistencia registrada
+else Sí asistió
+  V --> P: Listado y evidencia final
+  P -> V: POST respuestas y evidencias
+  V -> F: Validar preguntas, observaciones, hora y fotos
+  V -> S: guardar_reporte(..., asistio=True)
+  S -> DB: Crear Checkout y detalles de integridad
+  V --> P: Check-out completado
+end
+
+== Abrir la modificación ==
+P -> V: GET /apoyo/checkout/{codigo}/editar/
+V -> DB: Bloquear Checkout existente
+V -> V: Comprobar autor y registrado_en + 10 minutos
+alt Otro usuario o plazo vencido
+  V --> P: 403 · Edición no permitida
+else Autor dentro del plazo
+  V -> F: Precargar asistencia y listado original\nConservar imágenes existentes
+  V --> P: Formulario de modificación y hora límite
+end
+
+== Guardar corrección ==
+P -> V: POST cambios
+V -> DB: Bloquear Checkout y comprobar autor/plazo nuevamente
+V -> F: Validar asistencia y datos requeridos
+alt Inasistencia
+  note right of F: No se exige formulario de integridad.
+else Asistencia
+  F -> F: Validar listado, conservar fotos anteriores\no validar sus reemplazos
+end
+alt Datos inválidos
+  V --> P: Errores sin modificar el registro
+else Datos válidos
+  V -> S: guardar_reporte(..., registro=checkout)
+  S -> DB: Volver a comprobar autor y plazo con fila bloqueada
+  alt Plazo vencido
+    S --> V: PermissionDenied
+    V --> P: 403 · No se guarda la corrección
+  else Edición permitida
+    S -> DB: Crear EdicionCheckout con estado y rutas anteriores
+    S -> DB: Actualizar asistencia, respuestas y fotos vigentes
+    S -> DB: Guardar editado_en y editado_por\nConservar registrado_en original
+    V --> P: 302 · Check-out con marca Editado
+  end
+end
+note over V,DB
+  El plazo no se amplía al editar.
+  Los reportes consultan los incumplimientos vigentes.
+  Las fotografías anteriores permanecen referenciadas en el historial.
+end note
+@enduml

@@ -17,6 +17,11 @@ El detalle técnico, precondiciones y el paso a paso de cada prueba se encuentra
 | US-12 Historial de sanciones (administrador) | Administrador | [1-us-12.md](tests/1-us-12.md) |
 | US-14 Bloques del personal de apoyo | Personal de apoyo | [1-us-14.md](tests/1-us-14.md) |
 | US-17 Bloquear fechas de la sala | Administrador | [1-us-17.md](tests/1-us-17.md) |
+| US-20 Listado configurable y reportes de check-out | Administrador y personal de apoyo | [1-us-20.md](tests/1-us-20.md) |
+
+La [revisión técnica de US-20](revision-us-20.md) documenta el análisis de
+referencias, duplicaciones, compatibilidad y la verificación de la limpieza
+del código de check-out.
 
 ## Estructura de los documentos
 

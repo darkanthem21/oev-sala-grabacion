@@ -3,21 +3,42 @@
 {% load static %}
 {% block estilos_seccion %}<link rel="stylesheet" href="{% static 'uso/checkout/checkout.css' %}">{% endblock %}
 {% block seccion %}
+{% include "uso/checkout/_navegacion.html" %}
 <h2>Formulario de check-out</h2>
 <p>Organiza las secciones y sus preguntas de Sí o No. Los cambios se aplican al publicar el listado.</p>
 <p class="checkout-regla"><strong>Regla de integridad permanente:</strong> todas las preguntas son obligatorias. Cada «No» requiere una observación de al menos 10 caracteres y una foto antes de enviar. Esta regla también se aplica a las preguntas nuevas.</p>
-<p>Versión publicada: {{ listado.revision }}{% if listado.actualizado_por %} · {{ listado.actualizado_por }}{% endif %}</p>
 <form method="post" id="editor-checkout">
   {% csrf_token %}{{ form.revision }}{{ form.revision.errors }}{{ form.non_field_errors }}
   {{ form.secciones.errors }}
   <div id="editor-datos"><label for="id_secciones">Listado en formato JSON</label>{{ form.secciones }}</div>
   <noscript><p>Activa JavaScript para usar el editor visual. También puedes editar el listado en formato JSON.</p></noscript>
   <div id="editor-secciones"></div>
-  <div class="checkout-acciones">
-    <button type="button" class="btn" id="agregar-seccion" hidden>Añadir sección</button>
-    <button type="submit" class="btn principal">Publicar listado</button>
-  </div>
+  <section class="checkout-agregar-seccion" id="agregar-seccion-panel" hidden aria-labelledby="nueva-seccion-titulo">
+    <div>
+      <h3 id="nueva-seccion-titulo">Nueva sección</h3>
+      <p>Crea otro grupo de preguntas, separado de las secciones anteriores.</p>
+    </div>
+    <button type="button" class="btn activa" id="agregar-seccion">+ Añadir nueva sección</button>
+  </section>
   <p id="editor-estado" role="status" aria-live="polite"></p>
+  <section class="checkout-publicacion" aria-labelledby="revisar-listado-titulo">
+    <h3 id="revisar-listado-titulo">Revisar y publicar</h3>
+    <p>Prueba las preguntas y sus validaciones antes de publicar. La vista previa abre otra pestaña con los cambios que estás editando.</p>
+    <div class="checkout-acciones">
+      <button type="submit" class="btn checkout-btn-preview" formaction="{% url 'preview_checkout' %}" formtarget="_blank" name="accion" value="vista_previa">Vista previa / Probar listado</button>
+      <button type="submit" class="btn principal" id="publicar-listado">Publicar listado</button>
+    </div>
+  </section>
 </form>
+<dialog id="confirmar-publicacion" class="checkout-confirmacion" role="alertdialog" aria-labelledby="confirmar-publicacion-titulo" aria-describedby="confirmar-publicacion-descripcion">
+  <span class="checkout-confirmacion-icono" aria-hidden="true">!</span>
+  <h2 id="confirmar-publicacion-titulo">Confirmar cambios</h2>
+  <p id="confirmar-publicacion-descripcion">¿Estás seguro de que deseas guardar y publicar los cambios del formulario de check-out?</p>
+  <p class="checkout-ayuda">Los check-outs anteriores conservarán su formulario original.</p>
+  <div class="checkout-acciones">
+    <button type="button" class="btn" id="cancelar-publicacion" autofocus>Seguir editando</button>
+    <button type="button" class="btn activa" id="aceptar-publicacion">Guardar y publicar</button>
+  </div>
+</dialog>
 {% endblock %}
 {% block scripts %}<script defer src="{% static 'uso/checkout/editor.js' %}"></script>{% endblock %}

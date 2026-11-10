@@ -29,6 +29,28 @@ loop Preparar cambios sin publicar
   A -> E: Añadir, editar, eliminar o reordenar
   E -> E: Actualizar secciones y preguntas en memoria
 end
+opt Vista previa antes de publicar
+  A -> V: POST /configuracion/checkout/preview/\nBorrador y revisión
+  V -> F: EditorCheckoutForm: validar estructura del borrador
+  V --> A: Nueva pestaña con preview.html y asistencia previa
+  A -> V: POST /configuracion/checkout/preview/\nRespuestas y fotografías de prueba
+  V -> F: CheckoutForm: mismas reglas que el check-out real
+  F --> V: Resultado de la validación
+  V --> A: Mostrar errores o prueba correcta
+  note right of V
+    No publica el listado, no crea Checkout
+    y no guarda fotografías de prueba.
+  end note
+end
+A -> E: Pulsar Publicar listado
+E --> A: Alerta modal: Confirmar cambios\nFoco inicial en Seguir editando
+alt Seguir editando o Escape
+  A -> E: Cancelar publicación
+  E --> A: Cerrar alerta y conservar borrador en la pestaña
+  note right of E: Sin POST ni cambios en el listado publicado.
+else Guardar y publicar
+  A -> E: Confirmar publicación
+  E -> E: requestSubmit(): validar y enviar formulario
 A -> V: POST /configuracion/checkout/\nJSON del listado + revisión
 V -> F: EditorCheckoutForm.is_valid()
 F -> F: validar_secciones(): títulos, preguntas\ne identificadores únicos
@@ -52,6 +74,8 @@ else Estructura válida
   end
 end
 
+end
+
 == Responder el check-out del bloque ==
 P -> V: GET /apoyo/checkout/{codigo}/
 V -> B: buscar(codigo)
@@ -60,13 +84,23 @@ B --> V: Bloque con estado de check-out
 alt No existe, no terminó o se canceló sin check-out
   V --> P: 404 · Check-out no disponible
 else Bloque terminado con check-out pendiente
-  V -> DB: FormularioCheckout.cargar()
-  DB --> V: Listado vigente y revisión
+  V --> P: 200 · Registro de asistencia
+end
+
+P -> V: POST asistencia
+V -> F: AsistenciaForm.is_valid()
+alt No asistió
+  V -> DB: Bloquear ticket y configuración vigente
+  V -> S: guardar_reporte(..., asistio=False)
+  S -> DB: Crear Checkout sin respuestas, fotos ni hora de salida
+  V --> P: 302 · Inasistencia registrada
+else Asistió
+  V -> DB: Cargar listado vigente y revisión
   V -> F: CheckoutForm(listado=listado)
   V --> P: 200 · Preguntas obligatorias y cierre
 end
 
-P -> V: POST /apoyo/checkout/{codigo}/\nRespuestas + observaciones + fotos + hora + revisión
+P -> V: Si asistió: POST /apoyo/checkout/{codigo}/\nAsistencia + respuestas + observaciones + fotos + hora + revisión
 V -> B: buscar(codigo)
 B -> DB: Consultar disponibilidad del ticket
 B --> V: Estado de check-out
@@ -87,6 +121,7 @@ else Check-out disponible o ya completado
       else Sigue pendiente
         V -> F: CheckoutForm(POST, FILES, listado).is_valid()
         F -> F: Verificar revisión, respuestas y hora de salida
+        F -> F: Exigir observación final y fotografía de cierre válidas\nValidar recomendaciones generales del cierre (opcionales)
         loop Cada respuesta No
           F -> F: Exigir observación de al menos 10 caracteres\ny foto válida JPEG, PNG o WebP de hasta 5 MB
         end
@@ -99,10 +134,15 @@ else Check-out disponible o ya completado
         else Formulario válido
           V -> S: guardar_reporte(ticket, listado, datos, usuario)
           S -> DB: Crear Checkout único con respuestas, hora, autor,\nfecha, revisión y copia del listado
+          S -> FS: Guardar fotografía final en checkout/cierre/
+          S -> DB: Guardar observaciones finales, recomendaciones\ny ruta de la fotografía final
+          loop Todas las preguntas
+            S -> DB: Crear RespuestaCheckout con pregunta original,\ncumplimiento y observación del incumplimiento
+          end
           loop Cada respuesta No validada
             S -> FS: Guardar imagen de integridad
             FS --> S: Ruta del archivo
-            S -> DB: Crear FotoIntegridad asociada al reporte y pregunta
+            S -> DB: Crear FotoIntegridad asociada al reporte y RespuestaCheckout
           end
           S --> V: Reporte registrado
         end
@@ -125,10 +165,28 @@ B -> DB: Consultar ticket y estado completado
 B --> V: Bloque completado
 V -> DB: Consultar Checkout, respuestas y FotoIntegridad
 DB --> V: Copia original del listado y evidencias
-V --> P: 200 · Reporte de solo lectura con sus preguntas originales
+V -> S: resumen_respuestas(registro)
+S --> V: Preguntas y evidencias con la misma representación del PDF
+V --> P: 200 · Reporte con preguntas originales\ny acción Modificar para el autor durante 10 minutos
 note over V,DB
   Publicar otro listado no altera los reportes anteriores.
   El estado completado es compartido por todo el personal de apoyo.
   Las fotos se descargan mediante una vista con control de acceso.
+  Una inasistencia no implica revisión de integridad.
+  Las correcciones muestran autor, fecha y marca Editado.
+end note
+
+== Consultar únicamente las faltas de integridad ==
+P -> V: GET /apoyo/checkout/{codigo}/integridad/
+V -> DB: Cargar Checkout completado
+V -> S: casos_falta_integridad(checkout)
+S -> DB: RespuestaCheckout WHERE cumple = false\nIncluir foto y datos del check-out
+DB --> S: Preguntas incumplidas y evidencias asociadas
+S --> V: Casos de falta de integridad
+V --> P: 200 · incidencias.html: preguntas incumplidas,\nobservaciones y fotos asociadas
+note right of V
+  Las respuestas Sí no aparecen en este reporte.
+  La evidencia final acompaña a los casos detectados.
+  Si no hay casos, se informa que no hay faltas.
 end note
 @enduml

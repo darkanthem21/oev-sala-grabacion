@@ -1,0 +1,30 @@
+{% extends "panel.html" %}
+{% load static %}
+{% block titulo %}Vista previa del check-out{% endblock %}
+{% block estilos_seccion %}<link rel="stylesheet" href="{% static 'uso/checkout/checkout.css' %}">{% endblock %}
+{% block seccion %}
+<h2>Vista previa del listado</h2>
+<p class="checkout-regla">Puedes responder este borrador y probar sus validaciones. Las respuestas y fotografías de prueba no se guardan ni se publica el listado.</p>
+<p>Para seguir editando, vuelve a la pestaña del editor. Si haces más cambios, abre nuevamente la vista previa desde allí.</p>
+{% if validado %}
+  <p class="checkout-prueba-correcta" role="status">Prueba correcta: {% if inasistencia %}la inasistencia no requiere formulario de revisión.{% else %}las respuestas cumplen las validaciones.{% endif %} No se registró ningún check-out.</p>
+{% elif probado %}
+  <p class="checkout-regla" role="alert">La prueba detectó campos pendientes. Revisa lo indicado y vuelve a seleccionar las fotografías antes de probar otra vez.</p>
+{% endif %}
+<form method="post" enctype="multipart/form-data" id="{% if mostrar_listado %}checkout-form{% else %}asistencia-form{% endif %}" action="{% url 'preview_checkout' %}">
+  {% csrf_token %}
+  <input type="hidden" name="secciones" value="{{ secciones_json }}">
+  {{ form.revision }}{{ form.revision.errors }}
+  {% if mostrar_listado %}
+  <input type="hidden" name="asistencia" value="si">
+  {{ form.non_field_errors }}
+  {% include "uso/checkout/_listado.html" %}
+  <button type="submit" class="btn activa" name="accion" value="probar">Probar respuestas</button>
+  <button type="submit" class="btn" name="accion" value="cambiar_asistencia" formnovalidate>Cambiar asistencia</button>
+  {% else %}
+  {% include "uso/checkout/_asistencia.html" %}
+  <button type="submit" class="btn activa" name="accion" value="{% if inasistencia %}probar{% else %}asistencia{% endif %}" id="continuar-asistencia">{% if inasistencia %}Probar inasistencia{% else %}Continuar{% endif %}</button>
+  {% endif %}
+</form>
+{% endblock %}
+{% block scripts %}<script defer src="{% static 'uso/checkout/reporte.js' %}"></script>{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "uso/_base.html" %}
+{% load static %}
+{% block estilos %}
+  {{ block.super }}<link rel="stylesheet" href="{% static 'uso/checkout/checkout.css' %}">
+{% endblock %}
+{% block seccion %}
+<p><a href="{% url 'checkout_apoyo' bloque.ticket %}">‹ Volver al check-out</a></p>
+<h2>Modificar check-out · {{ bloque.ticket }}</h2>
+<p class="checkout-regla">Puedes guardar cambios hasta las {{ registro.limite_edicion|date:"H:i:s" }}. El plazo de 10 minutos cuenta desde el registro original y no se reinicia al editar.</p>
+<p>Al guardar se mostrará «Editado», junto con tu nombre y la fecha de la modificación.</p>
+<form method="post" enctype="multipart/form-data" id="checkout-form">
+  {% csrf_token %}
+  {% include "uso/checkout/_asistencia.html" %}
+  <fieldset id="listado-asistencia" class="checkout-listado-asistencia" {% if not mostrar_listado %}hidden disabled{% endif %}>
+    <legend class="checkout-solo-lectores">Revisión de la sala</legend>
+    {{ form.revision }}{{ form.revision.errors }}{{ form.non_field_errors }}
+    {% include "uso/checkout/_listado.html" %}
+  </fieldset>
+  <noscript><button type="submit" class="btn" name="accion" value="asistencia" formnovalidate>Confirmar asistencia y continuar</button></noscript>
+  <div class="checkout-acciones">
+    <button type="submit" class="btn activa">Guardar cambios</button>
+    <a class="btn" href="{% url 'checkout_apoyo' bloque.ticket %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script defer src="{% static 'uso/checkout/reporte.js' %}"></script>{% endblock %}

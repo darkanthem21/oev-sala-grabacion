@@ -18,7 +18,8 @@ Este manual cubre lo que hoy está disponible en el sistema, ordenado por rol:
 | US-05 Áreas académicas | Administrador | [Áreas](#áreas) |
 | US-08 Gestión de roles y usuarios | Administrador | [Usuarios](#usuarios) |
 | US-14 Bloques del personal de apoyo | Personal de apoyo | [Bloques del día](#bloques-del-día) |
-| US-15 Checklist de cierre (prototipo) | Personal de apoyo | [Checklist de cierre de la sala](#checklist-de-cierre-de-la-sala) |
+| US-15 Checklist de cierre (prototipo anterior) | Personal de apoyo | [Referencia histórica](#checklist-de-cierre-de-la-sala-prototipo-anterior) |
+| US-20 Listado configurable de check-out | Administrador y personal de apoyo | [Administrar el listado](#administrar-el-listado-de-check-out) y [Consultar las faltas de integridad](#consultar-las-faltas-de-integridad) |
 
 ## Puertas de acceso
 
@@ -799,14 +800,18 @@ día actual, o el selector de fecha para saltar a cualquier día.
 El botón **Hacer check-out** aparece recién cuando termina el bloque.
 
 1. Pulsa **Hacer check-out** en la fila del bloque.
-2. Revisa los datos del bloque, responde las preguntas del listado vigente e indica la hora efectiva de salida.
-3. Cada respuesta **No** requiere una observación de al menos 10 caracteres y una foto JPEG, PNG o WebP de hasta 5 MB. Pulsa **Finalizar y enviar reporte**.
-4. El sistema vuelve a la lista y el bloque aparece como **Completado**.
+2. En **Registro de asistencia**, indica si el solicitante asistió al bloque.
+3. Si marcas **No, no asistió**, pulsa **Registrar inasistencia**. El registro queda completado sin exigir preguntas, observaciones, fotos ni hora de salida. No se registra una revisión de integridad de la sala.
+4. Si marcas **Sí, asistió**, pulsa **Continuar al listado**. Responde las preguntas e indica la hora efectiva de salida. La asistencia positiva se guarda junto con el check-out al completar el formulario.
+5. Cada respuesta **No** exige una **Observación del incumplimiento** de al menos 10 caracteres y una foto JPEG, PNG o WebP de hasta 5 MB.
+6. En **Fundamento y evidencia final**, completa las observaciones finales (mínimo 10 caracteres) y adjunta una fotografía del estado general de la sala. Las recomendaciones finales son opcionales.
+7. Pulsa **Finalizar y enviar reporte**. Si faltan antecedentes, corrige lo indicado y vuelve a seleccionar las fotos. El bloque aparece como **Completado**.
 
 ![Check-out pendiente](uso/us-14/checkout-pendiente.png)
 
 Un check-out completado no se puede enviar de nuevo. Al pulsar **Completado**
-se ve quién lo registró y cuándo.
+se ve la asistencia, quién lo registró y cuándo. Las correcciones se realizan
+mediante **Modificar check-out**, dentro del plazo descrito más abajo.
 
 ![Check-out completado](uso/us-14/checkout-completado.png)
 
@@ -815,28 +820,135 @@ se muestran sus preguntas originales, respuestas y evidencias. Las fotos solo se
 descargan con una sesión de apoyo o administración. Las capturas de US-14 de arriba
 corresponden al simulador anterior.
 
+Si una respuesta de un registro antiguo no está disponible, el formulario
+completo y su PDF muestran **Sin respuesta registrada**, sin inventar una
+respuesta de cumplimiento o incumplimiento.
+
 ### Administrar el listado de check-out
 
-En **Configuración → Check-out** (`/configuracion/checkout/`) el administrador puede
-editar títulos y preguntas, añadir o eliminar secciones y preguntas, y cambiar su
-orden con **Subir** y **Bajar**. Debe conservar al menos una sección con una pregunta.
+La pestaña **Check-out** aparece después de **Validación** en Configuración.
+Inicia sesión como administrador y entra en `/configuracion/checkout/`.
+Dentro encontrarás dos pestañas: **Formulario**, para editar el listado, e
+**Historial**, para consultar los check-outs registrados.
+Cada sección tiene sus controles de orden en la cabecera y un botón
+**Añadir pregunta a esta sección** en su interior. Para crear un grupo distinto,
+usa **Añadir nueva sección** en el bloque separado al final del editor.
 
-Los botones de edición preparan los cambios; **Publicar listado** los guarda.
-Todas las preguntas son obligatorias y cada **No** exige observación y foto:
-el editor no permite quitar esa regla. Las preguntas nuevas heredan la validación.
+Edita los títulos y las preguntas, y usa **Subir**, **Bajar** o **Eliminar**
+en el elemento correspondiente. Debe conservarse al menos una sección con una
+pregunta. Todas las preguntas son de **Sí / No** y obligatorias.
+
+En **Revisar y publicar**, pulsa **Vista previa / Probar listado** para abrir
+el borrador en otra pestaña. Allí puedes responder y pulsar **Probar respuestas**:
+se ejecutan las mismas validaciones del check-out, sin guardar respuestas,
+fotografías ni publicar cambios. Regresa a la pestaña del editor para seguir
+editando y usa **Publicar listado** cuando esté listo. El sistema mostrará una
+alerta de confirmación dentro de la página, compacta, con esquinas redondeadas,
+borde fino naranja y celeste en la acción secundaria, antes
+de guardar y publicar los cambios. Pulsa **Guardar y publicar** para continuar o
+**Seguir editando** para conservar el borrador. También puedes cerrar la ventana
+con **Escape**. Mientras esté abierta, el foco permanece dentro de la ventana.
+La ventana comienza con el foco en **Seguir editando**. Cancelar no envía datos
+al servidor: el borrador permanece en la pestaña actual, sin publicarse. No se
+guarda automáticamente al salir o recargar. **Vista previa / Probar listado**
+abre la prueba directamente, sin pedir esta confirmación.
+
+La vista previa también comienza por asistencia. Permite probar una inasistencia
+sin pedir el listado ni guardar un registro real. Para revisar las preguntas,
+marca asistencia y continúa; **Cambiar asistencia** vuelve al paso anterior.
+
+Los botones de edición preparan el borrador; confirmar **Guardar y publicar** guarda los
+cambios para los check-outs pendientes. La regla de observación y foto ante un
+**No** también se aplica a las preguntas nuevas. No se muestra un número de
+versión publicada en la interfaz.
 
 Los reportes completados conservan una copia del listado que se respondió.
-Si el listado cambia mientras alguien responde o edita, el servidor rechaza la
-versión anterior y solicita recargar. Un envío con errores no registra el check-out;
+Si el listado cambia mientras alguien responde o edita, el sistema solicita
+recargar antes de continuar. Un envío con errores no registra el check-out;
 hay que corregirlo y volver a seleccionar las fotos antes de enviarlo.
+
+### Fotografías y observaciones del incumplimiento
+
+Al responder **No**, registra lo sucedido en **Observación del incumplimiento**
+y adjunta la fotografía de respaldo. Estos son los antecedentes que se
+recopilan para el informe; no hay un campo de recomendaciones por pregunta.
+
+**Recomendaciones para la fotografía** despliega consejos de iluminación,
+encuadre y enfoque. Es una ayuda para tomar la foto. Al seleccionar una imagen,
+aparece una vista previa para comprobar que fundamenta la observación.
+Usa JPEG, PNG o WebP de hasta 5 MB.
+
+La sección **Fundamento y evidencia final** reúne la observación y fotografía
+general de cierre. Allí se mantiene la opción de recomendaciones finales,
+separada de las observaciones específicas de los incumplimientos.
+
+### Consultar las faltas de integridad
+
+Después de registrar, abre el check-out completado y pulsa **Ver reporte de
+faltas de integridad**. El reporte reúne únicamente las preguntas respondidas
+**No**, agrupando cada pregunta y su sección original con la observación y la
+fotografía correspondiente. Incluye los antecedentes generales del cierre
+cuando existen incumplimientos.
+
+Las preguntas respondidas **Sí** permanecen en el check-out completo y no se
+incluyen como faltas. Si todas cumplen, el reporte indica que no hay faltas de
+integridad. Las fotografías se descargan con una sesión autorizada de apoyo o
+administración. La inasistencia se informa como tal, sin afirmar que se revisó
+la integridad de una sala que no se utilizó. El reporte muestra las observaciones
+y fotos de la última corrección válida.
+
+### Modificar un check-out durante los primeros 10 minutos
+
+1. Como el mismo usuario de apoyo que registró el check-out, abre **Completado**.
+2. Pulsa **Modificar check-out**. La pantalla indica la hora límite para guardar.
+3. Corrige asistencia, respuestas u observaciones. Las fotos registradas se
+   conservan si no seleccionas reemplazos. Se utilizan las preguntas originales,
+   aunque el administrador haya cambiado el listado desde entonces.
+4. Pulsa **Guardar cambios**. El registro y su reporte muestran **Editado**, el
+   autor de la corrección y su fecha y hora.
+
+El plazo termina 10 minutos después del registro original; editar no lo amplía.
+Solo el autor puede modificar y el servidor comprueba el plazo al guardar,
+incluso si el formulario se abrió antes. Una vez vencido, el registro queda
+disponible para consulta y ya no muestra la acción de modificación.
+
+Al corregir asistencia a inasistencia, se retiran las respuestas y fotos del
+reporte vigente y se conserva el estado anterior en el historial técnico. Al
+corregir inasistencia a asistencia, se exige completar el listado y la evidencia
+de cierre. Registrar inasistencia no aplica sanciones automáticas en este flujo.
+
+### Historial administrativo y formulario en PDF
+
+1. Entra como administrador a **Configuración → Check-out → Historial**.
+2. Selecciona una semana. **Esta semana** y las semanas anteriores aparecen de
+   la más reciente a la más antigua; los registros se agrupan por día en el mismo
+   orden. Una semana sin registros muestra un aviso.
+3. Revisa el usuario solicitante, la fecha de registro, la fecha y horario del
+   bloque reservado, quién registró el check-out y su estado de reporte. **Sí ·
+   Con reporte** indica al menos un incumplimiento de integridad; **No · Sin
+   incumplimientos** indica que todas las preguntas cumplieron, y **No ·
+   Inasistencia** indica que no hubo revisión de la sala. Las correcciones se
+   identifican con **Editado**.
+4. Pulsa el icono de documento **PDF** situado a la derecha de la fila. Se abre
+   el formulario completo en otra pestaña, desde donde puedes guardarlo o imprimirlo.
+
+El historial abarca los últimos **dos meses calendario**, según la fecha de
+registro. Por ejemplo, el 2 de noviembre permite consultar desde el 2 de septiembre.
+Los registros anteriores se conservan fuera de esta vista. Si hay más de 30
+registros en una semana, usa **Anterior** y **Siguiente** para cambiar de página.
+
+El PDF incluye las preguntas y respuestas originales, las observaciones y
+fotografías, el cierre y la marca de edición cuando corresponde. Para una
+inasistencia muestra sus datos y aclara que no se realizó revisión. El PDF
+contiene el formulario completo; **Ver reporte de faltas de integridad** sigue
+siendo la consulta que reúne exclusivamente los incumplimientos.
 
 ### Checklist de cierre de la sala: prototipo anterior
 
-> **Referencia histórica.** Esta pantalla es el prototipo de US-15 y todavía no está
-> en `main`: vive en la rama `feat/us-15-checkout-de-constancia`. Se abre en
-> `/checklist/`, sin iniciar sesión, y muestra siempre la misma reserva de
-> ejemplo (*Sala Virtual, 09:00 - 12:00*). El reporte queda guardado solo en el
-> navegador: todavía no llega al sistema ni reemplaza el check-out de arriba.
+> **Referencia histórica.** La descripción y capturas siguientes corresponden
+> al prototipo de US-15, con reserva de ejemplo y almacenamiento en el navegador.
+> No describen el flujo actual ni constituyen instrucciones para sus pruebas.
+> Para usar el check-out integrado, sigue las secciones anteriores de este manual.
 
 Al terminar el uso de la sala, el personal de apoyo la revisa y deja constancia
 de su estado. Son cuatro pasos; la barra de arriba dice en cuál vas y cuánto

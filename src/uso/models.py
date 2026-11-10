@@ -3,6 +3,6 @@
 La implementación del check-out se encuentra en uso.checkout.models.
 """
 
-from .checkout.models import Checkout, FotoIntegridad, FormularioCheckout, listado_inicial
+from .checkout.models import Checkout, EdicionCheckout, FotoIntegridad, FormularioCheckout, RespuestaCheckout, listado_inicial
 
-__all__ = ["Checkout", "FotoIntegridad", "FormularioCheckout", "listado_inicial"]
+__all__ = ["Checkout", "EdicionCheckout", "FotoIntegridad", "FormularioCheckout", "RespuestaCheckout", "listado_inicial"]

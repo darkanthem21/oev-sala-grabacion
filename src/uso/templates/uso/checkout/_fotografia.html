@@ -1,0 +1,19 @@
+<div class="checkout-carga">
+  {{ campo.label_tag }}{{ campo.errors }}{{ campo }}
+  {% if campo.initial %}<p class="checkout-ayuda">Ya existe una fotografía registrada. Se conservará si no seleccionas una nueva.</p>{% endif %}
+  <p class="checkout-ayuda">JPEG, PNG o WebP, máximo 5 MB. Puedes tomar una foto con el teléfono o seleccionar una imagen guardada.</p>
+  <details class="checkout-consejos">
+    <summary>Recomendaciones para la fotografía</summary>
+    <ul>
+      <li>Usa buena iluminación y comprueba que la imagen esté enfocada.</li>
+      <li>Muestra el elemento y su entorno para identificar dónde ocurrió el problema.</li>
+      <li>Para el cierre, muestra el estado general en que se entrega la sala.</li>
+      <li>Evita incluir rostros o datos personales que no sean necesarios.</li>
+    </ul>
+  </details>
+  <figure class="checkout-preview" hidden>
+    <img alt="Vista previa de la fotografía seleccionada">
+    <figcaption></figcaption>
+  </figure>
+  <p class="checkout-archivo-estado" role="status" aria-live="polite"></p>
+</div>
