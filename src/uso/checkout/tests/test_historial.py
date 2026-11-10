@@ -70,7 +70,6 @@ class HistorialCheckoutTests(TestCase):
         self.assertEqual(respuesta["Content-Type"], "application/pdf")
         self.assertIn("inline", respuesta["Content-Disposition"])
         datos = b"".join(respuesta.streaming_content)
-        respuesta.close()
         self.assertTrue(datos.startswith(b"%PDF-"))
         return PdfReader(BytesIO(datos))
 

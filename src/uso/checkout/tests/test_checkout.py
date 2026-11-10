@@ -180,7 +180,9 @@ class CheckoutTests(TestCase):
             self.assertEqual(cliente.get(url).status_code, 302)
         respuesta = self.client.get(url)
         self.assertEqual(respuesta.status_code, 200)
-        respuesta.close()
+        # Consumir el contenido cierra el archivo sin cerrar la conexión del
+        # TestCase, que respuesta.close() sí cierra al emitir request_finished.
+        b"".join(respuesta.streaming_content)
 
     def test_cierre_exige_observaciones_y_foto_aunque_todo_cumpla(self):
         datos = self.datos(observaciones="")
@@ -264,7 +266,8 @@ class CheckoutTests(TestCase):
         for url in urls:
             respuesta = self.client.get(url)
             self.assertEqual(respuesta.status_code, 200)
-            respuesta.close()
+            if respuesta.streaming:
+                b"".join(respuesta.streaming_content)
 
     def test_reporte_no_disponible_sin_checkout(self):
         self.assertEqual(self.client.get(reverse("reporte_integridad", args=[self.ticket.ticket])).status_code, 404)
