@@ -13,13 +13,27 @@ x-logs: &logs
     driver: json-file
     options: { max-size: "10m", max-file: "3" }
 
+# Lo que corre nuestro código no necesita ninguna capacidad de root ni debe
+# poder ganarlas.
+x-app: &app
+  env_file: .env
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  <<: *logs
+
 services:
   db:
     env_file: .env
+    # La base levanta en segundos; después basta revisarla cada medio minuto en
+    # vez de cada 2 s, que en un solo núcleo se nota.
+    healthcheck:
+      interval: 30s
+      start_period: 30s
+      start_interval: 2s
     <<: *logs
 
   web:
-    env_file: .env
+    <<: *app
     # El servidor tiene 1 GB. Con tope, si un PDF con fotos grandes o una fuga
     # se pasa, cae un worker de web (gunicorn levanta otro) y no la base, que
     # es a quien podría elegir el kernel al quedarse sin memoria.
@@ -33,12 +47,13 @@ services:
       timeout: 5s
       start_period: 60s
       start_interval: 2s
-    <<: *logs
 
   tareas:
-    env_file: .env
+    <<: *app
     mem_limit: 200m
-    <<: *logs
+    # Con sh como PID 1 la señal de parada se ignora y cada despliegue espera
+    # 10 s a que Docker lo mate.
+    init: true
 
   caddy:
     image: caddy:2.10-alpine
