@@ -57,6 +57,18 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# Con DEBUG=0 Django no escribe los errores en la consola: los manda por correo
+# a ADMINS, que está vacío. Sin esto un 500 no deja traza en `docker logs`.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {"sin_debug": {"()": "django.utils.log.RequireDebugFalse"}},
+    "handlers": {
+        "consola": {"class": "logging.StreamHandler", "level": "WARNING", "filters": ["sin_debug"]},
+    },
+    "root": {"handlers": ["consola"]},
+}
+
 ROOT_URLCONF = "oev.urls"
 
 TEMPLATES = [
