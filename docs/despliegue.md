@@ -225,7 +225,7 @@ stack trae el suyo.
 
 | Dato | Valor |
 |---|---|
-| Máquina | `45.79.193.250` (VPS de Linode, Ubuntu 24.04, 1 CPU, 1 GB de RAM) |
+| Máquina | `45.79.193.250`, con Ubuntu 24.04 |
 | URL | La de `DOMINIO`. Mientras `oev.inf.uach.cl` apunte al servidor del curso, `45-79-193-250.sslip.io` |
 | Acceso | Usuario `despliegue` por SSH, solo con clave. Ni `root` ni las contraseñas entran |
 | Carpeta de despliegue | `~/oev` de ese usuario |
@@ -244,8 +244,8 @@ Caddy sigue con el anterior.
 
 ### Preparación del servidor
 
-Se hizo una vez, el 10/11, sobre el Ubuntu recién entregado. Queda escrito para
-saber cómo está la máquina y para repetirlo si se reinstala.
+Lo que necesita una máquina con Ubuntu recién instalado antes de la primera
+instalación. Así está el servidor propio, y así se repite en otra máquina.
 
 | Qué | Cómo quedó |
 |---|---|
@@ -254,7 +254,6 @@ saber cómo está la máquina y para repetirlo si se reinstala.
 | Firewall | `ufw`: lo entrante cerrado salvo `22/tcp`, `80/tcp`, `443/tcp` y `443/udp` |
 | Docker | Engine y plugin de compose del repositorio oficial de Docker, no los de Ubuntu |
 | Actualizaciones | Las de seguridad se instalan solas, como trae Ubuntu. El reinicio no es automático |
-| Swap | 495 MB, la partición que trae la máquina |
 
 Como `root`, el usuario; después, desde la máquina propia, su clave pública:
 
@@ -365,7 +364,7 @@ Sobre el superusuario:
 Sin `EMAIL_BACKEND` en el `.env` no sale ningún correo. La bienvenida con el
 enlace para crear la contraseña, la recuperación de contraseña y los
 recordatorios de confirmación se escriben en el log del contenedor que los
-genera (`web` o `tareas`). **Al 10/11 el servidor propio está así.**
+genera (`web` o `tareas`).
 
 Mientras tanto, el enlace de cada cuenta se saca del log, en `~/oev`:
 
