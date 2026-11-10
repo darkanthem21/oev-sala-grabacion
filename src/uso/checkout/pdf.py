@@ -28,7 +28,12 @@ def _marca():
     pdfmetrics.registerFont(TTFont("CheckoutMontserrat", str(fuentes / "Montserrat-Bold.ttf")))
     pdfmetrics.registerFontFamily("CheckoutRoboto", normal="CheckoutRoboto", bold="CheckoutMontserrat")
     css = Path(finders.find("css/marca.css")).read_text(encoding="utf-8")
-    return {nombre: colors.HexColor(valor) for nombre, valor in re.findall(r"--([\w-]+):\s*(#[0-9a-fA-F]{6})", css)}
+    valores = dict(re.findall(r"--([\w-]+):\s*(#[0-9a-fA-F]{6}|var\(--[\w-]+\))", css))
+    # Algunas variables son alias de otra (--acento: var(--marca)).
+    def hexadecimal(nombre):
+        valor = valores[nombre]
+        return hexadecimal(valor[6:-1]) if valor.startswith("var(") else valor
+    return {nombre: colors.HexColor(hexadecimal(nombre)) for nombre in valores}
 
 
 def generar_pdf(registro):
