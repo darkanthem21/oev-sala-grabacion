@@ -1,0 +1,52 @@
+@startuml desactivar-cuenta
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Desactivar una cuenta (US-08)
+
+actor "Administrador" as A
+participant "<b>personas.views</b>\n<size:11>personas/views.py</size>" as N <<presentación>>
+participant "<b>personas.services</b>\n<size:11>personas/services.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : $comentario("abre la ficha de la cuenta")\nGET /configuracion/usuarios/<id>/ → usuario(request, pk)
+N -> D ++ : get_object_or_404(Usuario, pk=pk)\nSELECT personas_usuario
+return fila
+N -> D ++ : $comentario("AC5: lo que tiene abierto de hoy en adelante")\ncuenta.solicitudes.en_curso(hoy)\nSELECT COUNT(*) FILTER (…) FROM solicitudes_solicitud
+return pendientes, reservas
+N --> A : 200 · personas/usuario.html
+deactivate N
+note over A
+  Con pendientes o reservas, «Desactivar cuenta»
+  abre un diálogo que las cuenta: desactivar no
+  las cancela. Sin ellas, envía directo.
+end note
+A -> N ++ : $comentario("«Desactivar igual» o «Desactivar cuenta»")\nPOST /configuracion/usuarios/<id>/ (accion=desactivar)
+N -> V ++ : cambiar_estado_de_cuenta(cuenta, False, request.user)
+group @transaction.atomic
+  V -> V : $comentario("nadie se desactiva a sí mismo; otro administrador, solo el superusuario")\n_exigir_que_pueda(usuario, quien)
+  V -> D ++ : Usuario.objects.select_for_update().get(pk=…)\nSELECT personas_usuario … FOR UPDATE
+  return usuario
+  V -> V : antes = foto_de_cuenta(usuario.pk)
+  V -> V ++ : usuario.save(update_fields=["is_active"])
+  V -> D ++ : $comentario("AC6: falla si se va el último administrador activo")\nimpedir_quedar_sin_administrador({usuario.pk})\nSELECT personas_usuario … FOR UPDATE
+  return administradores
+  V -> D ++ : UPDATE personas_usuario SET is_active = false
+  deactivate D
+  deactivate V
+  V -> D ++ : $comentario("AC10")\nregistrar_cambios_de_cuenta(usuario, antes, quien)\nINSERT personas_cambiousuario
+  deactivate D
+end
+return cambio
+alt ValidationError
+  N -> N : messages.error(request, "Tiene que quedar al menos un administrador activo.")
+else desactivada
+  N -> N : messages.success(request, "Desactivaste la cuenta de …. Ya no puede entrar; …")
+end
+N --> A : 302 · /configuracion/usuarios/<id>/
+deactivate N
+note right of D
+  La cuenta no se borra (AC4): sus solicitudes
+  y sanciones la referencian con PROTECT.
+end note
+@enduml

@@ -1,0 +1,14 @@
+{% autoescape off %}Hola, {{ nombre }}:
+
+Tu reserva #{{ solicitud.pk }} de la sala de grabación es el {{ solicitud.fecha|date:"l j \d\e F" }} ({{ solicitud.area }}):
+{% for b in bloques %}  - de {{ b.inicio|time:"H:i" }} a {{ b.termino|time:"H:i" }}
+{% endfor %}
+Confírmala a más tardar el {{ solicitud.confirmar_hasta|date:"l j \d\e F" }}. Si no la confirmas, se libera y queda registrada como inasistencia:
+{{ url_confirmar }}
+
+Si no vas a usarla, cancélala para dejar libre el horario. Desde el lunes {{ solicitud.lunes|date:"j \d\e F" }}, cancelar también cuenta como inasistencia:
+{{ url_cancelar }}
+
+Oficina de Educación Virtual
+Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile
+{% endautoescape %}

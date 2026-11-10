@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+US-07. El encabezado copia el de templates/panel.html en vez de extenderlo:
+ese cascarón trae las pestañas de la configuración, y el
+validador no es una seccion de la configuracion. Los bloques se llaman igual que
+los de panel.html (estilos_seccion, seccion), así una pantalla que ven el
+validador y el administrador, como el historial (US-11), elige el envoltorio sin
+cambiar nada más.
+{% endcomment %}
+{% block estilos %}
+  <link rel="stylesheet" href="{% static 'css/panel.css' %}">
+  {% block estilos_seccion %}{% endblock %}
+{% endblock %}
+
+{% block contenido %}
+<header class="techo">
+  {% include "_banda.html" with puerta="validacion" %}
+  <div class="riel">
+    <div class="dentro">
+      {% include "_rol.html" with rol="validacion" nombre="Validador" %}
+    </div>
+  </div>
+</header>
+
+<main class="panel">
+  {% block seccion %}{% endblock %}
+</main>
+{% endblock %}

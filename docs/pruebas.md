@@ -13,6 +13,8 @@ El detalle técnico, precondiciones y el paso a paso de cada prueba se encuentra
 | US-04 Panel de administrador | Administrador | [1-us-04.md](tests/1-us-04.md) |
 | US-07 Panel del validador | Validador | [1-us-07.md](tests/1-us-07.md) |
 | US-09 Historial y retiro de solicitudes | Solicitante | [1-us-09.md](tests/1-us-09.md) |
+| US-10 Historial de sanciones | Solicitante y administrador | [1-us-10.md](tests/1-us-10.md) |
+| US-12 Historial de sanciones (administrador) | Administrador | [1-us-12.md](tests/1-us-12.md) |
 | US-14 Bloques del personal de apoyo | Personal de apoyo | [1-us-14.md](tests/1-us-14.md) |
 | US-17 Bloquear fechas de la sala | Administrador | [1-us-17.md](tests/1-us-17.md) |
 | US-20 Listado configurable y reportes de check-out | Administrador y personal de apoyo | [1-us-20.md](tests/1-us-20.md) |

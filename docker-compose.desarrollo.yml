@@ -29,3 +29,9 @@ services:
     volumes:
       # El codigo montado permite editar y recargar sin reconstruir la imagen.
       - ./src:/app
+
+  tareas:
+    environment:
+      POSTGRES_PASSWORD: oev
+    volumes:
+      - ./src:/app

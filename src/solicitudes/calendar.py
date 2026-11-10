@@ -20,8 +20,10 @@ class AgendaCalendar(calendar.HTMLCalendar):
         fecha_seleccionada: Optional[date] = None,
         fecha_minima: Optional[date] = None,
         fecha_maxima: Optional[date] = None,
+        en_asistente: bool = False,
     ):
         super().__init__()
+        self.en_asistente = en_asistente
         self.dias_disponibles = dias_disponibles
         self.year = year
         self.month = month
@@ -55,7 +57,7 @@ class AgendaCalendar(calendar.HTMLCalendar):
                 f'<td class="{css_class}" data-date="{date_str}">'
                 f'<a href="?year={self.year}&month={self.month}&fecha={date_str}" '
                 f'class="dia-enlace" '
-                f'hx-get="/solicitar/bloques/?fecha={date_str}" '
+                f'hx-get="/solicitar/bloques/?fecha={date_str}{"&amp;paso=1" if self.en_asistente else ""}" '
                 f'hx-target="#panel-bloques" '
                 f'hx-swap="innerHTML" '
                 f'hx-push-url="false" '
@@ -64,6 +66,19 @@ class AgendaCalendar(calendar.HTMLCalendar):
             )
 
         return f'<td class="{css_class}" data-date="{date_str}">{day}</td>'
+
+
+def area_del_asistente(request):
+    """El área que el usuario eligió en el asistente, si sigue siendo una de
+    sus áreas activas. Solo con ella se muestran los nombres de su unidad: la
+    solicitud se hace siempre para una sola, aunque la persona tenga varias."""
+    usuario = getattr(request, "user", None)
+    if not (usuario and usuario.is_authenticated and hasattr(request, "session")):
+        return None
+    area_id = SolicitudWizard(request.session).area_id
+    if not area_id:
+        return None
+    return usuario.areas.filter(id=area_id, activa=True).first()
 
 
 def construir_calendario_contexto(
@@ -95,12 +110,18 @@ def construir_calendario_contexto(
     if fecha_str is None:
         fecha_str = request.POST.get("fecha") if request.method == "POST" else request.GET.get("fecha")
 
+    # El calendario público también navega con ?paso= cuando lo usa el asistente.
+    en_asistente = bool(paso or request.GET.get("paso"))
+
+    area_unidad = area_del_asistente(request) if en_asistente else None
+
     fecha_seleccionada = FechaReservaForm.fecha_de(fecha_str) if fecha_str else None
     bloques_seleccionados = []
     if fecha_seleccionada:
         bloques_seleccionados = obtener_bloques_dia_para_usuario(
             fecha=fecha_seleccionada,
             usuario=getattr(request, "user", None),
+            area_id=area_unidad.id if area_unidad else None,
         )
     else:
         fecha_str = None
@@ -113,6 +134,7 @@ def construir_calendario_contexto(
         fecha_seleccionada=fecha_seleccionada,
         fecha_minima=fecha_minima,
         fecha_maxima=fecha_maxima,
+        en_asistente=en_asistente,
     )
     html_cal = cal.formatmonth(year, month)
 
@@ -161,6 +183,7 @@ def construir_calendario_contexto(
         "bloques_seleccionados": bloques_seleccionados,
         "bloques_seleccionados_ids": bloques_seleccionados_ids or [],
         "paso": paso,
+        "area_unidad": area_unidad,
         "fecha_minima": fecha_minima,
         "reserva": reserva,
     }

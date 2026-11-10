@@ -158,12 +158,15 @@ def test_ac5_001_edicion_terminos_condiciones(client, admin_user, solicitante_us
     session = client.session
     area = Area.objects.create(nombre="Términos", activa=True)
     solicitante_user.areas.add(area)
+    # El paso 3 vuelve a validar el horario: el bloque tiene que ser del día de la fecha.
+    fecha = primera_fecha_pedible()
+    bloque = Bloque.objects.filter(dia=fecha.weekday(), activo=True).order_by("inicio").first()
     session["solicitud_reserva"] = {
         "area_id": area.id,
         "area_nombre": area.nombre,
         "motivo": "Prueba visual de términos",
-        "fecha": "2026-12-01",
-        "bloques_ids": [1],
+        "fecha": fecha.isoformat(),
+        "bloques_ids": [bloque.id],
     }
     session.save()
 

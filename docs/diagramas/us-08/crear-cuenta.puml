@@ -1,0 +1,54 @@
+@startuml crear-cuenta
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Crear una cuenta (US-08)
+
+actor "Administrador" as A
+participant "<b>personas.views</b>\n<size:11>personas/views.py</size>" as N <<presentación>>
+participant "<b>personas.forms</b>\n<size:11>personas/forms.py</size>\n<size:11>UsuarioForm</size>" as F <<presentación>>
+participant "<b>personas.services</b>\n<size:11>personas/services.py</size>" as V <<dominio>>
+participant "<b>notificaciones</b>\n<size:11>notificaciones/services.py</size>" as C <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+A -> N ++ : $comentario("«Crear la cuenta» en Nueva cuenta")\nPOST /configuracion/usuarios/nueva/ (accion=guardar) → usuario(request)
+N -> F ++ : $comentario("la casilla Administrador solo se le ofrece al superusuario")\nUsuarioForm(request.POST, instance=Usuario(), da_admin=request.user.is_superuser)
+return formulario
+N -> F ++ : formulario.is_valid()
+F -> D ++ : $comentario("clean_email: el correo no se repite, sin distinguir mayúsculas")\nSELECT personas_usuario WHERE email ILIKE …
+return filas
+F -> F : $comentario("clean_roles: al menos uno")\nroles = ["Validador"]
+return valido
+break no es válido
+  N --> A : 200 · personas/usuario.html, con el error junto a su campo
+end
+N -> V ++ : guardar_usuario(formulario, request.user)
+group @transaction.atomic
+  V -> V : $comentario("Administrador solo lo da el superusuario; un solicitante necesita un área activa")\nValidationError si no se cumple
+  V -> V : $comentario("AC3: nadie la conoce; el enlace del correo la reemplaza")\nusuario.set_password(secrets.token_urlsafe(32))
+  V -> F ++ : form.save()
+  F -> D ++ : INSERT personas_usuario, personas_usuario_areas
+  deactivate D
+  return usuario
+  V -> D ++ : usuario.groups.set(roles)\nINSERT personas_usuario_groups
+  deactivate D
+  V -> V ++ : registrar_cambios_de_cuenta(usuario, CUENTA_NUEVA, quien)
+  V -> D ++ : $comentario("AC10: una fila por campo, de vacío a su valor")\nINSERT personas_cambiousuario
+  deactivate D
+  deactivate V
+end
+return cuenta
+N -> V ++ : enviar_acceso(cuenta)
+V -> V : $comentario("enlace firmado de /clave/ y la puerta de cada rol")\nenlace = URL_BASE + reverse("password_reset_confirm", …)
+V -> C ++ : avisar(cuenta.email, "Tu cuenta en la sala de grabación de la OEV", "bienvenida.txt", …)
+C -> C : send_mail(…)
+deactivate C
+return salió
+alt salió
+  N -> N : messages.success(request, "Creaste la cuenta de …. Le llegará un correo …")
+else el correo falló
+  N -> N : messages.error(request, "… pero el correo no salió. Reenvíalo desde su cuenta.")
+end
+N --> A : 302 · /configuracion/usuarios/
+deactivate N
+@enduml

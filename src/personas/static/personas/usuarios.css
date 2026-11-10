@@ -1,0 +1,90 @@
+/* Pestaña Usuarios (US-08). Tabla, barra y últimos cambios calcan los de Áreas;
+ * los campos, los de sus diálogos. Solo variables de marca.css (docs/estilo.md). */
+
+.usuarios, .cuenta, .acceso { padding: var(--esp-4); }
+.usuarios h2, .cuenta h2, .acceso h2 { margin: 0 0 var(--esp-1); font-size: var(--txt-lg); }
+.usuarios .detalle, .cuenta .detalle, .acceso .detalle {
+  margin: 0 0 var(--esp-3); font-size: var(--txt-sm); line-height: 1.45; color: var(--tinta-suave); max-width: 60ch;
+}
+
+/* --- Filtros --- */
+.filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--esp-3); margin-bottom: var(--esp-4); }
+.filtros label, .cuenta .campo {
+  display: flex; flex-direction: column; gap: var(--esp-1);
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: var(--txt-xs); color: var(--tinta-suave);
+}
+.filtros .buscar { flex: 1 1 16rem; }
+.filtros input, .filtros select, .cuenta .campo input {
+  box-sizing: border-box; min-height: var(--alto-control); padding: 0 var(--esp-2);
+  font-family: var(--fuente-texto); font-size: var(--txt-sm); font-weight: 400;
+}
+
+/* --- Lista --- */
+.usuarios table, .historial table { width: 100%; border-collapse: collapse; font-size: var(--txt-sm); }
+.usuarios th, .historial th {
+  text-align: left; font-weight: 500; color: var(--tinta-suave);
+  padding: var(--esp-1) var(--esp-2) var(--esp-1) 0; border-bottom: 1px solid var(--borde);
+}
+.usuarios td { padding: var(--esp-2) var(--esp-2) var(--esp-2) 0; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+.historial td { padding: var(--esp-1) var(--esp-2) var(--esp-1) 0; border-bottom: 1px solid var(--borde); }
+.usuarios tr:last-child td, .historial tr:last-child td { border-bottom: 0; }
+.persona .nombre { display: block; font-weight: 500; }
+.persona .correo { display: block; color: var(--tinta-suave); }
+.de-areas { max-width: 28ch; line-height: 1.45; color: var(--tinta-suave); }
+.usuarios .acciones { text-align: right; padding-right: 0; }
+/* La desactivada sigue en la lista, atenuada: su historial la usa. */
+.usuarios .inactiva td:not(:last-child) { color: var(--tinta-suave); }
+
+/* AC7: el ícono y el color de la puerta de cada rol. */
+.roles { display: flex; flex-direction: column; gap: var(--esp-1); margin: 0; padding: 0; list-style: none; }
+.roles li { display: flex; align-items: center; gap: var(--esp-1); white-space: nowrap; }
+.roles .icono-rol { width: 1rem; height: 1rem; }
+.sin-rol { color: var(--tinta-suave); }
+
+.paginas {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--esp-4);
+  margin-top: var(--esp-4); font-size: var(--txt-sm);
+}
+.paginas > :first-child { justify-self: start; }
+.paginas > :last-child { justify-self: end; }
+.paginas .suave { color: var(--tinta-suave); }
+
+.historial { max-height: 60vh; overflow: auto; margin-bottom: var(--esp-4); }
+.historial .cifra, .historial .cambio { font-variant-numeric: tabular-nums; }
+.historial .cambio { color: var(--tinta-suave); }
+
+.barra {
+  display: flex; align-items: center; gap: var(--esp-4); flex-wrap: wrap;
+  margin-top: var(--esp-4); padding: var(--esp-3) 0; border-top: 1px solid var(--borde);
+}
+.barra .btn.principal { margin-left: auto; }
+
+/* --- Ficha de la cuenta --- */
+.volver { margin: 0 0 var(--esp-3); font-size: var(--txt-sm); }
+.cuenta, .acceso { max-width: 44rem; }
+.acceso { margin-top: var(--esp-4); }
+.acceso .grupo { margin: 0; }
+.cuenta .datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: var(--esp-3); margin-bottom: var(--esp-4); }
+.cuenta .todo, .cuenta .opciones { min-width: 0; margin: 0 0 var(--esp-4); padding: 0; border: 0; }
+.cuenta .fijo { display: flex; align-items: center; gap: var(--esp-2); margin: 0; padding: var(--esp-1) 0; font-size: var(--txt-sm); }
+.cuenta legend { padding: 0; margin-bottom: var(--esp-1); font-family: var(--fuente-titulo); font-weight: 700; font-size: var(--txt-sm); }
+.cuenta .opciones label { display: flex; align-items: center; gap: var(--esp-2); padding: var(--esp-1) 0; font-size: var(--txt-sm); }
+.cuenta .error { margin: 0; font-family: var(--fuente-texto); font-weight: 400; font-size: var(--txt-sm); color: var(--alerta); }
+.cuenta .con-error input:not([type="checkbox"]) { border-color: var(--alerta); }
+.cuenta .acciones-form {
+  display: flex; align-items: center; justify-content: flex-end; gap: var(--esp-3);
+  padding-top: var(--esp-3); border-top: 1px solid var(--borde);
+}
+
+/* En el celular la tabla se desliza dentro de su marco. */
+/* --- Carga en lote (AC8) --- */
+.carga + .carga { margin-top: var(--esp-4); }
+.carga .formato { max-width: 60rem; margin-bottom: var(--esp-4); }
+.carga .formato td { padding: var(--esp-1) var(--esp-2) var(--esp-1) 0; }
+.carga .subir { margin-bottom: 0; }
+.carga .error { display: block; margin: 0; font-size: var(--txt-sm); color: var(--alerta); }
+.carga .con-error .cifra { color: var(--alerta); font-weight: 700; }
+.carga .suave { color: var(--tinta-suave); }
+.carga .barra { margin-bottom: 0; padding-bottom: 0; }
+
+@media (max-width: 40rem) { .usuarios table { min-width: 40rem; } }

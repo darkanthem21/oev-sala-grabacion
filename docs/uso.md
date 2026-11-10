@@ -10,9 +10,13 @@ Este manual cubre lo que hoy está disponible en el sistema, ordenado por rol:
 | US-02 Solicitud de reserva | Solicitante | [Solicitar una reserva](#solicitar-una-reserva) |
 | US-09 Historial de solicitudes | Solicitante | [Mis solicitudes](#mis-solicitudes) |
 | US-03 Confirmar la asistencia | Solicitante | [Confirmar la asistencia](#confirmar-la-asistencia) |
+| US-10 Historial de sanciones | Solicitante y administrador | [Mis sanciones](#mis-sanciones) y [Sanciones](#sanciones) |
+| US-12 Historial de sanciones (administrador) | Administrador | [Sanciones](#sanciones) |
 | US-07 Panel del validador | Validador y administrador | [Validador](#3-validador) |
 | US-04 Panel de administrador | Administrador | [Jornada semanal](#jornada-semanal) y [Reglas](#reglas-los-parámetros-del-sistema) |
 | US-17 Bloquear fechas de la sala | Administrador | [Bloquear fechas de la sala](#bloquear-fechas-de-la-sala) |
+| US-05 Áreas académicas | Administrador | [Áreas](#áreas) |
+| US-08 Gestión de roles y usuarios | Administrador | [Usuarios](#usuarios) |
 | US-14 Bloques del personal de apoyo | Personal de apoyo | [Bloques del día](#bloques-del-día) |
 | US-15 Checklist de cierre (prototipo anterior) | Personal de apoyo | [Referencia histórica](#checklist-de-cierre-de-la-sala-prototipo-anterior) |
 | US-20 Listado configurable de check-out | Administrador y personal de apoyo | [Administrar el listado](#administrar-el-listado-de-check-out) y [Consultar las faltas de integridad](#consultar-las-faltas-de-integridad) |
@@ -21,23 +25,22 @@ Este manual cubre lo que hoy está disponible en el sistema, ordenado por rol:
 
 Cada rol entra por su propia dirección. Solo la del solicitante está enlazada
 desde el sitio; las otras tres las conoce quien las usa. Cada puerta se reconoce
-por el panel de la izquierda, con el nombre y el color del rol.
+por el panel de la izquierda, con el nombre, el ícono y el color del rol. Una vez
+adentro, el mismo ícono y color aparecen junto al nombre, bajo la banda naranja.
 
 | Rol | Dirección | Panel |
 |---|---|---|
-| Solicitante | `/solicitante/entrar/` | Azul, **Solicitantes** |
+| Solicitante | `/solicitante/entrar/` | Naranjo, **Solicitantes** |
 | Administrador | `/configuracion/entrar/` | Azul petróleo, **Administración** |
-| Validador | `/validacion/entrar/` | Vino, **Validación** |
+| Validador | `/validacion/entrar/` | Turquesa, **Validación** |
 | Personal de apoyo | `/apoyo/entrar/` | Gris azulado, **Personal de apoyo** |
 
 ### Dar un rol a alguien
 
-Mientras la pestaña **Áreas** no tenga contenido (US-05), los roles se asignan
-desde `/admin` con la cuenta de administrador: en **Usuarios**, abre la cuenta de
-la persona, agrégale el grupo de su rol (**Solicitante**, **Validador**,
-**Personal de apoyo** o **Administrador**) y guarda. Un solicitante necesita
-además al menos un área académica activa. Una persona puede tener más de un rol
-a la vez.
+Los roles y las áreas de cada persona se asignan en la pestaña
+[Usuarios](#usuarios) del administrador. Una persona puede tener más de un rol y
+más de un área a la vez. Un solicitante necesita al menos un área activa; las
+áreas se crean en la pestaña [Áreas](#áreas).
 
 ---
 
@@ -119,6 +122,9 @@ Para cambiarla después, pulsa **Cambiar área** en el paso 1. Cambiar de área
 borra el día y los bloques que ya habías marcado.
 
 **Paso 1: elegir el día y los bloques**
+
+Si el área tiene una nota de la Oficina (por ejemplo, que no graba en horario
+laboral), aparece arriba del calendario.
 
 1. En el calendario, los días que se pueden pedir aparecen destacados y con un
    punto. Arriba se indica desde qué fecha se puede solicitar: entre la
@@ -219,10 +225,11 @@ estado. Se muestran de a 20; si hay más, abajo aparecen **Anterior** y
 |---|---|
 | **En revisión por la Oficina** | La Oficina todavía no la revisa. Se puede **Retirar** |
 | **Aceptada** | La Oficina la aceptó. Falta confirmar la asistencia: aparece **Confirmar asistencia** |
-| **Pendiente de confirmación** | Aceptada y esperando que confirmes. También aparece **Confirmar asistencia** |
-| **Confirmada** | Confirmaste que vas a usar la sala |
+| **Pendiente de confirmación** | Ya te llegó el recordatorio. Aparecen la fecha límite, **Confirmar asistencia** y **Cancelar reserva** |
+| **Confirmada** | Confirmaste que vas a usar la sala. Todavía se puede **Cancelar reserva** |
 | **Rechazada** | La Oficina la rechazó. Debajo va el motivo que escribió |
-| **Cancelada** | Se canceló después de aceptada |
+| **Cancelada** | Se canceló después de aceptada: la cancelaste tú o la Oficina le quitó el horario, con un correo que dice por qué. Si la cancelaste en la semana de la reserva, dice que cuenta como inasistencia |
+| **No confirmada (inasistencia)** | Llegó su día sin confirmar: el horario se liberó y queda como inasistencia |
 | **Retirada** | La retiraste antes de que la Oficina la revisara |
 
 **Retirar una solicitud**
@@ -267,6 +274,66 @@ cancelada o es el mismo día, la página lo dice y no muestra el botón.
 
 ![Reserva que ya no se puede confirmar](uso/us-03/confirmacion-no-disponible.png)
 
+**El recordatorio**
+
+Cuando falta el plazo de confirmación que fija la Oficina (hoy, dos días), llega
+un segundo correo con el resumen de la reserva y dos enlaces: uno para confirmar
+y otro para cancelar. Llega una sola vez, y no llega si ya confirmaste.
+
+Desde ese momento, al entrar al sistema aparece una franja bajo el encabezado:
+**Tienes N reservas por confirmar**, con un enlace a Mis solicitudes. En la
+fila, la reserva queda **Pendiente de confirmación** con la fecha límite.
+
+![Reserva por confirmar](uso/us-03/por-confirmar.png)
+
+Si llega el día de la reserva sin confirmar, su horario se libera y queda
+**No confirmada (inasistencia)**.
+
+**Cancelar una reserva**
+
+Una reserva aceptada, confirmada o no, se puede cancelar hasta que empiece su
+primer bloque.
+
+| Paso | Qué pasa |
+|---|---|
+| **Cancelar reserva** | En la fila de Mis solicitudes o desde el enlace del recordatorio. Abre una página con la reserva; abrirla no cancela nada |
+| **Sí, cancelar la reserva** | La reserva queda **Cancelada**, su horario vuelve a ofrecerse y la Oficina recibe un correo |
+
+Cancelar antes de la semana de la reserva no tiene consecuencias. Desde el lunes
+de esa semana, la página avisa que cancelar cuenta como **inasistencia**.
+
+![Cancelar una reserva en la semana de la reserva](uso/us-03/cancelar-reserva.png)
+
+Al cancelar, vuelves a **Mis solicitudes** con el aviso **Cancelaste la reserva
+#…** y la fila queda **Cancelada**.
+
+![Reserva cancelada](uso/us-03/reserva-cancelada.png)
+
+### Mis sanciones
+
+Una sanción suspende por un tiempo la posibilidad de enviar solicitudes nuevas.
+La pone la Oficina, por ejemplo tras inasistencias, con un motivo y un periodo.
+Rige desde su primer día hasta las **23:59 de su último día**, en hora de Chile;
+al día siguiente se puede volver a pedir sin hacer nada. Cuando la Oficina la
+pone desde su panel, llega un correo con el motivo, el periodo y desde qué día
+se puede volver a pedir.
+
+Mientras hay una sanción vigente:
+
+- En todas las pantallas del solicitante aparece, bajo el encabezado, una franja
+  que dice hasta cuándo rige y desde qué día se puede volver a solicitar.
+- **Solicitar reserva** no muestra el formulario: aparece **No puedes solicitar
+  por ahora**, con el motivo, el periodo y la fecha desde la que se puede pedir de
+  nuevo.
+- Las reservas ya **aceptadas** no cambian: se pueden confirmar y usar como
+  siempre. Las que estaban **en revisión** también siguen: la Oficina las
+  resuelve igual que antes.
+
+La pestaña **Mis sanciones**, arriba junto a **Mis solicitudes**, muestra primero
+la sanción vigente y debajo las anteriores, cada una con su motivo y su periodo.
+Si la Oficina levantó una antes de tiempo, dice cuándo y por qué. Está en
+`/solicitar/mis-sanciones/` y solo muestra las sanciones propias.
+
 ---
 
 ## 3. Validador
@@ -293,8 +360,8 @@ por resolver; **←**, **Hoy** y **→** cambian de semana.
 | Bloque | Qué indica |
 |---|---|
 | Con un nombre | Una solicitud pendiente lo pide |
-| Borde rojo, con dos nombres o más | Tope: varias solicitudes piden ese bloque |
-| Celeste, con el nombre en gris | Reservado: ya está aprobado para esa persona |
+| Borde color vino, con dos nombres o más | Tope: varias solicitudes piden ese bloque |
+| Filete celeste, con el nombre en gris | Reservado: ya está aprobado para esa persona |
 | Rayado | Bloqueado por el administrador: no se puede aprobar |
 | Borde punteado | Quitado de la jornada, pero con pedidos de antes |
 
@@ -356,6 +423,37 @@ quién se le asignó el bloque. Queda guardado: recargar la página no lo borra.
 
 ![Resueltas hoy](uso/us-07/resueltas.png)
 
+### Historial
+
+**Historial**, arriba del panel, abre todo lo resuelto hasta hoy en
+`/validacion/historial/`, de lo más reciente a lo más antiguo: la solicitud,
+sus bloques, la decisión, el motivo, quién la resolvió y cuándo. Una que perdió
+un tope dice **asignada a #N**, con el número de la que se quedó con el bloque.
+Una aprobada sin tope no lleva motivo y muestra **—**. El administrador lo abre
+desde su pestaña **Validación** y lo ve con las pestañas de su panel.
+
+Para acotar la lista:
+
+1. Elige cualquiera de los filtros: **Resuelta desde**, **Hasta**, **Área**,
+   **Decisión** y **Validador**. **Validador** ofrece solo a quienes han resuelto
+   algo.
+2. Pulsa **Filtrar**. La dirección de la página queda con los filtros: se puede
+   guardar o enviar a otra persona que valide.
+3. **Quitar filtros** vuelve a la lista completa.
+
+![Historial filtrado por rechazadas](uso/us-11/historial.png)
+
+Si **Hasta** es anterior a **Resuelta desde**, el campo lo avisa y esa fecha no
+se aplica. Un clic en **#N** abre la solicitud como se envió (solicitante, área,
+fecha, bloques, motivo, observaciones, personas, acompañantes y cuándo se envió)
+junto con su resolución. **Volver al historial** regresa a la misma página con
+los mismos filtros.
+
+![Detalle de una solicitud resuelta](uso/us-11/detalle.png)
+
+El historial es solo para consultar: desde ahí no se cambia nada, y en `/admin/`
+una solicitud resuelta tampoco se puede editar ni borrar.
+
 | Aviso | Cuándo |
 |---|---|
 | Escribe el motivo del rechazo (mínimo 10 caracteres). | Se rechaza, o se aprueba en un tope, sin motivo o con uno muy corto |
@@ -369,14 +467,14 @@ quién se le asignó el bloque. Queda guardado: recargar la página no lo borra.
 
 ## 4. Administrador
 
-El panel del administrador tiene cuatro pestañas: **Bloques**, **Áreas**,
-**Reglas** y **Validación**. Se entra por `/configuracion/entrar/`.
+El panel del administrador tiene siete pestañas: **Check-out**, **Bloques**,
+**Áreas**, **Usuarios**, **Reglas**, **Validación** y **Sanciones**. Se entra por
+`/configuracion/entrar/`.
 
 ![Puerta de la administración](uso/us-04/puerta-administracion.png)
 
 **Validación** es el panel del validador (ver [Validador](#3-validador)): el
-administrador también aprueba y rechaza, y la resolución queda a su nombre. La
-pestaña **Áreas** todavía no tiene contenido; llega con US-05.
+administrador también aprueba y rechaza, y la resolución queda a su nombre.
 
 ### Jornada semanal
 
@@ -482,6 +580,87 @@ bloqueos y levantamientos, con fecha, qué se bloqueó, motivo y responsable.
 > aceptadas y no canceladas de esas fechas. En desarrollo, los correos de aviso
 > se escriben en el log del contenedor en vez de enviarse.
 
+### Áreas
+
+Cada solicitud queda ligada a un área académica o unidad, y un solicitante solo
+puede pedir la sala con un área activa. La pestaña **Áreas** lista cada una con
+su nota, cuántas personas tiene y si está activa.
+
+![Áreas](uso/us-05/areas.png)
+
+| Acción | Qué pasa |
+|---|---|
+| **Nueva área** | Pide el nombre y, si hace falta, una nota. No puede haber dos áreas con el mismo nombre, aunque cambien las mayúsculas |
+| **Editar** | Cambia el nombre o la nota. Las solicitudes que ya usan el área muestran el nombre nuevo |
+| **Desactivar** | El área deja de ofrecerse al pedir. Las solicitudes que ya la usan no cambian, y las pendientes se resuelven como siempre |
+| **Reactivar** | Vuelve a ofrecerse al pedir |
+
+![Nueva área](uso/us-05/nueva-area.png)
+
+Las áreas no se borran: una desactivada sigue en la lista, atenuada. La **nota**
+es lo que hay que tener en cuenta de esa área, por ejemplo que Educación Continua
+no graba en horario laboral. La ve quien pide con esa área, arriba del calendario,
+y el validador en la ficha de cada solicitud, como **Nota del área**.
+
+![Nota del área en el panel del validador](uso/us-05/nota-validador.png)
+
+**Últimos cambios (…)**, al pie, abre los últimos 15: qué área cambió, qué
+campo, de qué valor a cuál, quién y cuándo. Lo que se cambie desde `/admin`
+también queda ahí.
+
+Las personas se asignan a un área desde la pestaña [Usuarios](#usuarios).
+
+### Usuarios
+
+La pestaña **Usuarios** lista cada cuenta con su nombre, correo, roles, áreas y
+estado. Se busca por nombre, apellido o correo, y se filtra por rol, área y
+estado. Cada rol aparece con el ícono y el color de su puerta.
+
+![Usuarios](uso/us-08/usuarios.png)
+
+| Acción | Qué pasa |
+|---|---|
+| **Nueva cuenta** | Pide nombre, apellido, correo, al menos un rol y, si es solicitante, sus áreas. El correo no se puede repetir. A la persona le llega un correo para crear su contraseña; nadie más la conoce |
+| **Editar** | Cambia los datos, los roles y las áreas. Validadores y personal de apoyo no tienen área |
+| **Reenviar el correo de la contraseña** | Aparece mientras la persona no haya entrado nunca, por ejemplo si el enlace venció |
+| **Desactivar cuenta** | La persona ya no entra por ninguna puerta y pierde la sesión abierta. Su historial se conserva. Si tiene solicitudes pendientes o reservas aceptadas de hoy en adelante, el sistema las cuenta y pide confirmar: desactivar no las cancela |
+| **Reactivar cuenta** | Vuelve a entrar con su contraseña |
+
+![Ficha de una cuenta](uso/us-08/cuenta.png)
+
+Las cuentas no se borran, ni siquiera desde `/admin`. Siempre queda al menos un
+administrador activo, y nadie se quita a sí mismo el rol ni desactiva su propia
+cuenta.
+
+El rol **Administrador** lo da y lo quita solo el **superusuario**, la cuenta de
+soporte de la Oficina que se crea al instalar el sistema (ver
+[despliegue](despliegue.md)). Un administrador que no es superusuario no ve esa
+casilla, y la cuenta de otro administrador le aparece de solo lectura.
+
+#### Cargar una planilla
+
+**Cargar planilla** crea o actualiza muchas cuentas a la vez, por ejemplo los
+docentes de una unidad.
+
+1. **Descargar plantilla** baja un CSV con las columnas `correo`, `nombre`,
+   `apellido`, `roles` y `areas`. Se completa una fila por persona. Varios roles
+   o áreas van en la misma celda, separados por coma.
+2. Se guarda como CSV (en Excel: *Guardar como → CSV*) y se sube con **Revisar**.
+3. La vista previa dice, fila por fila, si la cuenta **se crea**, **se le suma**
+   algo, queda **sin cambios** o tiene un **error**. Todavía no se guarda nada.
+4. Si ninguna fila tiene errores, **Confirmar la carga** guarda todo. Si alguna
+   tiene, no se puede confirmar: se corrige la planilla y se vuelve a subir.
+
+![Vista previa de la carga](uso/us-08/carga.png)
+
+A una cuenta que ya existe solo se le suman los roles y las áreas de la planilla;
+nunca se le quita nada, y su nombre no cambia. Las cuentas nuevas reciben el
+correo para crear su contraseña.
+
+**Últimos cambios (…)**, al pie de la lista, abre los últimos 15: qué cuenta
+cambió, qué campo, de qué valor a cuál, quién y cuándo. Lo que se cambie desde
+`/admin` y lo que entre por planilla también queda ahí.
+
 ### Reglas: los parámetros del sistema
 
 Aquí se ajustan los umbrales con los que opera el sistema, sin reinstalar nada.
@@ -509,6 +688,82 @@ su rango permitido, la fila se marca y no se guarda nada.
 **Últimos cambios (…)**, al pie, abre los últimos 15: quién cambió cada
 parámetro, cuándo y de qué valor a cuál.
 
+### Sanciones
+
+Una sanción impide a un solicitante enviar solicitudes nuevas desde su fecha de
+inicio hasta las 23:59 de su fecha de término. **No cancela sus reservas ya
+aceptadas ni sus solicitudes en revisión** (decisión del 20/10 sobre AC6 de
+US-10).
+
+#### El listado
+
+La pestaña **Sanciones** muestra una fila por solicitante, con:
+
+| Columna | Qué cuenta |
+|---|---|
+| Incidentes | Cada pregunta del check-out respondida **No**, en todos sus bloques |
+| Inasistencias | Reservas aceptadas que llegaron a su día sin confirmar, y las canceladas desde el lunes de su semana |
+| Sanción | **Vigente** (hasta qué día y por qué), **Levantada**, **Terminada** o **Sin sanción**, según la vigente o, si no hay, la última |
+| Levantar | Solo si tiene una vigente: el motivo y el botón, como en el detalle |
+
+Primero van quienes tienen más incidentes. Arriba se filtra por nombre o
+correo, por área y por estado de la sanción, y **Quitar filtros** vuelve a
+mostrar a todos. La dirección guarda los filtros, así que se puede compartir.
+Hay 25 personas por página.
+
+Si una persona llega a las **Inasistencias para sancionar** de
+[Reglas](#reglas-los-parámetros-del-sistema) desde su última sanción, la fila
+lo marca con **Llega al umbral de N**. El sistema **no la sanciona solo**:
+decide el administrador.
+
+#### El detalle de una persona
+
+Un clic en el nombre abre su historial, del más antiguo al más reciente:
+
+- **Incidente**: el día y el bloque, la sección y la pregunta del check-out tal
+  como se preguntó ese día, la observación de quien lo registró y la foto.
+- **Inasistencia**: el día, los bloques y si llegó su día sin confirmar o se
+  canceló tarde.
+- **Sanción**: el periodo, el motivo, quién la puso y cuándo y, si se levantó,
+  quién, cuándo y por qué.
+
+**Volver al listado** regresa a la misma página y filtros.
+
+#### Aplicar una sanción
+
+En el detalle, **Aplicar una sanción**:
+
+1. Escribe el motivo. Es obligatorio y le llega a la persona por correo.
+2. Revisa las fechas. Vienen propuestas: desde hoy y por la **Duración de la
+   sanción** de Reglas, contando el primer día. Con 30 días desde el 3 de
+   noviembre, **Hasta** dice 2 de diciembre: la sanción rige hasta las 23:59 de
+   ese día y la persona vuelve a pedir el 3.
+3. Pulsa **Sancionar**.
+
+No se puede empezar en una fecha futura, terminar antes de empezar ni cruzarse
+con otra sanción de la misma persona que no se haya levantado, aunque solo
+compartan un día. Si pasa, el formulario lo dice y no se guarda nada. Si otro
+administrador la sancionó justo antes, el segundo ve el cruce.
+
+La persona recibe un correo con el motivo, el periodo y desde qué día puede
+volver a pedir, y desde ese momento ve **No puedes solicitar por ahora**.
+
+El superusuario puede además crear y acortar sanciones en `/admin`, en
+**Personas › Sanciones**, con las mismas reglas. Las sanciones no se borran.
+
+#### Levantar una sanción
+
+Antes de que termine, en la fila del listado o en el detalle:
+
+1. Escribe el motivo del levantamiento. Es obligatorio.
+2. Pulsa **Levantar**.
+
+El aviso dice **Levantaste la sanción de …**. Si la persona no tiene otra
+vigente, agrega **Ya puede solicitar la sala** y puede pedir de inmediato. Si
+tiene otra, dice hasta cuándo sigue sin poder pedir. La sanción no se borra:
+queda en su historial con quién la levantó, cuándo y por qué. Si otra persona
+la levantó justo antes, o ya terminó, el aviso lo dice y no cambia nada.
+
 ---
 
 ## 5. Personal de apoyo
@@ -530,8 +785,8 @@ hoy, ordenadas por hora de inicio.
 | Solicitante | Quién pidió la sala |
 | Área | El área académica de la reserva |
 | Personas | Cuántas personas declaró el solicitante |
-| Estado | **Aprobada** o **Confirmada**. Una **Cancelada** aparece tachada: ya no hay que esperar a nadie |
-| Check-out | **Completado** si ya se registró, **Hacer check-out** si el bloque terminó y falta, o **—** si el bloque aún no termina o se canceló |
+| Estado | **Aprobada** o **Confirmada**. Una **Cancelada** o **No confirmada** aparece tachada: ya no hay que esperar a nadie |
+| Check-out | **Completado** si ya se registró, **Hacer check-out** si el bloque terminó y falta, o **—** si el bloque aún no termina, se canceló o no se confirmó |
 
 Las reservas pendientes de aprobación no aparecen, porque todavía pueden
 rechazarse. Todo el personal de apoyo ve todos los bloques; no se asignan a una

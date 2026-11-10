@@ -3,9 +3,13 @@
 {% comment %}
   Encabezado común de las pantallas del solicitante: el mismo techo con
   pestañas del panel de configuración. La pestaña activa sale de la ruta, así
-  ninguna vista tiene que avisarla; el historial y la confirmación de asistencia
-  son "Mis solicitudes", y todo lo demás es parte de solicitar (área, asistente,
-  envío).
+  ninguna vista tiene que avisarla; el historial, confirmar y cancelar son
+  "Mis solicitudes", "Mis sanciones" es la suya, y todo lo demás es parte de
+  solicitar (área, asistente, envío).
+
+  US-10 T3: la franja de sanción va acá, bajo el techo, para que se vea en todas
+  las pantallas del solicitante y no solo en el formulario. La de reservas por
+  confirmar (US-03 AC4), igual.
 {% endcomment %}
 {% block estilos %}
   <link rel="stylesheet" href="{% static 'css/panel.css' %}">
@@ -16,27 +20,23 @@
 {% block contenido %}
 {% with ruta=request.resolver_match.url_name %}
 <header class="techo">
-  <div class="dentro">
-    <div class="fila">
-      <img class="sello" src="{% static 'img/Facultad-color-negro.png' %}"
-           alt="Facultad de Ciencias de la Ingeniería, Universidad Austral de Chile">
-      <h1>Sala de grabación</h1>
-      <div class="quien">
-        <span class="correo">{{ user.get_full_name|default:user.email }}</span>
-        <form method="post" action="{% url 'logout' %}">
-          {% csrf_token %}<button class="btn" type="submit">Cerrar sesión</button>
-        </form>
-      </div>
+  {% include "_banda.html" with puerta="solicitante" %}
+  <div class="riel">
+    <div class="dentro">
+      <nav class="pestanas" aria-label="Secciones del solicitante">
+        <a class="pestana {% if ruta != 'mis_solicitudes' and ruta != 'confirmar_solicitud' and ruta != 'cancelar_solicitud' and ruta != 'mis_sanciones' %}activa{% endif %}" href="{% url 'solicitar' %}"
+           {% if ruta != "mis_solicitudes" and ruta != "confirmar_solicitud" and ruta != "cancelar_solicitud" and ruta != "mis_sanciones" %}aria-current="page"{% endif %}>Solicitar reserva</a>
+        <a class="pestana {% if ruta == 'mis_solicitudes' or ruta == 'confirmar_solicitud' or ruta == 'cancelar_solicitud' %}activa{% endif %}" href="{% url 'mis_solicitudes' %}"
+           {% if ruta == "mis_solicitudes" or ruta == "confirmar_solicitud" or ruta == "cancelar_solicitud" %}aria-current="page"{% endif %}>Mis solicitudes</a>
+        <a class="pestana {% if ruta == 'mis_sanciones' %}activa{% endif %}" href="{% url 'mis_sanciones' %}"
+           {% if ruta == "mis_sanciones" %}aria-current="page"{% endif %}>Mis sanciones</a>
+      </nav>
+      {% include "_rol.html" with rol="solicitante" nombre="Solicitante" %}
     </div>
-
-    <nav class="pestanas" aria-label="Secciones del solicitante">
-      <a class="pestana {% if ruta != 'mis_solicitudes' and ruta != 'confirmar_solicitud' %}activa{% endif %}" href="{% url 'solicitar' %}"
-         {% if ruta != "mis_solicitudes" and ruta != "confirmar_solicitud" %}aria-current="page"{% endif %}>Solicitar reserva</a>
-      <a class="pestana {% if ruta == 'mis_solicitudes' or ruta == 'confirmar_solicitud' %}activa{% endif %}" href="{% url 'mis_solicitudes' %}"
-         {% if ruta == "mis_solicitudes" or ruta == "confirmar_solicitud" %}aria-current="page"{% endif %}>Mis solicitudes</a>
-    </nav>
   </div>
 </header>
 {% endwith %}
+{% block aviso_sancion %}{% include "solicitudes/_aviso_sancion.html" %}{% endblock %}
+{% include "solicitudes/_aviso_confirmar.html" %}
 {% block hoja %}{% endblock %}
 {% endblock %}

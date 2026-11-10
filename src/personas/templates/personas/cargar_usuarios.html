@@ -1,0 +1,94 @@
+{% extends "panel.html" %}
+{% load static %}
+{% comment %}
+  US-08 AC8 y AC9. Subir la planilla muestra qué pasaría con cada fila; nada se
+  guarda hasta confirmar, y con una fila mala no se puede confirmar.
+{% endcomment %}
+{% block estilos_seccion %}<link rel="stylesheet" href="{% static 'personas/usuarios.css' %}">{% endblock %}
+
+{% block seccion %}
+<p class="volver"><a href="{% url 'panel_usuarios' %}">&larr; Usuarios</a></p>
+
+<section class="marco usuarios carga">
+  <h2>Cargar cuentas desde una planilla</h2>
+  <p class="detalle">
+    Descarga la plantilla, completa una fila por persona y súbela como CSV (en Excel:
+    Guardar como → CSV). Antes de guardar verás qué pasa con cada fila. A una cuenta
+    que ya existe solo se le suman roles y áreas; nunca se le quitan. Las cuentas
+    nuevas reciben el correo para crear su contraseña.
+  </p>
+
+  <table class="formato">
+    <thead><tr><th>Columna</th><th>Qué va</th></tr></thead>
+    <tbody>
+      <tr><td><code>correo</code></td><td>Obligatorio. Identifica la cuenta.</td></tr>
+      <tr><td><code>nombre</code>, <code>apellido</code></td><td>El nombre es obligatorio en las cuentas nuevas.</td></tr>
+      <tr><td><code>roles</code></td><td>Uno o más, separados por coma: {% for valor, etiqueta in roles %}{{ etiqueta|capfirst }}{% if not forloop.last %}, {% endif %}{% endfor %}.</td></tr>
+      <tr><td><code>areas</code></td><td>Solo para solicitantes, separadas por coma:
+        {% for area in areas %}{{ area.nombre }}{% if not forloop.last %}, {% endif %}{% empty %}no hay áreas activas{% endfor %}.</td></tr>
+    </tbody>
+  </table>
+
+  <form method="post" enctype="multipart/form-data" class="filtros subir">
+    {% csrf_token %}
+    <input type="hidden" name="accion" value="revisar">
+    <label class="buscar">Planilla (.csv)
+      <input type="file" name="planilla" accept=".csv,text/csv" required>
+    </label>
+    <div class="grupo">
+      <a class="btn" href="{% url 'panel_usuarios_plantilla' %}" download>Descargar plantilla</a>
+      <button class="btn lleno" type="submit">Revisar</button>
+    </div>
+  </form>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+</section>
+
+{% if filas %}
+<section class="marco usuarios carga" aria-labelledby="vista-previa">
+  <h2 id="vista-previa">Vista previa de {{ nombre_archivo }}</h2>
+  {% if con_errores %}
+    <p class="error" role="alert">
+      {{ con_errores }} fila{{ con_errores|pluralize }} con errores. Corrige la planilla y vuelve a subirla: no se guardó nada.
+    </p>
+  {% else %}
+    <p class="detalle">
+      Se crea{{ crear|pluralize:"n" }} {{ crear }} cuenta{{ crear|pluralize }} y se actualiza{{ actualizar|pluralize:"n" }} {{ actualizar }}.
+      Todavía no se guarda nada.
+    </p>
+  {% endif %}
+  <table>
+    <thead><tr><th>Fila</th><th>Persona</th><th>Roles</th><th>Áreas</th><th>Resultado</th></tr></thead>
+    <tbody>
+      {% for fila in filas %}
+        <tr{% if fila.errores %} class="con-error"{% endif %}>
+          <td class="cifra">{{ fila.fila }}</td>
+          <td class="persona">
+            <span class="nombre">{{ fila.nombre }} {{ fila.apellido }}</span>
+            <span class="correo">{{ fila.correo|default:"—" }}</span>
+          </td>
+          <td>{% for rol in fila.roles %}{{ rol.label|capfirst }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
+          <td class="de-areas">{% for area in fila.areas %}{{ area.nombre }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
+          <td>
+            {% if fila.accion == "error" %}
+              {% for error in fila.errores %}<span class="error">{{ error }}</span>{% endfor %}
+            {% elif fila.accion == "crear" %}Se crea
+            {% elif fila.accion == "actualizar" %}Se le suma
+              {% for rol in fila.suma_roles %}{{ rol.label }}{% if not forloop.last or fila.suma_areas %}, {% endif %}{% endfor %}{% for area in fila.suma_areas %}{{ area.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            {% else %}<span class="suave">Sin cambios: ya tiene todo</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if not con_errores %}
+    <form method="post" class="barra">
+      {% csrf_token %}
+      <a class="btn" href="{% url 'panel_usuarios_cargar' %}">Cancelar</a>
+      <button class="btn principal" type="submit" name="accion" value="confirmar">Confirmar la carga</button>
+    </form>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

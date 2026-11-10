@@ -1,5 +1,78 @@
 # Diagramas
 
+## Cómo se dibujan y se compilan
+
+Cada diagrama es un archivo PlantUML (`.puml`) en `docs/diagramas/<historia>/`,
+con su imagen (`.png`) al lado y el mismo nombre. Este documento muestra la
+imagen; el `.puml` es la fuente y se edita a mano, salvo el de relaciones de la
+base, que lo escribe un script (ver [Relaciones de la base de datos](#relaciones-de-la-base-de-datos)).
+
+### El estilo común: `estilo.iuml`
+
+Todos empiezan con `!include ../estilo.iuml`, así se ven iguales y nadie repite
+el estilo en cada archivo. `docs/diagramas/estilo.iuml` define:
+
+| Qué | Cómo |
+|---|---|
+| Resolución | `skinparam dpi 200`, para que el texto se lea al ampliar |
+| Fuentes | **Noto Sans** para todo y **JetBrainsMono NF** para el código de las flechas y los encabezados de `alt`, `opt` y `loop` |
+| Color por capa | Los estereotipos `<<presentación>>` (azul), `<<dominio>>` (morado) y `<<persistencia>>` (verde) colorean al participante. `hide stereotype` los oculta: se ve el color, no la palabra |
+| Comentarios | `$comentario("texto")` antepone `# texto` en gris a una línea de código larga, separado con `\n` |
+| Lo demás | Sin sombras, mensajes alineados a la izquierda, retornos bajo la flecha y notas en amarillo claro |
+
+Un diagrama de secuencia nuevo parte así:
+
+```plantuml
+@startuml nombre-del-archivo
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Lo que hace el escenario (US-XX)
+
+actor "Solicitante" as S
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+S -> N ++ : GET /ruta/ → vista(request)
+N -> D ++ : $comentario("qué busca, en palabras")\nSELECT tabla
+return fila
+N --> S : 200 · app/plantilla.html
+deactivate N
+@enduml
+```
+
+El nombre después de `@startuml` es el del archivo, sin extensión: PlantUML lo
+usa para nombrar la imagen.
+
+### Compilar las imágenes
+
+Se necesita PlantUML y las dos fuentes de `estilo.iuml` instaladas. PlantUML las
+busca por el nombre de familia exacto, `Noto Sans` y `JetBrainsMono NF`: si no
+las encuentra usa otras, sin avisar, y la imagen sale distinta a las demás. En
+macOS:
+
+```sh
+brew install plantuml
+brew install --cask font-noto-sans font-jetbrains-mono-nerd-font
+```
+
+Las Nerd Fonts actuales instalan la familia como `JetBrainsMono Nerd Font`. Si
+en el Catálogo Tipográfico no aparece `JetBrainsMono NF`, el código de las
+flechas sale con otra fuente monoespaciada: hay que instalar una versión que
+traiga ese nombre antes de compilar.
+
+Desde la raíz del repositorio, la imagen queda al lado de su `.puml`:
+
+```sh
+plantuml -tpng docs/diagramas/us-10/*.puml
+```
+
+`!include ../estilo.iuml` es relativo al `.puml`, así que funciona desde
+cualquier carpeta. Se commitean juntos el `.puml` y su `.png`. Un `.puml`
+cambiado con su `.png` viejo deja la documentación diciendo otra cosa que el
+código.
+
 ## Comportamiento
 
 Hay un diagrama de secuencia por escenario de cada historia. Están dibujados
@@ -219,6 +292,32 @@ rápido: el servidor lo vuelve a revisar.
 
 ![Resolver una solicitud sin tope](diagramas/us-07/resolver-sin-tope.png)
 
+### Consultar el historial de resoluciones (US-11)
+
+«Resueltas hoy» (US-07 AC5) muestra solo el día; el historial muestra todo lo
+que se aprobó o rechazó, de cualquier validador o del administrador.
+`Solicitud.objects.resueltas()` es lo que tiene `resuelta_en`, y ese campo lo
+escriben `resolver()` y `liberar()`, que rechaza a nombre del administrador la
+pendiente que pierde su horario. Las pendientes y las retiradas quedan fuera
+sin preguntar por su estado. Los filtros llegan por GET en
+`HistorialValidacionForm`: la dirección se puede compartir y los enlaces de
+página los repiten. La fecha se compara en America/Santiago
+(`resuelta_en__date`), así una resolución de las 22:30 cuenta para ese día y no
+para el siguiente, como diría UTC. La página se arma con un número fijo de
+consultas, tenga las filas que tenga.
+
+![Consultar el historial](diagramas/us-11/ver-historial.png)
+
+Es la misma vista para el validador y el administrador: `_envoltorio_validacion`
+elige `panel.html`, con la pestaña Validación, o `_base_validador.html`, que
+tienen los mismos bloques. Como Mis solicitudes (US-09), htmx pide solo la tabla
+y el botón Atrás del navegador pide la página entera.
+
+Lo resuelto es de solo lectura también en `/admin/`: `SolicitudAdmin` niega
+cambiar y borrar una solicitud con `resuelta_en`, y lo mismo sus bloques y
+acompañantes, en línea y en sus propias páginas. El borrado en lote pregunta
+fila por fila, así que una resuelta tampoco cae entre otras.
+
 ### Guardar los parámetros del sistema (US-04)
 
 La bitácora de quién cambió qué es el AC4, y es lo que obliga a que el guardado
@@ -244,6 +343,62 @@ crea con los valores del cliente si todavía no existe (AC2).
 
 Cuántos cambios quedaron, o que no había nada que cambiar, llega como mensaje
 de Django en la sesión, y `base.html` lo dibuja como aviso flotante.
+
+### Crear o editar un área (US-05)
+
+Nueva área y Editar son dos diálogos de la pestaña Áreas que envían al mismo
+`POST`, con `accion=crear` o `accion=editar`. `AreaForm.clean_nombre` busca otra
+con el mismo nombre sin distinguir mayúsculas, porque el índice único sí las
+distingue. Guardar y registrar van en una transacción, como en Reglas: un área
+cambiada sin su registro es lo que AC6 pide evitar.
+
+![Crear o editar un área](diagramas/us-05/guardar-area.png)
+
+La administración de Django usa el mismo registro: `AreaAdmin.save_model` llama
+a `cambios_de_area` y `registrar_cambios`, y no deja borrar áreas.
+
+### Desactivar o reactivar un área (US-05)
+
+Las áreas no se borran (AC3). Desactivar es un `UPDATE` condicionado al estado
+contrario, así un doble clic deja un solo registro. Al pedir, el solicitante
+solo ve sus áreas activas; las solicitudes que ya la usan no cambian.
+
+![Desactivar o reactivar un área](diagramas/us-05/desactivar-area.png)
+
+### Crear una cuenta (US-08)
+
+Nueva cuenta y Editar comparten la vista y el formulario. `UsuarioForm` revisa
+que el correo no se repita sin distinguir mayúsculas y que haya al menos un rol.
+`guardar_usuario` aplica las reglas que no son de un campo (el rol Administrador
+lo da solo el superusuario, un solicitante necesita un área activa) y guarda la
+cuenta, sus roles y su registro en una transacción. La contraseña es una al azar
+que nadie conoce: la persona crea la suya con el enlace del correo, el mismo de
+recuperar la clave (US-01 AC6).
+
+![Crear una cuenta](diagramas/us-08/crear-cuenta.png)
+
+El correo sale después de la transacción: si falla, la cuenta queda creada y el
+administrador lo reenvía desde la ficha. `UsuarioAdmin` usa el mismo registro
+desde `/admin/` y no deja borrar cuentas.
+
+### Desactivar una cuenta (US-08)
+
+Antes de desactivar, la ficha cuenta lo que la persona tiene abierto de hoy en
+adelante (AC5). `personas` no importa `solicitudes`: lo pregunta por la relación
+inversa, `cuenta.solicitudes`. La regla del último administrador (AC6) vive en
+`Usuario.save` y en una señal de `groups`, así que rige igual desde la pestaña,
+`/admin/` o el shell.
+
+![Desactivar una cuenta](diagramas/us-08/desactivar-cuenta.png)
+
+### Cargar cuentas desde una planilla (US-08)
+
+La vista previa y la confirmación son dos `POST`. Entre uno y otro, lo leído
+espera en la sesión; al confirmar se revisa de nuevo contra la base, por si
+alguien cambió una cuenta entremedio. A una cuenta que ya existe solo se le
+suman roles y áreas (AC9).
+
+![Cargar cuentas desde una planilla](diagramas/us-08/cargar-planilla.png)
 
 ### Editar la plantilla semanal de bloques (US-04)
 
@@ -339,6 +494,38 @@ página muestra el botón, y el `UPDATE` condicionado de `confirmar_solicitud` e
 el que vale, como al retirar. Si entre abrir la página y el clic la reserva
 cambió o llegó el día, no se confirma y vuelve a Mis solicitudes con el aviso.
 
+### Recordar la confirmación (US-03)
+
+El servidor no tiene cron, así que el stack suma el servicio `tareas`: la misma
+imagen que `web`, con un bucle que corre `recordar_confirmaciones` cada hora. El
+comando avisa a cada reserva aceptada que entró al plazo de confirmación
+(`plazo_confirmacion_dias`) sin confirmar, cancelar ni recordatorio previo. La
+marca es el paso a `PENDIENTE` con `recordatorio_enviado_en`, y va después del
+correo: si el envío falla, la vuelta siguiente lo reintenta, y correrlo dos
+veces no repite avisos.
+
+![Recordar la confirmación](diagramas/us-03/recordatorio.png)
+
+Una aceptada que llega a su día sin confirmar no cambia de fila: `estado_clave`
+la calcula como **no confirmada** por la fecha, y el personal de apoyo la ve sin
+check-out pendiente.
+
+### Cancelar la reserva (US-03)
+
+`/solicitar/mis-solicitudes/<id>/cancelar/` es el enlace del recordatorio y de
+**Cancelar reserva** en Mis solicitudes. Como al confirmar, el `GET` solo
+muestra la reserva y es la segunda confirmación; cancela el `POST`. Se puede
+cancelar una aceptada, confirmada o no, hasta que empiece su primer bloque.
+
+![Cancelar la reserva](diagramas/us-03/cancelar-reserva.png)
+
+La regla del primer bloque no cabe en un `UPDATE` condicionado, así que
+`cancelar_solicitud` bloquea la fila (`select_for_update`) y la revisa: si en
+otra pestaña confirma al mismo tiempo, una espera a la otra. Desde el lunes de
+la semana de la reserva, cancelar cuenta como inasistencia
+(`cancelar_cuenta_inasistencia`, calculado con `cancelada_en`). El correo a
+quien la aprobó sale solo si la cancelación quedó guardada.
+
 ### Ver los bloques del día (US-14)
 
 Cada ticket es un bloque de una solicitud aceptada en una fecha
@@ -420,6 +607,102 @@ con la misma regla `cubre()` que usa el resto del sistema.
 
 Un sábado o domingo, sin fecha en la dirección, la vista abre la semana que
 viene, porque la rejilla es de lunes a viernes.
+
+### Pedir la sala con una sanción vigente (US-10)
+
+`solicitar` y `solicitar_area` preguntan primero por `Usuario.sancion_vigente`,
+antes que por el área. Con una sanción vigente devuelven
+`solicitudes/sancionado.html` con el motivo y desde cuándo se puede volver a
+pedir, también ante un POST de cualquier paso. `guardar_solicitud_completa`
+repite la pregunta, para el POST que llegue sin pasar por la vista.
+
+![Pedir la sala con una sanción vigente](diagramas/us-10/solicitar-sancionado.png)
+
+La vigencia se calcula al leer, contra `timezone.localdate()` en America/Santiago:
+rige desde `inicio` hasta las 23:59 de `termino`, ambos incluidos, y al día
+siguiente la consulta ya no la encuentra. No hay tarea programada que la apague.
+La franja de aviso es un include de `solicitudes/_base.html`, así que sale en
+todas las páginas del solicitante con la misma consulta.
+
+AC6 quedó decidido el 20/10: la sanción solo impide pedir. Las reservas ya
+aceptadas y las solicitudes en revisión siguen su curso, así que crear una
+sanción no cancela ni avisa a nadie.
+
+### Levantar una sanción (US-10 y US-12)
+
+El administrador las levanta desde la pestaña **Sanciones** del panel, en el
+listado o en el detalle de la persona. Como en los bloqueos de US-17, levantar
+no borra la fila: la marca con quién, cuándo y por qué con un `UPDATE`
+condicionado a que siga vigente. Desde US-12 la vista es de `uso` (ver Ver el
+historial de sanciones e incidentes), y antes de avisar pregunta si a la persona
+le queda otra sanción vigente: si le queda, el aviso dice hasta cuándo sigue sin
+poder pedir, en vez de «Ya puede solicitar la sala».
+
+![Levantar una sanción](diagramas/us-12/levantar-sancion.png)
+
+### Ver el historial de sanciones e incidentes (US-12)
+
+La pestaña **Sanciones** cuenta check-outs, y `personas` no puede importar
+`uso`, así que la vista y su consulta viven en `uso` (`uso.views.sanciones` y
+`uso.services.historial_personas`). Conserva la dirección y el nombre de US-10,
+`/configuracion/sanciones/` y `panel_sanciones`.
+
+Un **incidente** es cada pregunta del check-out respondida «No». No tiene tabla:
+US-20 guarda una fila de `uso_fotointegridad` por cada «No», así que contarlas
+es contar los «No» sin leer el JSON de `uso_checkout`. Esa definición está solo
+en `uso.services.incidentes()`, para cambiarla en un lugar si el equipo decide
+otra. Una **inasistencia** tampoco es una fila: `Solicitud.objects.inasistencias()`
+escribe en SQL la regla de `estado_clave` y `cancelar_cuenta_inasistencia`
+(US-03): aceptada que llegó a su día sin confirmar, o cancelada desde el lunes
+de su semana.
+
+![Ver el historial de sanciones e incidentes](diagramas/us-12/ver-historial.png)
+
+La página es una sola consulta, tenga las filas que tenga: los conteos, la
+sanción vigente, su estado y las áreas son subconsultas correlacionadas y no
+JOIN. Filtrar por área sí hace JOIN con `personas_usuario_areas`, pero una
+persona está a lo más una vez en cada área y los conteos no pasan por ese JOIN,
+así que no se repite nadie ni se inflan los números. El orden es por incidentes
+y luego por `id`, para que la paginación no repita filas. Con el COUNT del
+paginador, `Parametros`, el área del filtro y sus opciones, más la sesión, son 7
+consultas fijas. Los filtros van por GET y htmx pide solo la tabla, como en el
+historial de US-11.
+
+El estado de la sanción de cada persona es **vigente** si tiene una; si no, el
+de su última sanción por fecha de inicio, **levantada** o **terminada**, o **sin
+sanción**. El listado marca, sin sancionar, a quien llega a
+`inasistencias_para_sancion` desde el inicio de su última sanción: la sanción
+automática espera la decisión de la PO (AC8). El detalle junta incidentes,
+inasistencias y sanciones en una línea de tiempo, del más antiguo al más
+reciente. La pregunta y la observación de cada incidente salen de la copia del
+listado que guardó ese check-out, así que editar el listado después no cambia
+lo que se preguntó entonces.
+
+### Aplicar una sanción (US-12)
+
+Desde el detalle de la persona. `personas.services.aplicar` es la única entrada
+para crear una desde el código, para que la sanción automática la reutilice
+cuando se decida. Las reglas están en `Sancion.clean()`, así que `/admin/`
+también las cumple: motivo, término no anterior al inicio, inicio no futuro
+(US-10) y que no se cruce con otra sanción no levantada de la misma persona, con
+los dos extremos incluidos.
+
+![Aplicar una sanción](diagramas/us-12/aplicar-sancion.png)
+
+Revisar el cruce y guardar son dos pasos, y dos administradores a la vez
+pasarían los dos la revisión. Por eso `aplicar` bloquea primero la fila de la
+persona (`SELECT … FOR UPDATE`): el segundo espera a que el primero confirme y
+ya ve su sanción. Sin fechas, empieza hoy y termina en inicio + `dias_sancion` −
+1, porque el día de término rige entero, hasta las 23:59: con 30 días desde el
+3/11 termina el 2/12 y se vuelve a pedir el 3/12. El correo sale con
+`transaction.on_commit`.
+
+Una `ExclusionConstraint` de PostgreSQL sobre `daterange(inicio, termino, '[]')`
+con `levantada_en IS NULL` haría la misma regla en la base, también para el
+shell. No se agregó: necesita la extensión `btree_gist`, y la migración, que
+corre sola al arrancar el contenedor, fallaría si la base ya tiene sanciones
+pisadas, que US-10 permitía. Está anotada como decisión abierta en
+`docs/despliegue.md`.
 
 ### Editar el listado y registrar un check-out (US-20)
 
@@ -503,3 +786,38 @@ saber qué reservas pierde un bloqueo le pregunta por la señal
 `reservas_aprobadas` (ver Bloquear la sala en unas fechas). Las FK a
 `personas_usuario` desde `agenda` y `configuracion` no se dibujan, porque se
 escriben como texto (`settings.AUTH_USER_MODEL`) y no importan el modelo.
+
+### Relaciones de la base de datos
+
+Todas las tablas del esquema `public`, agrupadas por la app que las crea, con
+sus columnas y una línea por clave foránea, rotulada con la columna que la
+guarda. Las de Django (`auth_*`, `django_*`) también van, porque `personas_usuario`
+se une a ellas por los grupos y los permisos. Este sí muestra las FK a
+`personas_usuario` que el de arquitectura no dibuja.
+
+![Relaciones de la base de datos](diagramas/estructura/relaciones-bd.png)
+
+| Marca | Qué dice |
+|---|---|
+| Nombre en negrita | La clave primaria |
+| `*` antes de la columna | `NOT NULL` |
+| `→ tabla` después del tipo | Clave foránea hacia esa tabla |
+| Dos rayas junto a la tabla referenciada | La FK es obligatoria. Con una raya y un círculo, puede quedar vacía |
+| Pata de gallo junto a la otra tabla | Muchas filas pueden apuntar a la misma. Con una raya y un círculo, a lo más una: la columna es única, como el check-out de cada bloque reservado |
+
+El `.puml` no se escribe a mano: lo genera
+`docs/diagramas/estructura/generar_relaciones.sh` leyendo la base de desarrollo.
+Cuando una historia agrega o cambia una migración, se corre el script con la
+base al día y se compila la imagen como las demás:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.desarrollo.yml up -d db
+docker compose -f docker-compose.yml -f docker-compose.desarrollo.yml run --rm web python manage.py migrate
+docs/diagramas/estructura/generar_relaciones.sh
+plantuml -tpng docs/diagramas/estructura/relaciones-bd.puml
+```
+
+El diagrama muestra la base y no los modelos: lo que Django valida y la base no
+(como que una sanción no empiece en el futuro) no aparece. Las reglas que sí
+están en la base, como `sancion_termina_despues_de_empezar`, se ven en la
+estructura exportada (ver "Exportar la estructura" en `docs/despliegue.md`).

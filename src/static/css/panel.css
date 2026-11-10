@@ -1,58 +1,49 @@
-/* Cascarón del panel de administración, lo que comparten las tres pestañas.
- * Lo propio de cada una vive en el static de su módulo.
- * Solo variables de marca.css, ningún color literal (docs/estilo.md). */
+/* Cascarón de las pantallas con sesión: la banda naranja, el riel con las
+ * pestañas y el rol, y el contenedor. Las piezas comunes están en base.css; lo
+ * propio de cada pantalla, en su módulo. Solo variables de marca.css. */
 
-/* Alpine tarda un instante en montar y sin esto lo que usa x-show parpadea. */
-[x-cloak] { display: none !important; }
-
-/* Todo el encabezado (marca, título, quién sos y las pestañas) es un solo
- * bloque blanco. El filete de abajo hace de riel para la pestaña activa. */
 .techo { background: var(--superficie); border-bottom: 1px solid var(--borde); }
-.techo .dentro { max-width: 74rem; margin: 0 auto; padding: 0 1.5rem; }
-.techo .fila { display: flex; align-items: center; gap: 1rem; padding: .7rem 0 .6rem; }
-.techo h1 {
-  margin: 0; font-size: 1.15rem; letter-spacing: -.01em;
-  border-left: 1px solid var(--borde); padding-left: 1rem;
+.banda { background: var(--marca); color: var(--superficie); }
+.banda .dentro, .riel .dentro { box-sizing: border-box; max-width: 74rem; margin: 0 auto; padding: 0 var(--esp-5); }
+.banda .dentro { display: flex; align-items: center; gap: var(--esp-4); padding-block: var(--esp-3); }
+.sello { flex: none; height: 3.6rem; width: auto; }
+/* Todo el texto sobre --marca es de 20 px en negrita: así alcanza el 3:1. */
+.producto {
+  margin: 0; padding-left: var(--esp-4); border-left: 1px solid var(--superficie);
+  font-size: var(--txt-lg); color: var(--superficie);
 }
-.sello { height: 1.9rem; width: auto; }
-.quien { display: flex; align-items: center; gap: .75rem; margin-left: auto; }
-.quien form { margin: 0; }
-.correo { font-size: .8rem; color: var(--tinta-suave); }
+.banda form { margin: 0 0 0 auto; }
+.banda .btn { border-color: var(--superficie); }
+.banda :focus-visible { outline-color: var(--superficie); }
 
-.panel { max-width: 74rem; margin: 0 auto; padding: 1.75rem 1.5rem 4rem; }
-
-.pestanas { display: flex; gap: 1.5rem; }
+/* El filete de abajo es el riel sobre el que se apoya la pestaña activa. */
+.riel .dentro { display: flex; align-items: flex-end; gap: var(--esp-5); }
+.pestanas { display: flex; flex-wrap: wrap; column-gap: var(--esp-5); }
 .pestana {
-  padding: .45rem .1rem; margin-bottom: -1px; text-decoration: none;
-  color: var(--tinta-suave); border-bottom: 2px solid transparent;
-  font-family: var(--fuente-titulo); font-weight: 700; font-size: .8rem;
+  padding: var(--esp-3) 2px 9px; margin-bottom: -1px; text-decoration: none;
+  color: var(--tinta-suave); border-bottom: 3px solid transparent;
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: var(--txt-sm);
 }
 .pestana:hover { color: var(--tinta); }
 .pestana.activa { color: var(--tinta); border-bottom-color: var(--acento); }
 
-.vacio { color: var(--tinta-suave); font-size: .9rem; }
-
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; position: relative;
-  min-height: 1.9rem; padding: 0 .7rem;
-  border: 1px solid var(--borde); background: var(--superficie); color: var(--accion);
-  text-decoration: none; cursor: pointer;
-  font-family: var(--fuente-texto); font-size: .8rem; font-weight: 500;
+/* US-08 AC7: el rol con su ícono y su color, igual que en su puerta. */
+.rol-sesion {
+  display: flex; align-items: center; gap: var(--esp-2);
+  margin: 0 0 0 auto; padding-block: var(--esp-3);
+  font-size: var(--txt-sm); font-weight: 500;
 }
-.btn:hover { border-color: var(--accion); z-index: 1; }
-.btn.ico { min-width: 2rem; padding: 0; font-size: .95rem; }
-.btn.activa { background: var(--accion); color: var(--superficie); border-color: var(--accion); z-index: 1; }
+.rol-sesion .quien { color: var(--tinta-suave); font-weight: 400; }
 
-/* Los botones de un grupo comparten filete para leerse como un solo mando. */
-.grupo { display: flex; }
-.grupo .btn { margin-left: -1px; }
-.grupo .btn:first-child { margin-left: 0; }
-
-.marco { border: 1px solid var(--borde); background: var(--superficie); overflow-x: auto; }
+.panel { box-sizing: border-box; max-width: 74rem; margin: 0 auto; padding: var(--esp-6) var(--esp-5) var(--esp-7); }
 
 @media (max-width: 40rem) {
-  .techo .dentro { padding: 0 1rem; }
-  .techo h1 { border-left: 0; padding-left: 0; }
-  .panel { padding: 1.25rem 1rem 3rem; }
-  .correo { display: none; }
+  .banda .dentro, .riel .dentro { padding-inline: var(--esp-4); }
+  .banda .dentro { flex-wrap: wrap; row-gap: var(--esp-1); }
+  .sello { height: 2.9rem; }
+  .producto { order: 3; flex-basis: 100%; padding-left: 0; border-left: 0; }
+  .riel .dentro { flex-direction: column; align-items: stretch; gap: 0; }
+  .rol-sesion { margin-left: 0; padding-bottom: var(--esp-1); }
+  .pestanas { column-gap: var(--esp-4); }
+  .panel { padding: var(--esp-5) var(--esp-4) var(--esp-6); }
 }

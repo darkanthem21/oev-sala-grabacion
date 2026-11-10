@@ -32,6 +32,16 @@
     <p class="sub">Elige un día habilitado en el calendario y selecciona los bloques de tiempo requeridos para tu actividad.</p>
 
     {% comment %}
+    US-05: lo que la Oficina pide tener en cuenta del área, antes de elegir
+    bloques; por ejemplo, que Educación Continua no graba en horario laboral.
+    {% endcomment %}
+    {% if area.nota %}
+      <aside class="nota-area" aria-label="Nota del área">
+        <strong>{{ area.nombre }}:</strong> {{ area.nota }}
+      </aside>
+    {% endif %}
+
+    {% comment %}
     US-17 AC7: el calendario ya no ofrece los horarios bloqueados; esta lista
     dice por qué faltan, para que nadie crea que es un error.
     {% endcomment %}
@@ -76,14 +86,14 @@
 
       <div class="acciones-paso">
         {% if puede_cambiar_area %}
-          <a href="{% url 'solicitar_area' %}?cambiar=1" class="btn-secundario">
+          <a href="{% url 'solicitar_area' %}?cambiar=1" class="btn">
             <svg class="icono-btn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
             <span>Cambiar área</span>
           </a>
         {% else %}
           <div></div>
         {% endif %}
-        <button type="submit" class="btn-accion" :disabled="!haySeleccion" {% if not bloques_seleccionados_ids %}disabled{% endif %}>
+        <button type="submit" class="btn principal" :disabled="!haySeleccion" {% if not bloques_seleccionados_ids %}disabled{% endif %}>
           <span>Continuar a datos de la actividad</span>
           <svg class="icono-btn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
         </button>
@@ -103,7 +113,7 @@
         <strong>{{ reserva.fecha|date:"l d \d\e F \d\e Y"|capfirst }}</strong>
         <span>Bloques: {{ reserva.bloques_texto }}</span>
       </div>
-      <a href="{% url 'solicitar' %}?paso=1" class="btn-enlace-horario" role="button" title="Modificar fecha y bloques">
+      <a href="{% url 'solicitar' %}?paso=1" class="btn" role="button" title="Modificar fecha y bloques">
         <svg class="icono-btn" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
         <span>Cambiar horario</span>
       </a>
@@ -170,11 +180,11 @@
       </section>
 
       <div class="acciones-paso">
-        <a href="{% url 'solicitar' %}?paso=1" class="btn-secundario">
+        <a href="{% url 'solicitar' %}?paso=1" class="btn">
           <svg class="icono-btn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
           <span>Volver al calendario</span>
         </a>
-        <button type="submit" class="btn-accion">
+        <button type="submit" class="btn principal">
           <span>Continuar a confirmación</span>
           <svg class="icono-btn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
         </button>
@@ -228,11 +238,11 @@
       </section>
 
       <div class="acciones-paso">
-        <a href="{% url 'solicitar' %}?paso=2" class="btn-secundario">
+        <a href="{% url 'solicitar' %}?paso=2" class="btn">
           <svg class="icono-btn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
           <span>Modificar datos</span>
         </a>
-        <button type="submit" class="btn-accion" :disabled="!acepta">Confirmar y enviar solicitud</button>
+        <button type="submit" class="btn principal" :disabled="!acepta">Confirmar y enviar solicitud</button>
       </div>
       <p class="pista" x-show="!acepta">Acepta los términos para poder enviar.</p>
     </form>

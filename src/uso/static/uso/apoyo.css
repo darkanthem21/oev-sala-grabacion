@@ -1,32 +1,53 @@
 /* Vista del personal de apoyo (US-14). Solo variables de marca.css. */
 
-.dia { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-.dia h2 { margin: 0; font-size: 1.05rem; }
+.dia { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-4); margin-bottom: var(--esp-4); }
+.dia h2 { margin: 0; font-size: var(--txt-lg); }
 .dia form { margin-left: auto; }
 
-.bloques { width: 100%; border-collapse: collapse; font-size: .875rem; }
-.bloques th, .bloques td { padding: .6rem .8rem; text-align: left; border-bottom: 1px solid var(--borde); }
-.bloques th { font-size: .75rem; color: var(--tinta-suave); font-weight: 500; }
+.bloques { width: 100%; border-collapse: collapse; font-size: var(--txt-sm); }
+.bloques th, .bloques td { padding: var(--esp-2) var(--esp-3); text-align: left; border-bottom: 1px solid var(--borde); }
+.bloques th { font-size: var(--txt-xs); color: var(--tinta-suave); font-weight: 500; }
 .bloques tr:last-child td { border-bottom: 0; }
 .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* El texto dice el estado; el color solo lo refuerza. */
-.marca { display: inline-block; font-size: .75rem; font-weight: 500; padding: .1rem .45rem; border: 1px solid var(--borde); }
-.marca.confirmada, .marca.completado { border-color: var(--exito); }
-.marca.pendiente { border-color: var(--precaucion); }
-.marca.cancelada { border-color: var(--alerta); color: var(--alerta); }
+/* El texto dice el estado y el filete lo refuerza, como en Mis solicitudes. */
+.marca { display: inline-block; font-weight: 500; padding: 1px 0 1px var(--esp-2); border-left: 3px solid var(--borde); white-space: nowrap; }
+.marca.confirmada, .marca.completado { border-left-color: var(--exito); }
+.marca.pendiente { border-left-color: var(--precaucion); }
+.marca.cancelada,
+.marca.no-confirmada { border-left-color: var(--alerta); }
 .cancelada td:not(:nth-child(5)) { text-decoration: line-through; color: var(--tinta-suave); }
 .nada { color: var(--tinta-suave); }
 
 /* US-17 AC2: la reserva sigue en la lista, pero ya no hay sala que preparar. */
-.marca.bloqueada { border-color: var(--destacado); margin-left: .25rem; }
+.marca.bloqueada { border-left-color: var(--alerta); margin-left: var(--esp-2); }
 .bloqueos {
-  margin: 0 0 1rem; padding: .55rem .75rem; font-size: .85rem;
-  background: var(--superficie); border-left: 3px solid var(--destacado);
+  margin: 0 0 var(--esp-4); padding: var(--esp-2) var(--esp-3); font-size: var(--txt-sm);
+  border-left: 3px solid var(--alerta);
 }
-.bloqueos ul { margin: .25rem 0 0; padding-left: 1.1rem; }
+.bloqueos ul { margin: var(--esp-1) 0 0; padding-left: var(--esp-4); }
 
 a.marca { text-decoration: none; color: var(--tinta); }
-.ficha { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1.25rem; margin: 1rem 0 1.5rem; font-size: .9rem; }
+
+/* En el celular cada bloque pasa a ser una ficha, como en Mis solicitudes: en
+ * tabla, la columna de check-out, que es a lo que se viene, quedaba fuera de la
+ * pantalla. Las etiquetas repiten el encabezado, que acá se oculta. */
+@media (max-width: 36rem) {
+  .bloques thead { display: none; }
+  .bloques tr { display: block; padding: var(--esp-2) var(--esp-3); border-bottom: 1px solid var(--borde); }
+  .bloques tr:last-child { border-bottom: 0; }
+  .bloques td { display: grid; grid-template-columns: 6rem 1fr; gap: var(--esp-3); align-items: center; padding: var(--esp-1) 0; border: 0; }
+  .bloques td > * { justify-self: start; }
+  .bloques td::before { color: var(--tinta-suave); font-size: var(--txt-xs); }
+  .bloques td:nth-child(1)::before { content: "Hora"; }
+  .bloques td:nth-child(2)::before { content: "Solicitante"; }
+  .bloques td:nth-child(3)::before { content: "Área"; }
+  .bloques td:nth-child(4)::before { content: "Personas"; }
+  .bloques td:nth-child(5)::before { content: "Estado"; }
+  .bloques td:nth-child(6)::before { content: "Check-out"; }
+  /* Más alto para tocarlo con el dedo. */
+  .bloques .btn { min-height: 2.5rem; }
+}
+.ficha { display: grid; grid-template-columns: max-content 1fr; gap: var(--esp-1) var(--esp-5); margin: var(--esp-4) 0 var(--esp-5); font-size: var(--txt-sm); }
 .ficha dt { color: var(--tinta-suave); }
 .ficha dd { margin: 0; }

@@ -1,0 +1,29 @@
+{% extends "solicitudes/_base.html" %}
+{% block titulo %}Solicitudes suspendidas{% endblock %}
+
+{% block aviso_sancion %}{% endblock %}
+
+{% block hoja %}
+<main class="hoja">
+  {% comment %}
+  US-10 T2: en vez del formulario. Dice por qué y desde cuándo, para que nadie
+  tenga que preguntarle a la Oficina.
+  {% endcomment %}
+  <h1>No puedes solicitar por ahora</h1>
+  <p class="sub">
+    Tienes una sanción vigente, así que no puedes enviar solicitudes nuevas. Tus
+    reservas ya aceptadas siguen en pie.
+  </p>
+
+  <dl class="ficha">
+    <dt>Motivo</dt><dd>{{ sancion.motivo }}</dd>
+    <dt>Vigente</dt><dd>{{ sancion.periodo|capfirst }}, hasta las 23:59 del último día</dd>
+    <dt>Podrás solicitar</dt><dd><strong>Desde el {{ sancion.rehabilita }}</strong></dd>
+  </dl>
+
+  <div class="acciones-paso">
+    <a href="{% url 'mis_solicitudes' %}" class="btn"><span>Ver mis solicitudes</span></a>
+    <a href="{% url 'mis_sanciones' %}" class="btn"><span>Ver mis sanciones</span></a>
+  </div>
+</main>
+{% endblock %}

@@ -61,7 +61,7 @@
     <input type="hidden" name="asistencia" value="si">
     {{ form.non_field_errors }}{{ form.revision }}{{ form.revision.errors }}
     {% include "uso/checkout/_listado.html" %}
-    <button class="btn activa" type="submit">Finalizar y enviar reporte</button>
+    <button class="btn principal" type="submit">Finalizar y enviar reporte</button>
   </form>
   {% else %}
   <form method="post" id="asistencia-form">

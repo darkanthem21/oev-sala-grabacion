@@ -1,0 +1,46 @@
+/* Pestaña Áreas (US-05). La tabla calca la de Sanciones, la barra y el diálogo
+ * de últimos cambios los de Reglas, y los campos los de los pop-ups de Bloques.
+ * Solo variables de marca.css (docs/estilo.md). */
+
+.areas { padding: var(--esp-4) var(--esp-4) var(--esp-4); }
+.areas h2 { margin: 0 0 var(--esp-1); font-size: var(--txt-lg); }
+.areas .detalle { margin: 0 0 var(--esp-3); font-size: var(--txt-sm); line-height: 1.45; color: var(--tinta-suave); max-width: 60ch; }
+
+.areas table, .historial table { width: 100%; border-collapse: collapse; font-size: var(--txt-sm); }
+.areas th, .historial th {
+  text-align: left; font-weight: 500; font-size: var(--txt-sm); color: var(--tinta-suave);
+  padding: var(--esp-1) var(--esp-2) var(--esp-1) 0; border-bottom: 1px solid var(--borde);
+}
+.areas td { padding: var(--esp-2) var(--esp-2) var(--esp-2) 0; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+.historial td { padding: var(--esp-1) var(--esp-2) var(--esp-1) 0; border-bottom: 1px solid var(--borde); }
+.areas tr:last-child td, .historial tr:last-child td { border-bottom: 0; }
+.areas .nombre { font-weight: 500; }
+.areas .nota { color: var(--tinta-suave); max-width: 40ch; line-height: 1.45; }
+.areas .cifra, .historial .cifra, .historial .cambio { font-variant-numeric: tabular-nums; }
+.areas .grupo { margin: 0; justify-content: flex-end; }
+.areas th:last-child { text-align: right; padding-right: 0; }
+/* La desactivada sigue en la lista, atenuada: sus solicitudes viejas la usan. */
+.areas .inactiva td:not(:last-child) { color: var(--tinta-suave); }
+.historial { max-height: 60vh; overflow: auto; margin-bottom: var(--esp-4); }
+.historial .cambio { color: var(--tinta-suave); }
+
+.barra {
+  display: flex; align-items: center; gap: var(--esp-4); flex-wrap: wrap;
+  margin-top: var(--esp-4); padding: var(--esp-3) 0; border-top: 1px solid var(--borde);
+}
+.barra .btn.principal { margin-left: auto; }
+
+.campos-area { display: flex; flex-direction: column; gap: var(--esp-3); }
+.campos-area label {
+  display: flex; flex-direction: column; gap: var(--esp-1);
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: var(--txt-xs); color: var(--tinta-suave);
+}
+.campos-area input, .campos-area textarea {
+  padding: var(--esp-1) var(--esp-2);
+  font-family: var(--fuente-texto); font-size: var(--txt-sm); font-weight: 400; line-height: 1.5;
+}
+.campos-area textarea { resize: vertical; }
+.campos-area .dialogo-acciones { margin-top: var(--esp-2); }
+
+/* En el celular la tabla se desliza dentro de su marco en vez de aplastar la nota. */
+@media (max-width: 40rem) { .areas table { min-width: 34rem; } }

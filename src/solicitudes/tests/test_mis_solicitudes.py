@@ -320,7 +320,7 @@ class RetirarSolicitudTestCase(TestCase):
         pagina = self.client.get(reverse("mis_solicitudes"))
         self.assertContains(pagina, f"Retiraste la solicitud #{solicitud.id}")
         self.assertContains(pagina, "estado-retirada")
-        self.assertNotContains(pagina, 'class="btn-retirar"')
+        self.assertNotContains(pagina, '>Retirar</button>')
 
     def test_con_htmx_devuelve_la_tabla_redibujada(self):
         solicitud = self._solicitud()
@@ -337,7 +337,7 @@ class RetirarSolicitudTestCase(TestCase):
             estado_validacion=Solicitud.EstadoValidacion.ACEPTADA,
         )
         response = self.client.get(reverse("mis_solicitudes"))
-        self.assertContains(response, 'class="btn-retirar"', count=1)
+        self.assertContains(response, '>Retirar</button>', count=1)
         self.assertContains(response, reverse("retirar_solicitud", args=[en_revision.id]))
 
     def test_no_retira_las_ya_revisadas(self):

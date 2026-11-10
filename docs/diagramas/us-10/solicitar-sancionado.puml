@@ -1,0 +1,57 @@
+@startuml solicitar-sancionado
+!include ../estilo.iuml
+hide footbox
+autonumber
+title Pedir la sala con una sanción vigente (US-10)
+
+actor "Solicitante" as S
+participant "<b>solicitudes.views</b>\n<size:11>solicitudes/views.py</size>" as N <<presentación>>
+participant "<b>solicitudes.services</b>\n<size:11>solicitudes/services.py</size>" as V <<dominio>>
+participant "<b>personas.models</b>\n<size:11>personas/models.py</size>\n<size:11>Usuario, SancionQuerySet</size>" as M <<dominio>>
+database "<b>PostgreSQL</b>\n<size:11>base oev</size>" as D <<persistencia>>
+
+S -> N ++ : GET o POST /solicitar/ → solicitar(request)
+N -> N ++ : $comentario("antes que el área: elegir una no le serviría de nada")\n_sancionado(request)
+N -> M ++ : request.user.sancion_vigente
+M -> M : $comentario("hoy en Santiago; el día de término cuenta entero")\nhoy = timezone.localdate()
+M -> D ++ : $comentario("usuario, inicio <= hoy, termino >= hoy, levantada_en IS NULL; la que termina más tarde")\nSELECT personas_sancion
+return fila
+return sancion
+
+alt sanción vigente
+  N -> N : render(request, "solicitudes/sancionado.html", {"sancion": sancion})
+  return respuesta
+  N --> S : 200 · solicitudes/sancionado.html con el motivo, «hasta las 23:59» y desde cuándo puede volver a pedir
+  note right of N
+    El POST de cualquier paso también termina acá,
+    así que el asistente no avanza ni se guarda nada.
+  end note
+else sin sanción
+  return None
+  N -> N : $comentario("sigue el flujo de US-02: área, paso pedido y su manejador")\nmanejar(request, wizard, …)
+  opt paso 3, Confirmar y enviar
+    N -> V ++ : guardar_solicitud_completa(usuario, wizard.datos)
+    V -> M ++ : $comentario("la misma pregunta, por si el POST llegó sin pasar por la vista")\nusuario.sancion_vigente
+    M -> D ++ : SELECT personas_sancion
+    return fila
+    return sancion
+    break hay sanción vigente
+      V --> N : ValidationError("Tienes una sanción vigente hasta el …")
+      N --> S : 200 · solicitudes/solicitar.html con el error
+    end
+    V -> D ++ : INSERT solicitudes_solicitud, solicitudbloque, acompanante
+    return
+    return solicitud
+  end
+  N --> S : 200 · solicitudes/solicitar.html, o 302 al paso siguiente
+end
+deactivate N
+
+note over S, D
+  Todas las páginas del solicitante extienden solicitudes/_base.html, que incluye
+  solicitudes/_aviso_sancion.html: la misma consulta dibuja la franja de aviso.
+  Al día siguiente del término la consulta ya no la encuentra y vuelve a poder pedir,
+  sin tarea programada. AC6: las reservas ya aceptadas y las solicitudes en revisión
+  no se tocan.
+end note
+@enduml

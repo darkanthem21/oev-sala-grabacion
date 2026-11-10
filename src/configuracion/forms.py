@@ -27,10 +27,11 @@ SECCIONES = [
     ]),
     ("Cierre y sanciones", [
         ("Inasistencias para sancionar", ["inasistencias_para_sancion"],
-         "Inasistencias seguidas tras las que el sistema sanciona solo. El administrador "
-         "puede levantar o acortar una sanción después."),
+         "Inasistencias desde su última sanción con las que la pestaña Sanciones marca "
+         "a una persona. Por ahora la sanción la aplica el administrador desde ahí."),
         ("Duración de la sanción", ["dias_sancion"],
-         "Cuánto impide pedir nuevas reservas. No cancela las que ya estaban aprobadas."),
+         "Cuánto impide pedir nuevas reservas, contando el día de inicio. Es lo que "
+         "propone la pestaña Sanciones. No cancela las que ya estaban aprobadas."),
     ]),
     ("Acceso", [
         ("Intentos antes de bloquear", ["intentos_maximos"],

@@ -1,18 +1,28 @@
 from datetime import timedelta
 
+from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.contrib.auth.forms import AuthenticationForm
-from django.http import HttpResponse
-from django.shortcuts import redirect, render
+from django.db.models import Count, Prefetch, Q
+from django.http import HttpResponse, HttpResponseBadRequest
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 
 from configuracion.models import Parametros
 
-from .models import Rol, Usuario
+from . import carga, services
+from .forms import AreaForm, UsuarioForm
+from .models import PUERTA_DEL_ROL, Area, CambioArea, CambioUsuario, Rol, Usuario
+from .permisos import solo_administradores
 
+# Como en Reglas: el registro completo está en /admin/, y acá basta lo último.
+ULTIMOS_CAMBIOS = 15
+CUENTAS_POR_PAGINA = 50
 
 
 def destino_tras_login(usuario):
@@ -125,3 +135,236 @@ def entrar(request, rol, destino, ruta, titulo, puerta, nombre):
 def panel(request):
     """La raíz lleva a cada uno a su panel, por la prioridad de sus roles."""
     return redirect(destino_tras_login(request.user))
+
+
+@solo_administradores
+def areas(request):
+    """US-05: las áreas con su nota y cuánta gente tiene cada una.
+
+    Crear, editar, desactivar y reactivar van por POST y vuelven con una
+    redirección, como Sanciones; lo que pasó llega como aviso flotante. Las
+    personas se asignan a un área desde la pestaña Usuarios (US-08).
+    """
+    if request.method == "POST":
+        accion = request.POST.get("accion")
+        if accion not in ("crear", "editar", "desactivar", "reactivar"):
+            return HttpResponseBadRequest()
+        area = None if accion == "crear" else get_object_or_404(Area, pk=request.POST.get("area"))
+
+        if accion in ("desactivar", "reactivar"):
+            if not services.cambiar_estado(area, accion == "reactivar", request.user):
+                messages.info(request, f"«{area}» ya estaba {'activa' if accion == 'reactivar' else 'inactiva'}.")
+            elif accion == "desactivar":
+                messages.success(request, f"Desactivaste «{area}». Ya no se ofrece al pedir; las solicitudes "
+                                          "que la usan no cambian.")
+            else:
+                messages.success(request, f"Reactivaste «{area}». Vuelve a ofrecerse al pedir.")
+            return redirect("panel_areas")
+
+        formulario = AreaForm(request.POST, instance=area)
+        if not formulario.is_valid():
+            errores = " ".join(e for lista in formulario.errors.values() for e in lista)
+            messages.error(request, f"{errores} No se guardó nada.")
+        elif not formulario.has_changed():
+            messages.info(request, "No había nada que cambiar.")
+        else:
+            area = services.guardar_area(formulario, request.user)
+            messages.success(request, f"Creaste el área «{area}»." if accion == "crear" else f"Guardaste «{area}».")
+        return redirect("panel_areas")
+
+    return render(request, "personas/areas.html", {
+        "pestana": "areas",
+        "areas": Area.objects.annotate(cuantos=Count("usuarios")).order_by("-activa", "nombre"),
+        "historial": CambioArea.objects.select_related("area", "quien")[:ULTIMOS_CAMBIOS],
+    })
+
+
+ESTADOS = {"activas": Q(is_active=True), "desactivadas": Q(is_active=False)}
+
+
+def _roles_de(cuenta):
+    """Sus roles en el orden de `Rol`, con la puerta que elige ícono y color (AC7)."""
+    tiene = {grupo.name for grupo in cuenta.groups.all()}
+    return [(PUERTA_DEL_ROL[rol], rol.label) for rol in Rol if rol in tiene]
+
+
+@solo_administradores
+def usuarios(request):
+    """US-08 AC1: las cuentas con roles, áreas y estado, con búsqueda y filtros.
+    Crear y editar tienen su página, para mostrar cada error junto a su campo."""
+    filtros = {clave: request.GET.get(clave, "").strip() for clave in ("q", "rol", "area", "estado")}
+    cuentas = Usuario.objects.prefetch_related(
+        "groups", Prefetch("areas", queryset=Area.objects.order_by("nombre")),
+    ).order_by("-is_active", "first_name", "last_name", "email")
+    # Cada palabra en cualquiera de los tres campos, para que «ana pérez» encuentre
+    # a Ana Pérez aunque nombre y apellido estén separados.
+    for termino in filtros["q"].split():
+        cuentas = cuentas.filter(
+            Q(email__icontains=termino) | Q(first_name__icontains=termino) | Q(last_name__icontains=termino)
+        )
+    if filtros["rol"] in Rol.values:
+        cuentas = cuentas.filter(groups__name=filtros["rol"])
+    if filtros["area"].isdigit():
+        cuentas = cuentas.filter(areas__pk=filtros["area"])
+    if filtros["estado"] in ESTADOS:
+        cuentas = cuentas.filter(ESTADOS[filtros["estado"]])
+
+    pagina = Paginator(cuentas, CUENTAS_POR_PAGINA).get_page(request.GET.get("pagina"))
+    for cuenta in pagina:
+        cuenta.lista_roles = _roles_de(cuenta)
+    sin_pagina = request.GET.copy()
+    sin_pagina.pop("pagina", None)
+    return render(request, "personas/usuarios.html", {
+        "pestana": "usuarios",
+        "pagina": pagina,
+        "filtros": filtros,
+        "filtrando": any(filtros.values()),
+        "url_pagina": f"?{sin_pagina.urlencode()}&pagina=" if sin_pagina else "?pagina=",
+        "roles": Rol.choices,
+        "areas": Area.objects.order_by("-activa", "nombre"),
+        "historial": CambioUsuario.objects.select_related("usuario", "quien")[:ULTIMOS_CAMBIOS],
+    })
+
+
+@solo_administradores
+def usuario(request, pk=None):
+    """US-08 AC2 a AC4: crear o editar una cuenta, desactivarla o reactivarla y
+    reenviarle el correo para crear su contraseña."""
+    cuenta = get_object_or_404(Usuario, pk=pk) if pk else Usuario()
+    nombre = cuenta.get_full_name() or cuenta.email
+    da_admin = request.user.is_superuser
+    form = UsuarioForm(instance=cuenta, da_admin=da_admin)
+
+    if request.method == "POST":
+        accion = request.POST.get("accion")
+        if pk and accion in ("desactivar", "reactivar"):
+            try:
+                cambio = services.cambiar_estado_de_cuenta(cuenta, accion == "reactivar", request.user)
+            except ValidationError as error:
+                messages.error(request, " ".join(error.messages))
+            else:
+                if not cambio:
+                    estado = "activa" if accion == "reactivar" else "desactivada"
+                    messages.info(request, f"La cuenta de {nombre} ya estaba {estado}.")
+                elif accion == "desactivar":
+                    messages.success(request, f"Desactivaste la cuenta de {nombre}. Ya no puede entrar; "
+                                              "su historial se conserva.")
+                else:
+                    messages.success(request, f"Reactivaste la cuenta de {nombre}. Puede volver a entrar "
+                                              "con su contraseña.")
+            return redirect("panel_usuario", pk=pk)
+
+        if pk and accion == "reenviar":
+            if not services.puede_cambiar_cuenta(cuenta, request.user):
+                messages.error(request, "Solo el superusuario cambia la cuenta de otro administrador.")
+            elif not cuenta.is_active:
+                messages.error(request, "La cuenta está desactivada: reactívala antes de reenviar el correo.")
+            elif services.enviar_acceso(cuenta):
+                messages.success(request, f"Le reenviaste a {cuenta.email} el correo para crear su contraseña.")
+            else:
+                messages.error(request, "El correo no salió. Inténtalo de nuevo en unos minutos.")
+            return redirect("panel_usuario", pk=pk)
+
+        if accion != "guardar":
+            return HttpResponseBadRequest()
+        form = UsuarioForm(request.POST, instance=cuenta, da_admin=da_admin)
+        if pk and not form.has_changed():
+            messages.info(request, "No había nada que cambiar.")
+            return redirect("panel_usuarios")
+        if form.is_valid():
+            try:
+                cuenta = services.guardar_usuario(form, request.user)
+            except ValidationError as error:
+                form.add_error(None, error)
+            else:
+                guardada = cuenta.get_full_name() or cuenta.email
+                if pk:
+                    messages.success(request, f"Guardaste la cuenta de {guardada}.")
+                elif services.enviar_acceso(cuenta):
+                    messages.success(request, f"Creaste la cuenta de {guardada}. Le llegará un correo a "
+                                              f"{cuenta.email} para crear su contraseña.")
+                else:
+                    messages.error(request, f"Creaste la cuenta de {guardada}, pero el correo no salió. "
+                                            "Reenvíalo desde su cuenta.")
+                return redirect("panel_usuarios")
+
+    return render(request, "personas/usuario.html", {
+        "pestana": "usuarios",
+        "form": form,
+        "cuenta": cuenta,
+        "nombre": nombre,
+        "roles": [
+            (rol.value, rol.label, PUERTA_DEL_ROL[rol]) for rol in Rol if da_admin or rol != Rol.ADMINISTRADOR
+        ],
+        "bloqueada": not services.puede_cambiar_cuenta(cuenta, request.user),
+        "solicitante": Rol.SOLICITANTE in (form["roles"].value() or []),
+        # AC5: lo que sigue abierto, para avisarlo antes de desactivar.
+        "en_curso": cuenta.solicitudes.en_curso(timezone.localdate()) if cuenta.pk and cuenta.is_active else {},
+    })
+
+
+SESION_CARGA = "carga_de_usuarios"
+
+
+@solo_administradores
+def plantilla_usuarios(request):
+    """AC8: la planilla vacía, con las columnas que lee la carga."""
+    respuesta = HttpResponse(carga.plantilla(), content_type="text/csv; charset=utf-8")
+    respuesta["Content-Disposition"] = 'attachment; filename="cuentas-oev.csv"'
+    return respuesta
+
+
+@solo_administradores
+def cargar_usuarios(request):
+    """AC8 y AC9: subir la planilla, ver fila por fila qué pasaría y confirmar.
+    Lo leído espera en la sesión entre la vista previa y la confirmación; al
+    confirmar se revisa de nuevo contra la base, por si algo cambió entremedio."""
+    contexto = {"pestana": "usuarios", "columnas": carga.COLUMNAS, "roles": Rol.choices,
+                "areas": Area.objects.filter(activa=True).order_by("nombre")}
+    accion = request.POST.get("accion")
+
+    if accion == "confirmar":
+        crudas = request.session.pop(SESION_CARGA, None)
+        if not crudas:
+            messages.error(request, "Vuelve a subir la planilla: la vista previa ya no está.")
+            return redirect("panel_usuarios_cargar")
+        try:
+            resultado = carga.aplicar(crudas, request.user)
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
+            return redirect("panel_usuarios_cargar")
+        partes = []
+        if resultado["creadas"]:
+            n = resultado["creadas"]
+            partes.append(f"creaste {n} cuenta{'s' if n != 1 else ''}")
+        if resultado["actualizadas"]:
+            n = resultado["actualizadas"]
+            partes.append(f"actualizaste {n}")
+        messages.success(request, (" y ".join(partes) or "No había nada que cambiar").capitalize() + ".")
+        if resultado["sin_correo"]:
+            messages.error(request, "No salió el correo para crear la contraseña a: "
+                                    f"{', '.join(resultado['sin_correo'])}. Reenvíalo desde cada cuenta.")
+        return redirect("panel_usuarios")
+
+    if accion == "revisar":
+        archivo = request.FILES.get("planilla")
+        if archivo is None:
+            contexto["error"] = "Elige el archivo de la planilla."
+        else:
+            try:
+                crudas = carga.leer(archivo.read(carga.MAX_BYTES + 1))
+            except ValidationError as error:
+                contexto["error"] = " ".join(error.messages)
+            else:
+                filas = carga.revisar(crudas, request.user)
+                errores = sum(1 for f in filas if f.errores)
+                if errores:
+                    request.session.pop(SESION_CARGA, None)
+                else:
+                    request.session[SESION_CARGA] = crudas
+                contexto |= {
+                    "filas": filas, "nombre_archivo": archivo.name, "con_errores": errores,
+                    "crear": sum(1 for f in filas if f.accion == "crear"),
+                    "actualizar": sum(1 for f in filas if f.accion == "actualizar"),
+                }
+    return render(request, "personas/cargar_usuarios.html", contexto)

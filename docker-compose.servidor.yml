@@ -23,6 +23,13 @@ services:
       DB_HOST: grupo6_db
     networks: [red_taller_software]
 
+  tareas:
+    container_name: grupo6_tareas
+    env_file: .env
+    environment:
+      DB_HOST: grupo6_db
+    networks: [red_taller_software]
+
 networks:
   red_taller_software:
     external: true

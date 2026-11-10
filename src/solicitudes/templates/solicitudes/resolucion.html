@@ -1,0 +1,87 @@
+{% extends envoltorio %}
+{% load static %}
+{% comment %}
+  US-11 T4. La solicitud como la envió el solicitante y cómo se resolvió. Solo
+  lectura: ni formularios ni botones que cambien algo.
+{% endcomment %}
+{% block titulo %}Solicitud #{{ solicitud.id }}{% endblock %}
+{% block estilos_seccion %}
+  <link rel="stylesheet" href="{% static 'solicitudes/validador.css' %}">
+  <link rel="stylesheet" href="{% static 'solicitudes/historial_validacion.css' %}">
+{% endblock %}
+
+{% block seccion %}
+<div class="cabeza-historial">
+  <h2>Solicitud #{{ solicitud.id }}</h2>
+  <a class="btn" href="{{ volver }}">Volver al historial</a>
+</div>
+
+<div class="ficha-resolucion">
+  <section class="marco">
+    <h3>Lo que se envió</h3>
+    <dl>
+      <dt>Solicitante</dt>
+      <dd>{{ solicitud.solicitante.get_full_name|default:solicitud.solicitante.email }}
+        <span class="suave">{{ solicitud.solicitante.email }}</span></dd>
+      <dt>Área</dt>
+      <dd>{{ solicitud.area.nombre }}</dd>
+      <dt>Fecha</dt>
+      <dd><time datetime="{{ solicitud.fecha|date:'Y-m-d' }}">{{ solicitud.fecha|date:"l d/m/Y"|capfirst }}</time></dd>
+      <dt>Bloques</dt>
+      <dd>
+        <ul class="bloques">
+          {% for sb in solicitud.solicitudes_bloques.all %}
+            <li>{{ sb.inicio|time:"H:i" }}–{{ sb.termino|time:"H:i" }}</li>
+          {% empty %}<li>—</li>{% endfor %}
+        </ul>
+      </dd>
+      <dt>Motivo</dt>
+      <dd>{{ solicitud.motivo }}</dd>
+      <dt>Observaciones</dt>
+      <dd>{{ solicitud.observaciones|default:"—"|linebreaksbr }}</dd>
+      <dt>Personas en sala</dt>
+      <dd>{{ solicitud.personas }}</dd>
+      <dt>Acompañantes</dt>
+      <dd>
+        {% with acompanantes=solicitud.acompanantes.all %}
+          {% if acompanantes %}
+            <ul class="acompanantes">
+              {% for a in acompanantes %}<li>{{ a.nombre }} <span class="suave">{{ a.correo }}</span></li>{% endfor %}
+            </ul>
+          {% else %}—{% endif %}
+        {% endwith %}
+      </dd>
+      <dt>Enviada el</dt>
+      <dd class="cifra"><time datetime="{{ solicitud.creado_en|date:'c' }}">{{ solicitud.creado_en|date:"d/m/Y H:i" }}</time></dd>
+    </dl>
+  </section>
+
+  <section class="marco">
+    <h3>Resolución</h3>
+    <dl>
+      <dt>Decisión</dt>
+      <dd>
+        {% if solicitud.estado_validacion == "ACEPTADA" %}
+          <span class="estado aprobada">Aprobada</span>
+        {% else %}
+          <span class="estado rechazada">Rechazada</span>
+        {% endif %}
+      </dd>
+      {% if solicitud.asignada_a %}
+        <dt>Asignada a</dt>
+        <dd><a href="{% url 'historial_resolucion' solicitud.asignada_a_id %}{% if consulta_completa %}?{{ consulta_completa }}{% endif %}">#{{ solicitud.asignada_a_id }}</a>
+          {{ solicitud.asignada_a.solicitante.get_full_name|default:solicitud.asignada_a.solicitante.email }}</dd>
+      {% endif %}
+      <dt>Motivo</dt>
+      <dd>{{ solicitud.motivo_resolucion|default:"—" }}</dd>
+      <dt>Resuelta por</dt>
+      <dd>{{ solicitud.resuelta_por.get_full_name|default:solicitud.resuelta_por.email }}</dd>
+      <dt>Resuelta el</dt>
+      <dd class="cifra"><time datetime="{{ solicitud.resuelta_en|date:'c' }}">{{ solicitud.resuelta_en|date:"d/m/Y H:i" }}</time></dd>
+      {# Después de aprobada puede confirmarse o cancelarse (US-03): esto es lo de hoy. #}
+      <dt>Estado hoy</dt>
+      <dd>{{ solicitud.estado_general }}</dd>
+    </dl>
+  </section>
+</div>
+{% endblock %}

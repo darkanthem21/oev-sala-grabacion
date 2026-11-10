@@ -1,43 +1,82 @@
 /* Tokens del Manual de marca de la Facultad de Ciencias de la Ingeniería, UACh.
- * Los doce colores y las dos tipografías salen del manual, que los entrega sin
- * asignarles función: el reparto de roles es nuestro y lo decide el contraste
- * medido, anotado junto a cada valor. docs/estilo.md es la referencia del
- * manual; las decisiones viven aquí.
+ * Los colores son los doce hex del manual, el Orange 021 C y el blanco. El
+ * manual no les asigna función: el reparto es nuestro y lo decide el contraste
+ * medido, anotado junto a cada valor. docs/estilo.md resume el manual.
  *
  * Regla: en el resto del CSS no se escribe un color literal. Si hace falta uno
  * que no está aquí, es que falta una decisión, no un hex. */
 
-/* Las fuentes vienen de Google Fonts. Si hubiera que servirlas nosotros (una
- * red sin salida a internet, o el RNF de transferibilidad) se descargan a
- * static/fonts y este @import pasa a ser @font-face. */
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;500&display=swap");
+/* Servidas por la app: Google Fonts no aporta caché compartida desde Chrome 86
+ * y así la página no depende de un tercero. Subconjunto latino, licencia OFL
+ * (static/fonts/). */
+@font-face {
+  font-family: "Montserrat"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("../fonts/montserrat-700-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Roboto"; font-style: normal; font-weight: 400 500; font-display: swap;
+  src: url("../fonts/roboto-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 :root {
+  /* --- Marca --- */
+  /* Pantone Orange 021 C, con el RGB que le da el propio manual (portada y
+   * encabezado de ingenieria.uach.cl). Blanco encima da 3.88:1: solo texto de
+   * 20 px en negrita o más, o marcas sin texto. */
+  --marca:        #e15200;
+
   /* --- Superficies y texto --- */
-  --fondo:        #ebf7fc;  /* fondo de página */
-  --superficie:   #ffffff;  /* tarjetas, formularios */
-  --borde:        #dbd5d0;  /* separadores y bordes de campo */
-  --tinta:        #2a4451;  /* texto principal, 9.4:1 sobre el fondo */
-  --tinta-suave:  #516e80;  /* texto secundario, 4.9:1, el mínimo aceptable */
+  --fondo:        #ffffff;
+  --superficie:   #ffffff;
+  --borde:        #dbd5d0;  /* filetes y marcos. 1.45:1: no delimita un campo */
+  --borde-campo:  #516e80;  /* borde de campos y botones, 5.4:1 */
+  --tinta:        #2a4451;  /* texto principal, 10.3:1 */
+  --tinta-suave:  #516e80;  /* texto secundario, 5.4:1 */
 
   /* --- Acción --- */
-  --accion:       #006699;  /* botón principal, enlaces. Texto blanco encima: 6.3:1 */
-  --acento:       #0097a6;  /* Pantone 320 C. Realces y foco */
+  --accion:       #2a4451;  /* botones y links de texto chico: ningún naranjo da 4.5:1 */
+  --acento:       var(--marca);  /* pestaña activa, hoy, selección: sin texto encima */
+  --foco:         #2a4451;
 
-  /* --- Estado. Son RELLENOS: el texto encima va en --tinta, nunca blanco --- */
-  --alerta:       #dd5829;  /* Pantone Orange 021 C. Error */
-  /* El rojo pastel del rayado de lo bloqueado (US-17): el mismo naranja de
-   * marca, aclarado sobre blanco. Es solo relleno, nunca lleva texto encima. */
-  --alerta-suave: color-mix(in srgb, var(--alerta) 35%, var(--superficie));
+  /* --- Estado. Filetes junto a un texto que dice el estado --- */
+  --alerta:       #954f72;  /* error, rechazada, bloqueado. 5.8:1, admite texto */
+  /* Solo relleno, bajo texto en tinta (7.5:1). Lo usa el check-out (US-20). */
+  --alerta-suave: color-mix(in srgb, var(--alerta) 20%, var(--superficie));
   --precaucion:   #e3994c;
   --exito:        #aebe4c;
   --exito-suave:  #9ec089;
   --info:         #68abc2;
-  --destacado:    #954f72;  /* único de los claros que admite texto blanco */
+
+  /* --- Roles (US-08 AC7): el mismo color en puerta, encabezado y listas --- */
+  --rol-solicitante: var(--marca);
+  --rol-validacion:  #0097a6;  /* Pantone 320 C. Blanco encima 3.51:1: solo texto grande */
+  --rol-gestion:     #2a4451;
+  --rol-apoyo:       #516e80;
 
   /* --- Tipografía --- */
   --fuente-titulo: "Montserrat", system-ui, sans-serif;
   --fuente-texto:  "Roboto", system-ui, sans-serif;
+  /* Seis tamaños. Texto y formularios a 16; tablas, agenda y paneles densos a 14. */
+  --txt-xs:   .8125rem;  /* 13: etiquetas, pies de tabla */
+  --txt-sm:   .875rem;   /* 14 */
+  --txt-base: 1rem;      /* 16 */
+  --txt-lg:   1.25rem;   /* 20: títulos de sección y todo texto sobre --marca */
+  --txt-xl:   1.5rem;    /* 24: título de pantalla */
+  --txt-2xl:  2rem;      /* 32 */
+
+  /* --- Espaciado, base 4 --- */
+  --esp-1: .25rem;
+  --esp-2: .5rem;
+  --esp-3: .75rem;
+  --esp-4: 1rem;
+  --esp-5: 1.5rem;
+  --esp-6: 2rem;
+  --esp-7: 3rem;
+
+  --radio: 4px;
+  --alto-control: 2.25rem;
 }
 
 body {
@@ -45,21 +84,34 @@ body {
   background: var(--fondo);
   color: var(--tinta);
   font-family: var(--fuente-texto);
+  font-size: var(--txt-base);
   font-weight: 400;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
 h1, h2, h3, h4 {
   font-family: var(--fuente-titulo);
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+/* Los de la escala: cada pantalla ajusta el suyo, pero ninguno queda fuera de ella. */
+h1 { font-size: var(--txt-xl); }
+h2 { font-size: var(--txt-lg); }
+h3, h4 { font-size: var(--txt-base); }
+
+/* El subrayado distingue el link del texto (1.4.1) y lleva el naranjo, que como
+ * marca sin texto sí alcanza el 3:1. */
+a {
+  color: var(--accion);
+  text-decoration-color: var(--marca);
+  text-decoration-thickness: 2px;
+  text-underline-offset: .2em;
 }
 
-a { color: var(--accion); }
-
 /* El foco visible no se quita nunca: es la única pista que tiene quien navega
- * con teclado. */
+ * con teclado. Sobre la banda naranja se vuelve blanco (panel.css). */
 :focus-visible {
-  outline: 2px solid var(--acento);
+  outline: 2px solid var(--foco);
   outline-offset: 2px;
 }

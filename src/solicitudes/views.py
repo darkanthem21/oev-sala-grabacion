@@ -1,7 +1,7 @@
+from datetime import date
 from urllib.parse import urlencode
 
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -10,19 +10,21 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.cache import patch_vary_headers
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_safe
 
 from agenda.models import Bloqueo, primera_fecha_pedible
 from configuracion.models import Parametros
-from personas.models import Rol
+from personas.models import Area, Rol, Sancion
+from personas.permisos import solo_administradores
 
 from . import validacion
-from .calendar import construir_calendario_contexto
+from .calendar import area_del_asistente, construir_calendario_contexto
 from .forms import (
     MAXIMO_ACOMPANANTES,
     MAXIMO_PERSONAS,
     AcompananteFormSet,
     FechaReservaForm,
+    HistorialValidacionForm,
     SeleccionAreaForm,
     SeleccionHorarioForm,
     SolicitudForm,
@@ -30,8 +32,10 @@ from .forms import (
 )
 from .models import Solicitud
 from .services import (
+    cancelar_solicitud,
     confirmar_solicitud,
     guardar_solicitud_completa,
+    motivo_horario_invalido,
     obtener_bloques_dia_para_usuario,
     resolver,
     retirar_solicitud,
@@ -67,7 +71,7 @@ def panel_validador(request):
     return render(request, "solicitudes/validador.html", _datos_validacion())
 
 
-@staff_member_required(login_url="login_gestion")
+@solo_administradores
 def panel_validacion_admin(request):
     """La misma bandeja como pestaña del panel del administrador."""
     return render(request, "solicitudes/validacion_admin.html", {**_datos_validacion(), "pestana": "validacion"})
@@ -91,6 +95,81 @@ def resolver_solicitud(request):
     except ValidationError as error:
         return JsonResponse({"error": " ".join(error.messages)}, status=400)
     return JsonResponse({"ok": True})
+
+
+RESOLUCIONES_POR_PAGINA = 20
+
+
+def _envoltorio_validacion(usuario):
+    """El administrador ve el historial dentro de su pestaña Validación; el
+    validador, con el encabezado de su panel. Con los dos roles manda el de
+    administrador, como en destino_tras_login."""
+    if usuario.is_staff:
+        return {"envoltorio": "panel.html", "pestana": "validacion", "panel": reverse("panel_validacion")}
+    return {"envoltorio": "solicitudes/_base_validador.html", "panel": reverse("panel_validador")}
+
+
+@user_passes_test(puede_validar, login_url="login_validacion")
+@require_safe
+def historial_validacion(request):
+    """US-11: lo que aprobaron o rechazaron todos los validadores y el
+    administrador, filtrado por GET y de RESOLUCIONES_POR_PAGINA por página.
+
+    Es solo lectura (T5): solo responde a GET, y no hay nada que enviar por POST.
+    """
+    filtros = HistorialValidacionForm(request.GET)
+    resoluciones = (
+        filtros.filtrar(Solicitud.objects.resueltas())
+        .con_detalle()
+        .select_related("solicitante", "resuelta_por")
+    )
+    # Los filtros con la página al final y vacía: los enlaces de página los
+    # repiten, y filtrar de nuevo vuelve a la primera.
+    consulta = request.GET.copy()
+    consulta.pop("pagina", None)
+    consulta["pagina"] = ""
+    contexto = {
+        **_envoltorio_validacion(request.user),
+        "filtros": filtros,
+        "filtrado": any(v for k, v in consulta.items() if k != "pagina"),
+        # Los enlaces de página le agregan el número al final.
+        "url_pagina": f"{reverse('historial_validacion')}?{consulta.urlencode()}",
+        # El detalle vuelve a esta misma página con estos mismos filtros.
+        "consulta_completa": request.GET.urlencode(),
+        "pagina": Paginator(resoluciones, RESOLUCIONES_POR_PAGINA).get_page(request.GET.get("pagina")),
+    }
+    # Igual que Mis solicitudes: htmx pide solo la tabla, salvo al restaurar
+    # el historial del navegador.
+    if request.headers.get("HX-Request") and not request.headers.get("HX-History-Restore-Request"):
+        respuesta = render(request, "solicitudes/_tabla_resoluciones.html", contexto)
+    else:
+        respuesta = render(request, "solicitudes/historial_validacion.html", contexto)
+    patch_vary_headers(respuesta, ["HX-Request"])
+    return respuesta
+
+
+@user_passes_test(puede_validar, login_url="login_validacion")
+@require_safe
+def resolucion(request, solicitud_id):
+    """US-11 T4: la solicitud tal como se envió, junto a su resolución. Solo de
+    las resueltas, igual que el historial."""
+    solicitud = get_object_or_404(
+        Solicitud.objects.resueltas().con_detalle()
+        .select_related("solicitante", "resuelta_por", "asignada_a__solicitante")
+        .prefetch_related("acompanantes"),
+        pk=solicitud_id,
+    )
+    # Lo que llega por GET son los filtros del historial, y solo se usan para
+    # volver a él: el destino es siempre esta misma ruta.
+    volver = reverse("historial_validacion")
+    if request.GET:
+        volver += f"?{request.GET.urlencode()}"
+    return render(request, "solicitudes/resolucion.html", {
+        **_envoltorio_validacion(request.user),
+        "solicitud": solicitud,
+        "volver": volver,
+        "consulta_completa": request.GET.urlencode(),
+    })
 
 
 SOLICITUDES_POR_PAGINA = 20
@@ -176,6 +255,21 @@ def confirmar(request, solicitud_id):
     return render(request, "solicitudes/confirmar.html", {"solicitud": solicitud})
 
 
+@user_passes_test(es_solicitante, login_url="login_solicitante")
+def cancelar(request, solicitud_id):
+    """US-03 AC6: la página del enlace para cancelar, de Mis solicitudes y del
+    recordatorio. Como en confirmar, el GET solo muestra la reserva: su pregunta
+    es la segunda confirmación, y cancela el POST."""
+    solicitud = get_object_or_404(Solicitud.objects.de(request.user).con_detalle(), pk=solicitud_id)
+    if request.method == "POST":
+        if cancelar_solicitud(request.user, solicitud_id):
+            messages.success(request, f"Cancelaste la reserva #{solicitud_id}. Su horario queda libre y la Oficina ya está avisada.")
+        else:
+            messages.error(request, f"La reserva #{solicitud_id} ya no se puede cancelar.")
+        return redirect(f"{reverse('mis_solicitudes')}?vista=proximas")
+    return render(request, "solicitudes/cancelar.html", {"solicitud": solicitud})
+
+
 def calendario(request):
     """Vista pública para consultar disponibilidad de la sala en el calendario."""
     fecha_str = request.POST.get("fecha") if request.method == "POST" else request.GET.get("fecha")
@@ -207,17 +301,46 @@ def bloques_dia(request):
     """Vista parcial HTMX para consultar y desplegar los bloques de una fecha."""
     fecha_str = request.GET.get("fecha")
     fecha = FechaReservaForm.fecha_de(fecha_str)
-    bloques = obtener_bloques_dia_para_usuario(fecha=fecha, usuario=request.user) if fecha else []
+    # Los nombres de la unidad solo dentro del asistente; el calendario público
+    # sigue mostrando solo la cantidad.
+    area_unidad = area_del_asistente(request) if request.GET.get("paso") else None
+    bloques = obtener_bloques_dia_para_usuario(
+        fecha=fecha, usuario=request.user, area_id=area_unidad.id if area_unidad else None
+    ) if fecha else []
     return render(request, "solicitudes/bloques_dia.html", {
+        "area_unidad": area_unidad,
         "fecha": fecha,
         "fecha_str": fecha_str,
         "bloques": bloques,
     })
 
 
+def _sancionado(request):
+    """US-10 T2: en vez del formulario, el motivo y desde cuándo puede volver a
+    pedir. None si no tiene una sanción vigente. Va antes que el área, porque
+    elegir un área no le serviría de nada."""
+    sancion = request.user.sancion_vigente
+    if sancion is None:
+        return None
+    return render(request, "solicitudes/sancionado.html", {"sancion": sancion})
+
+
+@user_passes_test(es_solicitante, login_url="login_solicitante")
+def mis_sanciones(request):
+    """US-10 T4: las vigentes primero y después las pasadas, siempre del usuario
+    conectado. No hay dirección por sanción, así que no hay cómo pedir una ajena."""
+    propias = Sancion.objects.filter(usuario=request.user).select_related("levantada_por")
+    return render(request, "solicitudes/mis_sanciones.html", {
+        "vigentes": propias.vigentes().order_by("-termino", "-id"),
+        "pasadas": propias.pasadas(),
+    })
+
+
 @user_passes_test(es_solicitante, login_url="login_solicitante")
 def solicitar_area(request):
     """Paso previo de selección de área académica para usuarios con múltiples áreas activas."""
+    if respuesta := _sancionado(request):
+        return respuesta
     areas = list(request.user.areas.filter(activa=True))
     if not areas:
         return render(request, "solicitudes/sin_area.html")
@@ -260,6 +383,9 @@ def solicitar(request):
     Paso 2: Datos de la actividad (motivo y acompañantes).
     Paso 3: Revisión de la reserva, aceptación de términos y confirmación.
     """
+    # También corta los POST de cualquier paso: quien está sancionado no avanza.
+    if respuesta := _sancionado(request):
+        return respuesta
     areas = list(request.user.areas.filter(activa=True))
     if not areas:
         return render(request, "solicitudes/sin_area.html")
@@ -283,6 +409,18 @@ def solicitar(request):
     if paso_actual != paso_solicitado and request.method == "GET":
         return redirect(f"{reverse('solicitar')}?paso={paso_actual.value}")
 
+    # Regresar al paso 1 si el horario seleccionado previamente dejó de ser válido
+    if paso_actual >= PasoSolicitud.DATOS:
+        fecha = date.fromisoformat(wizard.fecha_str)
+        motivo = motivo_horario_invalido(
+            request.user, fecha, wizard.bloques_ids, wizard.datos.get("bloques_texto", "")
+            )
+        if motivo:
+            wizard.limpiar_horario()
+            messages.error(request, f"{motivo} Elige otro horario.")
+            consulta = urlencode({"year": fecha.year, "month": fecha.month, "fecha": fecha.isoformat()})
+            return redirect(f"{reverse('solicitar')}?{consulta}")
+    
     manejar = {
         PasoSolicitud.HORARIO: _manejar_paso_horario,
         PasoSolicitud.DATOS: _manejar_paso_datos,
@@ -327,6 +465,8 @@ def _manejar_paso_horario(request, wizard: SolicitudWizard, puede_cambiar_area: 
         "error_paso": error_bloques,
         "reserva": wizard.obtener_resumen(),
         "puede_cambiar_area": puede_cambiar_area,
+        # US-05: la nota del área se lee antes de elegir bloques, no solo al validar.
+        "area": Area.objects.filter(pk=wizard.area_id).first(),
         # US-17 AC7: qué no se puede pedir y por qué. Desde la primera fecha
         # pedible, porque lo anterior tampoco se podría pedir sin bloqueo.
         "bloqueos": Bloqueo.objects.vigentes()
