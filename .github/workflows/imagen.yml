@@ -4,6 +4,9 @@
 #
 # Una rama se publica a mano desde Actions > imagen > Run workflow, cuando hay
 # que probarla en un servidor.
+#
+# Las acciones van fijadas por commit y no por etiqueta: una etiqueta se puede
+# mover, y este workflow publica la imagen y tiene la clave del servidor.
 name: imagen
 
 on:
@@ -39,8 +42,8 @@ jobs:
       DB_HOST: localhost
       POSTGRES_PASSWORD: oev
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.13"
           cache: pip
@@ -61,20 +64,20 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # Las etiquetas de Docker no admiten '/' y los nombres de rama si:
       # feat/us-01-inicio-sesion -> feat-us-01-inicio-sesion
       - id: etiqueta
         run: echo "nombre=${GITHUB_REF_NAME//\//-}" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           push: true
@@ -86,7 +89,7 @@ jobs:
 
       # Sin esto el paquete crece con cada push. Se conservan `main` y las 15
       # versiones mas recientes: bastan para volver atras por SHA.
-      - uses: actions/delete-package-versions@v5
+      - uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5
         with:
           package-name: oev-sala-grabacion
           package-type: container
@@ -104,7 +107,9 @@ jobs:
     environment: produccion
     concurrency: produccion
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Preparar SSH
         env:
           SSH_CLAVE: ${{ secrets.SSH_CLAVE }}
