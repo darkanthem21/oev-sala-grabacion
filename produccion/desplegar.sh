@@ -12,14 +12,10 @@ TAG="${1:?falta el tag: el SHA del commit o main}"
 export TAG
 c="docker compose -f docker-compose.yml -f docker-compose.produccion.yml"
 
-mkdir -p respaldos
-if [ -n "$($c ps -q db 2>/dev/null)" ]; then
-  archivo="respaldos/oev-$(date +%Y%m%d-%H%M%S).sql.gz"
-  $c exec -T db pg_dump -U oev oev | gzip > "$archivo"
-  echo "respaldo: $archivo"
-  # Quedan los 20 más recientes.
-  ls -1t respaldos/*.sql.gz | tail -n +21 | xargs -r rm --
-fi
+# La base se levanta primero para respaldarla siempre, también si estaba
+# detenida. Si el respaldo falla, no se despliega.
+$c up -d --wait db
+sh produccion/respaldar.sh
 
 $c pull web tareas
 $c up -d --remove-orphans
