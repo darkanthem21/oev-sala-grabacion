@@ -10,7 +10,7 @@ from .wizard import SolicitudWizard, obtener_limites_reserva
 class AgendaCalendar(calendar.HTMLCalendar):
     """Generador HTML para la grilla de disponibilidad del calendario."""
 
-    DIAS_SEMANA = ["LUN", "MAR", "MIE", "JUE", "VIE", "SÁB", "DOM"]
+    DIAS_SEMANA = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
 
     def __init__(
         self,

@@ -1,5 +1,6 @@
 {% extends "panel.html" %}
 {% load static %}
+{% block titulo %}Historial de check-outs · Configuración{% endblock %}
 {% block estilos_seccion %}<link rel="stylesheet" href="{% static 'uso/checkout/checkout.css' %}">{% endblock %}
 {% block seccion %}
 {% include "uso/checkout/_navegacion.html" %}
@@ -40,9 +41,9 @@
 {% endfor %}
 {% if pagina.has_other_pages %}
   <nav class="checkout-acciones" aria-label="Páginas de esta semana">
-    {% if pagina.has_previous %}<a class="btn" href="?semana={{ semana.lunes|date:'Y-m-d' }}&amp;pagina={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
+    {% if pagina.has_previous %}<a class="btn" href="?semana={{ semana.lunes|date:'Y-m-d' }}&amp;pagina={{ pagina.previous_page_number }}"><span class="chevron izq" aria-hidden="true"></span>Anterior</a>{% endif %}
     <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
-    {% if pagina.has_next %}<a class="btn" href="?semana={{ semana.lunes|date:'Y-m-d' }}&amp;pagina={{ pagina.next_page_number }}">Siguiente</a>{% endif %}
+    {% if pagina.has_next %}<a class="btn" href="?semana={{ semana.lunes|date:'Y-m-d' }}&amp;pagina={{ pagina.next_page_number }}">Siguiente<span class="chevron der" aria-hidden="true"></span></a>{% endif %}
   </nav>
 {% endif %}
 {% endblock %}

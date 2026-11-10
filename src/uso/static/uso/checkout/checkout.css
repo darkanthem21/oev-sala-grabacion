@@ -32,24 +32,23 @@
 .checkout-preview { margin: 1rem 0; padding: .75rem; border: 1px solid var(--borde); }
 .checkout-preview img { display: block; max-width: 100%; max-height: 22rem; object-fit: contain; }
 .checkout-preview figcaption, .checkout-archivo-estado { color: var(--tinta-suave); overflow-wrap: anywhere; font-size: .875rem; }
-.btn:disabled { opacity: .5; cursor: default; }
 .checkout-seccion-cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
 .checkout-seccion-cabecera h3 { margin: 0; }
 .checkout-orden { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
-.checkout-orden .btn { font-size: .8rem; min-height: 2rem; }
+.checkout-orden .btn { font-size: .8rem; }
 .checkout-btn-orden { color: var(--tinta-suave); border-color: var(--borde); }
 .checkout-btn-eliminar { color: var(--tinta); border-color: var(--borde); }
 .checkout-btn-eliminar:hover { background: var(--alerta-suave); border-color: var(--alerta); }
 .checkout-editor-pregunta { border: 1px solid var(--borde); padding: 1rem; margin: 1rem 0; background: var(--fondo); }
 .checkout-orden-pregunta { justify-content: flex-end; margin-top: .75rem; }
 .checkout-pie-seccion { margin-top: 1rem; }
-.checkout-pie-seccion .checkout-btn-pregunta { color: var(--accion); border-color: var(--accion); font-size: .9rem; min-height: 2.5rem; }
+.checkout-pie-seccion .checkout-btn-pregunta { color: var(--accion); border-color: var(--accion); font-size: .9rem; }
 .checkout-agregar-seccion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin: 2rem 0; padding: 1.5rem; border: 2px dashed var(--acento); background: var(--fondo); }
 .checkout-agregar-seccion h3 { margin: 0 0 .5rem; }
 .checkout-agregar-seccion p { margin: 0; color: var(--tinta-suave); }
-.checkout-agregar-seccion .btn { min-height: 2.75rem; font-size: 1rem; padding: .5rem 1rem; }
+.checkout-agregar-seccion .btn { font-size: 1rem; padding: .5rem 1rem; }
 .checkout-publicacion { border-top: 1px solid var(--borde); padding-top: 1.5rem; margin-top: 2rem; }
-.checkout-publicacion .btn { min-height: 2.75rem; padding: .3rem 1rem; font-size: .95rem; }
+.checkout-publicacion .btn { padding: .3rem 1rem; font-size: .95rem; }
 .checkout-btn-preview { border-color: var(--accion); }
 .checkout-confirmacion {
   box-sizing: border-box; width: min(26rem, calc(100% - 2rem));
@@ -67,10 +66,10 @@
 .checkout-confirmacion h2 { margin: 0 0 .75rem; font-family: var(--fuente-titulo); font-size: 1.15rem; font-weight: 700; }
 .checkout-confirmacion p { margin: .5rem 0; font-size: .9rem; }
 .checkout-confirmacion .checkout-acciones { justify-content: flex-end; margin-bottom: 0; }
-.checkout-confirmacion .btn { min-height: 2.75rem; padding: .5rem .75rem; border-radius: .5rem; font-family: var(--fuente-texto); font-size: .875rem; border-color: var(--info); color: var(--tinta); background: var(--fondo); }
-.checkout-confirmacion .btn.activa { border-color: var(--alerta); background: var(--alerta-suave); color: var(--tinta); }
+.checkout-confirmacion .btn { padding: .5rem .75rem; border-radius: .5rem; font-family: var(--fuente-texto); font-size: .875rem; border-color: var(--info); color: var(--tinta); background: var(--fondo); }
+.checkout-confirmacion .btn.lleno { border-color: var(--alerta); background: var(--alerta-suave); color: var(--tinta); }
 .checkout-confirmacion .btn:hover { border-color: var(--accion); }
-.checkout-confirmacion .btn.activa:hover { background: color-mix(in srgb, var(--alerta) 45%, var(--superficie)); border-color: var(--alerta); }
+.checkout-confirmacion .btn.lleno:hover { background: color-mix(in srgb, var(--alerta) 45%, var(--superficie)); border-color: var(--alerta); }
 .checkout-confirmacion .btn:focus-visible { outline: 2px solid var(--accion); outline-offset: 3px; }
 .checkout-prueba-correcta { color: var(--tinta); border-left: 3px solid var(--exito); background: var(--superficie); padding: 1rem; }
 .checkout-editado { display: inline-block; color: var(--tinta); border-left: 3px solid var(--acento); background: var(--superficie); padding: .5rem .75rem; }
@@ -92,7 +91,7 @@
 .checkout-tabla tr:last-child td { border-bottom: 0; }
 .checkout-etiqueta { display: inline-block; border-left: 3px solid var(--exito); padding: .2rem .5rem; }
 .checkout-con-reporte { border-color: var(--alerta); background: var(--alerta-suave); }
-.checkout-pdf { gap: .4rem; min-height: 2.5rem; }
+.checkout-pdf { gap: .4rem; }
 [hidden] { display: none !important; }
 @media (max-width: 40rem) {
   .checkout-seccion { padding: 1rem; }

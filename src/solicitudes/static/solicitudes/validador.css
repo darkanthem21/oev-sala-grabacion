@@ -3,22 +3,32 @@
  * vista semanal de agenda/calendario.css. Acá va solo lo del validador. */
 
 /* --- Bloques de la agenda --- */
-/* Un bloque dice la hora y quién lo pide; nada más. El tope lleva el borde de
- * choque de Configuración y lo reservado el filete celeste. */
+/* Un bloque dice la hora y quién lo pide; nada más. El filete dice su estado:
+ * claro si está libre, en tinta si alguien lo pide, celeste si ya está
+ * reservado. El tope, además, cierra el filete en L y se tiñe: es lo primero
+ * que hay que ver y no depende solo del color. */
 /* La hora arriba y debajo un nombre por línea; calendario.css los deja en una. */
 .validacion .bloque { display: flex; flex-direction: column; justify-content: flex-start; }
 .bloque .quien-b { font-size: var(--txt-xs); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bloque.tope { border-color: var(--alerta); }
+.bloque.tope { border-color: var(--alerta); border-bottom-width: 4px; background: color-mix(in srgb, var(--alerta) 9%, var(--superficie)); }
+.bloque.tope.elegido { background: var(--accion); border-color: var(--accion); }
 .bloque.reservada { border-left-color: var(--info); }
 .bloque.reservada .quien-b { font-weight: 400; color: var(--tinta-suave); }
 .bloque.elegido .quien-b { color: var(--superficie); }
 /* Sin pendientes no hay nada que elegir: no reacciona, pero se lee igual. */
 .bloque:disabled { cursor: default; }
 .bloque:disabled:hover { border-color: var(--borde); border-left-color: var(--tinta-suave); }
+/* Libre: nadie lo pide ni lo tiene. Retrocede para que resalte lo que sí. */
+.validacion .bloque:disabled:not(.reservada),
+.validacion .bloque:disabled:not(.reservada):hover { border-left-color: var(--borde); color: var(--tinta-suave); }
 .bloque.tope:hover { border-color: var(--alerta); }
 
-.tope-m { background: var(--superficie); box-shadow: inset 3px 0 0 var(--alerta), inset 0 0 0 1px var(--alerta); }
-.reservada-m { background: var(--superficie); box-shadow: inset 3px 0 0 var(--info), inset 0 0 0 1px var(--borde); }
+.tope-m {
+  height: .9rem; background: color-mix(in srgb, var(--alerta) 9%, var(--superficie));
+  box-shadow: inset var(--filete-bloque) 0 0 var(--alerta), inset 0 -4px 0 var(--alerta), inset 0 0 0 1px var(--alerta);
+}
+.reservada-m { background: var(--superficie); box-shadow: inset var(--filete-bloque) 0 0 var(--info), inset 0 0 0 1px var(--borde); }
+.pendiente-m { background: var(--superficie); box-shadow: inset var(--filete-bloque) 0 0 var(--tinta-suave), inset 0 0 0 1px var(--borde); }
 
 /* Un día bloqueado entero no tiene bloques: la cabecera dice por qué. */
 .cabecera .razon-dia { flex-basis: 100%; font-size: var(--txt-xs); font-weight: 400; color: var(--tinta-suave); }
@@ -83,7 +93,7 @@
 /* --- Resueltas (diálogo) --- */
 .tabla { width: 100%; border-collapse: collapse; font-size: var(--txt-sm); }
 .tabla th {
-  text-align: left; font-size: var(--txt-xs); text-transform: uppercase; letter-spacing: .05em;
+  text-align: left; font-size: var(--txt-xs);
   color: var(--tinta-suave); padding: var(--esp-2) var(--esp-4); border-bottom: 1px solid var(--borde);
 }
 .tabla td { padding: var(--esp-2) var(--esp-4); border-bottom: 1px solid var(--borde); vertical-align: top; }

@@ -43,8 +43,16 @@
 .calendario table th.month { display: none; }
 .calendario th {
   padding: var(--esp-3) var(--esp-1); text-align: center; border-bottom: 1px solid var(--borde);
-  font-size: var(--txt-xs); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; color: var(--tinta-suave);
+  font-size: var(--txt-xs); font-weight: 500; color: var(--tinta-suave);
 }
+/* Hoy la sala no abre sábado ni domingo (agenda.Dia va de lunes a viernes) y
+ * dos columnas que nunca se pueden pedir solo achican las cinco que sí. Si un
+ * día se agrega un bloque de sábado, el mes que lo tenga disponible vuelve a
+ * mostrar las siete: la regla mira las celdas, no una lista de días.
+ * Se ocultan por posición y no por .sat/.sun porque la celda vacía de otro mes
+ * no lleva el día; la fila que quedaría vacía se va entera. */
+.calendario table:not(:has(td.sat.available, td.sun.available)) tr > :nth-child(n+6) { display: none; }
+.calendario table:not(:has(td.sat.available, td.sun.available)) tr:has(td):not(:has(td:nth-child(-n+5):not(.noday))) { display: none; }
 .calendario td {
   position: relative; height: 3.5rem; padding: 0; border: 1px solid var(--borde);
   text-align: center; vertical-align: middle; font-variant-numeric: tabular-nums;
@@ -110,7 +118,7 @@
   display: flex; align-items: center; gap: var(--esp-3); box-sizing: border-box;
   padding: var(--esp-3) var(--esp-4); border: 1px solid var(--borde); border-radius: var(--radio);
 }
-.tarjeta-bloque.disponible { position: relative; border-left: 3px solid var(--acento); cursor: pointer; user-select: none; }
+.tarjeta-bloque.disponible { position: relative; border-left: var(--filete-bloque) solid var(--acento); cursor: pointer; user-select: none; }
 .tarjeta-bloque.disponible:hover { border-color: var(--borde-campo); border-left-color: var(--acento); }
 .tarjeta-bloque.disponible:has(.bloque-checkbox:focus-visible) { outline: 2px solid var(--foco); outline-offset: 2px; }
 .tarjeta-bloque.disponible:has(.bloque-checkbox:checked),
@@ -192,7 +200,7 @@
 .tarjeta-bloque.disponible.selected .badge-seleccionado { display: inline-block; }
 
 .tarjeta-bloque.bloque-propio { cursor: not-allowed; }
-.tarjeta-bloque.bloque-propio.pendiente { border-left: 3px solid var(--precaucion); }
+.tarjeta-bloque.bloque-propio.pendiente { border-left: var(--filete-bloque) solid var(--precaucion); }
 .tarjeta-bloque.bloque-propio .checkbox-visual { opacity: .35; }
 .tarjeta-bloque.no-disponible { border-style: dashed; opacity: .65; cursor: not-allowed; user-select: none; }
 

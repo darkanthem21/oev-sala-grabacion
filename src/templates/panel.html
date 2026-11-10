@@ -18,27 +18,27 @@
   <div class="riel">
     <div class="dentro">
       <nav class="pestanas" aria-label="Secciones de la configuración">
-        <a class="pestana {% if pestana == 'checkout' %}activa{% endif %}" href="{% url 'panel_checkout' %}"
-           {% if pestana == "checkout" %}aria-current="page"{% endif %}>Check-out</a>
         <a class="pestana {% if pestana == 'bloques' %}activa{% endif %}" href="{% url 'panel_bloques' %}"
            {% if pestana == "bloques" %}aria-current="page"{% endif %}>Bloques</a>
-        <a class="pestana {% if pestana == 'areas' %}activa{% endif %}" href="{% url 'panel_areas' %}"
-           {% if pestana == "areas" %}aria-current="page"{% endif %}>Áreas</a>
-        <a class="pestana {% if pestana == 'usuarios' %}activa{% endif %}" href="{% url 'panel_usuarios' %}"
-           {% if pestana == "usuarios" %}aria-current="page"{% endif %}>Usuarios</a>
-        <a class="pestana {% if pestana == 'reglas' %}activa{% endif %}" href="{% url 'panel_reglas' %}"
-           {% if pestana == "reglas" %}aria-current="page"{% endif %}>Reglas</a>
         <a class="pestana {% if pestana == 'validacion' %}activa{% endif %}" href="{% url 'panel_validacion' %}"
            {% if pestana == "validacion" %}aria-current="page"{% endif %}>Validación</a>
         <a class="pestana {% if pestana == 'sanciones' %}activa{% endif %}" href="{% url 'panel_sanciones' %}"
            {% if pestana == "sanciones" %}aria-current="page"{% endif %}>Sanciones</a>
+        <a class="pestana {% if pestana == 'usuarios' %}activa{% endif %}" href="{% url 'panel_usuarios' %}"
+           {% if pestana == "usuarios" %}aria-current="page"{% endif %}>Usuarios</a>
+        <a class="pestana {% if pestana == 'areas' %}activa{% endif %}" href="{% url 'panel_areas' %}"
+           {% if pestana == "areas" %}aria-current="page"{% endif %}>Áreas</a>
+        <a class="pestana {% if pestana == 'reglas' %}activa{% endif %}" href="{% url 'panel_reglas' %}"
+           {% if pestana == "reglas" %}aria-current="page"{% endif %}>Reglas</a>
+        <a class="pestana {% if pestana == 'checkout' %}activa{% endif %}" href="{% url 'panel_checkout' %}"
+           {% if pestana == "checkout" %}aria-current="page"{% endif %}>Check-out</a>
       </nav>
       {% include "_rol.html" with rol="gestion" nombre="Administrador" %}
     </div>
   </div>
 </header>
 
-<main class="panel">
+<main id="principal" tabindex="-1" class="panel">
   {% block seccion %}{% endblock %}
 </main>
 {% endblock %}

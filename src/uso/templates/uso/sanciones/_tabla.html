@@ -83,9 +83,9 @@
            hx-indicator="#personas">
         {% if pagina.has_previous %}
           <a class="btn" rel="prev" href="{{ url_pagina }}{{ pagina.previous_page_number }}"
-             hx-get="{{ url_pagina }}{{ pagina.previous_page_number }}">&larr; Anterior</a>
+             hx-get="{{ url_pagina }}{{ pagina.previous_page_number }}"><span class="chevron izq" aria-hidden="true"></span>Anterior</a>
         {% else %}
-          <span class="btn deshabilitado" aria-disabled="true">&larr; Anterior</span>
+          <span class="btn deshabilitado" aria-disabled="true"><span class="chevron izq" aria-hidden="true"></span>Anterior</span>
         {% endif %}
 
         <span class="suave" aria-live="polite">
@@ -95,9 +95,9 @@
 
         {% if pagina.has_next %}
           <a class="btn" rel="next" href="{{ url_pagina }}{{ pagina.next_page_number }}"
-             hx-get="{{ url_pagina }}{{ pagina.next_page_number }}">Siguiente &rarr;</a>
+             hx-get="{{ url_pagina }}{{ pagina.next_page_number }}">Siguiente<span class="chevron der" aria-hidden="true"></span></a>
         {% else %}
-          <span class="btn deshabilitado" aria-disabled="true">Siguiente &rarr;</span>
+          <span class="btn deshabilitado" aria-disabled="true">Siguiente<span class="chevron der" aria-hidden="true"></span></span>
         {% endif %}
       </nav>
     {% endif %}

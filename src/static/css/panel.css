@@ -35,6 +35,10 @@
 }
 .rol-sesion .quien { color: var(--tinta-suave); font-weight: 400; }
 
+/* El validador llega al historial por su pestaña; el administrador, que ve la
+ * misma pantalla dentro de Validación, conserva el botón. */
+.con-pestanas .va-en-pestana { display: none; }
+
 .panel { box-sizing: border-box; max-width: 74rem; margin: 0 auto; padding: var(--esp-6) var(--esp-5) var(--esp-7); }
 
 @media (max-width: 40rem) {
@@ -42,8 +46,17 @@
   .banda .dentro { flex-wrap: wrap; row-gap: var(--esp-1); }
   .sello { height: 2.9rem; }
   .producto { order: 3; flex-basis: 100%; padding-left: 0; border-left: 0; }
-  .riel .dentro { flex-direction: column; align-items: stretch; gap: 0; }
-  .rol-sesion { margin-left: 0; padding-bottom: var(--esp-1); }
-  .pestanas { column-gap: var(--esp-4); }
+  /* El rol primero y las pestañas en una sola fila que se desliza: con siete
+   * en dos o tres filas el encabezado se comía un tercio de la pantalla. El
+   * borde derecho se desvanece para que se note que hay más. */
+  .riel .dentro { flex-direction: column-reverse; align-items: stretch; gap: 0; }
+  .rol-sesion { margin-left: 0; padding-block: var(--esp-2) 0; }
+  .pestanas {
+    flex-wrap: nowrap; column-gap: var(--esp-4); overflow-x: auto; scrollbar-width: none;
+    margin-inline: calc(-1 * var(--esp-4)); padding-inline: var(--esp-4);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+  }
+  .pestanas::-webkit-scrollbar { display: none; }
+  .pestana { flex: none; white-space: nowrap; }
   .panel { padding: var(--esp-5) var(--esp-4) var(--esp-6); }
 }

@@ -50,7 +50,7 @@
 }
 .acompanante legend {
   padding: 0 var(--esp-2); font-family: var(--fuente-titulo); font-weight: 700;
-  font-size: var(--txt-xs); text-transform: uppercase; letter-spacing: .04em; color: var(--tinta-suave);
+  font-size: var(--txt-xs); color: var(--tinta-suave);
 }
 .par { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--esp-4); }
 @media (max-width: 34rem) { .par { grid-template-columns: 1fr; } }
@@ -149,7 +149,7 @@
 
 .subtitulo-resumen {
   margin: var(--esp-5) 0 var(--esp-2); color: var(--tinta-suave);
-  font-family: var(--fuente-titulo); font-size: var(--txt-sm); text-transform: uppercase; letter-spacing: .04em;
+  font-family: var(--fuente-titulo); font-size: var(--txt-sm);
 }
 
 /* --- Elegir el área (paso 0) --- */
@@ -161,7 +161,7 @@
 .historial { width: 100%; border-collapse: collapse; margin-bottom: var(--esp-5); font-size: var(--txt-sm); }
 .historial th {
   text-align: left; padding: var(--esp-3); border-bottom: 1px solid var(--borde);
-  font-size: var(--txt-xs); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; color: var(--tinta-suave);
+  font-size: var(--txt-xs); font-weight: 500; color: var(--tinta-suave);
 }
 .historial td { padding: var(--esp-3); border-bottom: 1px solid var(--borde); vertical-align: top; }
 .historial td .btn { margin: var(--esp-2) var(--esp-2) 0 0; }

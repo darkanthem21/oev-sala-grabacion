@@ -1,5 +1,6 @@
 {% extends "panel.html" %}
 {% load static %}
+{% block titulo %}{% if cuenta.pk %}Cuenta de {{ cuenta.get_full_name|default:cuenta.email }}{% else %}Nueva cuenta{% endif %} · Configuración{% endblock %}
 {% comment %}
   US-08 AC2 a AC4. Crear y editar comparten la página. Desactivar, reactivar y
   reenviar el correo van en un formulario aparte porque no tocan los datos.

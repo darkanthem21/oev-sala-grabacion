@@ -75,8 +75,16 @@
   --esp-6: 2rem;
   --esp-7: 3rem;
 
+  /* El filete del estado en un bloque de la agenda. A 3 px, como en las
+   * etiquetas de estado, no se alcanzaba a leer en una rejilla de 30 bloques. */
+  --filete-bloque: 6px;
   --radio: 4px;
   --alto-control: 2.25rem;
+}
+/* Con el dedo, 36 px se yerran: todo lo que mide --alto-control sube a 44
+ * (2.5.5). El mouse conserva la densidad de las tablas y la agenda. */
+@media (pointer: coarse) {
+  :root { --alto-control: 2.75rem; }
 }
 
 body {

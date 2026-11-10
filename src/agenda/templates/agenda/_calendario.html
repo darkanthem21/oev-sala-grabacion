@@ -107,13 +107,13 @@
         <a class="btn ico" x-ref="antes"
            href="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ anterior|date:'Y-m-d' }}"
            hx-get="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ anterior|date:'Y-m-d' }}"
-           aria-label="{% if vista == 'mes' %}Mes anterior{% else %}Semana anterior{% endif %}">&larr;</a>
+           aria-label="{% if vista == 'mes' %}Mes anterior{% else %}Semana anterior{% endif %}"><span class="chevron izq" aria-hidden="true"></span></a>
         <a class="btn" href="{% url 'panel_bloques' %}?vista={{ vista }}"
            hx-get="{% url 'panel_bloques' %}?vista={{ vista }}">Hoy</a>
         <a class="btn ico" x-ref="luego"
            href="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ siguiente|date:'Y-m-d' }}"
            hx-get="{% url 'panel_bloques' %}?vista={{ vista }}&amp;desde={{ siguiente|date:'Y-m-d' }}"
-           aria-label="{% if vista == 'mes' %}Mes siguiente{% else %}Semana siguiente{% endif %}">&rarr;</a>
+           aria-label="{% if vista == 'mes' %}Mes siguiente{% else %}Semana siguiente{% endif %}"><span class="chevron der" aria-hidden="true"></span></a>
       </div>
 
       <div class="grupo" role="group" aria-label="Forma de ver el calendario">
@@ -323,11 +323,11 @@
         <div class="mini-barra">
           <a class="btn ico" href="{% url 'panel_bloques' %}?vista=semana&amp;desde={{ mini.anterior|date:'Y-m-d' }}"
              hx-get="{% url 'panel_bloques' %}?vista=semana&amp;desde={{ mini.anterior|date:'Y-m-d' }}"
-             aria-label="Mes anterior">&lsaquo;</a>
+             aria-label="Mes anterior"><span class="chevron izq" aria-hidden="true"></span></a>
           <span class="mini-mes">{{ mini.titulo }}</span>
           <a class="btn ico" href="{% url 'panel_bloques' %}?vista=semana&amp;desde={{ mini.siguiente|date:'Y-m-d' }}"
              hx-get="{% url 'panel_bloques' %}?vista=semana&amp;desde={{ mini.siguiente|date:'Y-m-d' }}"
-             aria-label="Mes siguiente">&rsaquo;</a>
+             aria-label="Mes siguiente"><span class="chevron der" aria-hidden="true"></span></a>
         </div>
         <table>
           <thead><tr><th>L</th><th>M</th><th>X</th><th>J</th><th>V</th><th>S</th><th>D</th></tr></thead>

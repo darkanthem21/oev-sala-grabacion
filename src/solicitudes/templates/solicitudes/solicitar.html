@@ -6,7 +6,7 @@
 {% endblock %}
 
 {% block hoja %}
-<main class="hoja {% if paso == 1 %}hoja-calendario{% endif %}"
+<main id="principal" tabindex="-1" class="hoja {% if paso == 1 %}hoja-calendario{% endif %}"
       {% if paso == 2 %}x-data="{ personas: {{ personas_inicial }} }"{% elif paso == 3 %}x-data="{ acepta: {{ acepta_inicial|yesno:'true,false' }} }"{% endif %}>
 
   <!-- Indicador visual del progreso del flujo multipaso (3 pasos simétricos) -->
