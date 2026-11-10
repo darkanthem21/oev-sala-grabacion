@@ -1,10 +1,5 @@
-# Servidor propio (no el del curso): Caddy en el mismo stack termina el TLS.
-# Requiere Compose v2. Va encima del base, con el .env al lado:
-#
-#   docker compose -f docker-compose.yml -f docker-compose.produccion.yml up -d
-#
-# El nombre del proyecto queda fijo en `oev`, así que los volúmenes son
-# oev_pgdata y oev_checkoutmedia sin importar la carpeta.
+# Servidor propio: va encima del base, con Compose v2, y agrega Caddy para el
+# TLS. El nombre fijo del proyecto evita que los volúmenes dependan de la carpeta.
 name: oev
 
 # Sin límite, los logs de Docker crecen hasta llenar el disco.
@@ -13,8 +8,7 @@ x-logs: &logs
     driver: json-file
     options: { max-size: "10m", max-file: "3" }
 
-# Lo que corre nuestro código no necesita ninguna capacidad de root ni debe
-# poder ganarlas.
+# El código de la aplicación corre sin capacidades de root y sin poder ganarlas.
 x-app: &app
   env_file: .env
   cap_drop: [ALL]
@@ -24,8 +18,7 @@ x-app: &app
 services:
   db:
     env_file: .env
-    # La base levanta en segundos; después basta revisarla cada medio minuto en
-    # vez de cada 2 s, que en un solo núcleo se nota.
+    # Cada 2 s solo mientras arranca; después, cada 30 s para no gastar CPU.
     healthcheck:
       interval: 30s
       start_period: 30s
@@ -34,13 +27,11 @@ services:
 
   web:
     <<: *app
-    # El servidor tiene 1 GB. Con tope, si un PDF con fotos grandes o una fuga
-    # se pasa, cae un worker de web (gunicorn levanta otro) y no la base, que
-    # es a quien podría elegir el kernel al quedarse sin memoria.
+    # Con tope, si web se pasa de memoria cae uno de sus workers y gunicorn
+    # levanta otro. Sin tope, el kernel podría matar la base.
     mem_limit: 400m
-    # La página de ingreso no consulta la base: prueba que gunicorn responde, es
-    # decir, que el arranque pasó la revisión y las migraciones. desplegar.sh
-    # espera este resultado. Hasta estar sano se revisa cada 2 s.
+    # Pasa cuando gunicorn responde, o sea, con la revisión de arranque y las
+    # migraciones listas. desplegar.sh espera este resultado.
     healthcheck:
       test: ["CMD", "python", "-c", "import os, urllib.request as u; u.urlopen(u.Request('http://127.0.0.1:3006/solicitante/entrar/', headers={'Host': os.environ['ALLOWED_HOSTS'].split(',')[0]}), timeout=4)"]
       interval: 30s
@@ -64,9 +55,8 @@ services:
     environment:
       DOMINIO: ${DOMINIO:?falta DOMINIO en el .env}
     volumes:
-      # Se monta la carpeta y no el archivo: un archivo suelto queda atado a
-      # su inodo, y editarlo con sed o vim (que lo reemplazan) no llegaría al
-      # contenedor.
+      # La carpeta entera: un archivo suelto queda atado a su inodo, y lo que
+      # se edite con sed o un editor no llegaría al contenedor.
       - ./produccion:/etc/caddy:ro
       # Certificados y claves de ACME: perderlos obliga a pedirlos de nuevo, y
       # Let's Encrypt limita cuántos se pueden pedir por semana.

@@ -1,10 +1,6 @@
 #!/bin/sh
-# Despliega una versión en el servidor propio. Uso:
-#
-#   sh produccion/desplegar.sh <tag>      # SHA completo de un commit, o main
-#
-# Si la versión no levanta, vuelve sola a la última de desplegados.log. Las
-# migraciones no se revierten: para eso está el respaldo que se hace antes.
+# Uso: sh produccion/desplegar.sh <SHA completo del commit, o main>
+# Si la versión no levanta, vuelve a la anterior sin revertir las migraciones.
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -27,9 +23,8 @@ $c pull web tareas || docker image inspect "$repo:$TAG" >/dev/null
 levantar() { $c up -d --remove-orphans --wait --wait-timeout 180; }
 
 if levantar; then
-  # Compose no nota los cambios de un archivo montado: Caddy se recarga para
-  # tomar el Caddyfile nuevo, sin cortar conexiones. Si es inválido, sigue con
-  # el anterior.
+  # Compose no nota los cambios del Caddyfile montado, así que Caddy se
+  # recarga. Si el archivo es inválido, sigue con el anterior.
   $c exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 \
     || echo "aviso: Caddy no pudo recargar el Caddyfile; sigue con el anterior" >&2
   echo "$(date -Iseconds) $TAG" >> desplegados.log

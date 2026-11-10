@@ -1,12 +1,10 @@
-# Pruebas en cada PR y en main; en main, además, la imagen en GHCR y, si está
-# activado, el despliegue al servidor propio. Ninguno de los dos servidores
-# corre pip: bajan el artefacto ya construido.
+# Pruebas en cada PR y en main. En main, además, publica la imagen en GHCR y,
+# si está activado, la despliega en el servidor propio.
 #
-# Una rama se publica a mano desde Actions > imagen > Run workflow, cuando hay
-# que probarla en un servidor.
+# Una rama se publica a mano: Actions > imagen > Run workflow.
 #
-# Las acciones van fijadas por commit y no por etiqueta: una etiqueta se puede
-# mover, y este workflow publica la imagen y tiene la clave del servidor.
+# Las acciones van fijadas por commit porque una etiqueta se puede mover, y
+# este workflow publica la imagen y tiene la clave del servidor.
 name: imagen
 
 on:
@@ -18,9 +16,8 @@ on:
 permissions:
   contents: read
 
-# Las corridas de una misma rama van en fila. Si dos merges seguidos publicaran
-# a la vez, la del commit viejo podría terminar última: `main` y el servidor
-# quedarían en la versión anterior. En un PR, la corrida nueva cancela la vieja.
+# En fila por rama: si dos merges seguidos publicaran a la vez, el commit viejo
+# podría quedar como última versión. En un PR, la corrida nueva cancela la vieja.
 concurrency:
   group: imagen-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -66,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      # Las etiquetas de Docker no admiten '/' y los nombres de rama si:
+      # Las etiquetas de Docker no admiten '/' y los nombres de rama sí:
       # feat/us-01-inicio-sesion -> feat-us-01-inicio-sesion
       - id: etiqueta
         run: echo "nombre=${GITHUB_REF_NAME//\//-}" >> "$GITHUB_OUTPUT"
@@ -81,16 +78,14 @@ jobs:
         with:
           context: .
           push: true
-          # La de rama se mueve con cada push; la del commit es inmutable y es la
-          # que se despliega cuando hace falta saber exactamente que corre.
+          # La de rama se mueve con cada push; la del commit no cambia y es la
+          # que se despliega.
           tags: |
             ghcr.io/${{ github.repository }}:${{ steps.etiqueta.outputs.nombre }}
             ghcr.io/${{ github.repository }}:${{ github.sha }}
 
-      # Sin esto el paquete crece con cada push. Se conservan `main` y las 15
-      # versiones mas recientes: bastan para volver atras por SHA. Si la limpieza
-      # falla no detiene nada: la imagen ya esta publicada y el despliegue no
-      # depende de ella.
+      # Quedan `main` y las 15 versiones más recientes, para volver atrás por
+      # SHA. Si la limpieza falla no detiene nada: la imagen ya está publicada.
       - uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5
         continue-on-error: true
         with:
@@ -99,10 +94,8 @@ jobs:
           min-versions-to-keep: 15
           ignore-versions: '^main$'
 
-  # Apagado hasta que exista la variable DESPLIEGUE_AUTOMATICO=true y el
-  # environment `produccion` con SSH_HOST, SSH_USUARIO, SSH_CLAVE y
-  # SSH_HUELLA (ver docs/despliegue.md). Copia los compose en cada despliegue,
-  # así que un cambio en ellos llega solo al servidor.
+  # Apagado hasta que existan la variable DESPLIEGUE_AUTOMATICO=true y el
+  # environment `produccion` con sus secretos (docs/despliegue.md).
   desplegar:
     needs: publicar
     if: github.ref == 'refs/heads/main' && vars.DESPLIEGUE_AUTOMATICO == 'true'

@@ -1,4 +1,4 @@
-# Base, comun a desarrollo y al servidor del curso.
+# Base común a desarrollo y a los dos servidores.
 services:
   db:
     image: postgres:17
@@ -14,34 +14,24 @@ services:
     restart: unless-stopped
 
   web:
-    # En el servidor la imagen se baja de GHCR y no se construye nada; el compose
-    # de desarrollo agrega `build` para trabajar sobre el codigo local.
-    # TAG es la rama publicada, o el sha de un commit para fijar una version
-    # exacta. Por defecto `main`: desplegar otra cosa hay que pedirlo a proposito.
+    # La imagen se baja de GHCR; solo el compose de desarrollo la construye.
+    # TAG es `main`, una rama publicada o el SHA de un commit.
     image: ghcr.io/darkanthem21/oev-sala-grabacion:${TAG:-main}
-    # check --deploy corta el arranque si la configuracion es insegura (clave
-    # debil, DEBUG, cookies sin Secure). gunicorn va detras de un proxy y no
-    # recibe conexiones directas de internet.
+    # check --deploy corta el arranque si la configuración es insegura: clave
+    # débil, DEBUG o cookies sin Secure.
     command: >
       sh -c "python manage.py check --deploy --fail-level WARNING &&
              python manage.py migrate &&
              { python manage.py createsuperuser --noinput 2>/dev/null || true; } &&
              exec gunicorn oev.wsgi --bind 0.0.0.0:${PUERTO:-3006} --workers ${WEB_CONCURRENCY:-2}"
     environment:
-      # Unicos valores fijos del stack: el resto lo pone el entorno que corresponda.
+      # Lo único fijo del stack; el resto lo pone el entorno de cada servidor.
       DB_HOST: db
-      # gunicorn las lee de aqui. Van fuera del command porque YAML conserva cada
-      # salto de linea de ese bloque y partiria la orden.
-      # --threads: el proxy no acumula el cuerpo de la peticion, y con workers
-      # sincronos una subida lenta de fotos pasaba de los 30 s de timeout y mataba
-      # al worker. Con hilos ocupa uno y el worker sigue respondiendo.
-      # --keep-alive 0: el proxy reutiliza conexiones mas tiempo del que gunicorn
-      # las mantiene, y la que ya se cerro termina en un 502.
-      # --max-requests: cada worker se reemplaza tras unas 500 peticiones, para
-      # que la memoria que no devuelve (los PDF con fotos) no se acumule.
-      # --access-logformat: el formato de siempre, mas la IP que informa el
-      # proxy. La primera es la de quien se conecta y no se puede falsear; la
-      # segunda viene en una cabecera y solo vale si la puso el proxy.
+      # Opciones de gunicorn; dentro de `command` YAML partiría la orden.
+      # --threads: una subida lenta de fotos ocupa un hilo, no al worker completo.
+      # --keep-alive 0: el proxy reutilizaba conexiones ya cerradas (502).
+      # --max-requests: recicla cada worker para soltar la memoria de los PDF.
+      # --access-logformat: la IP de quien se conecta y la que informa el proxy.
       GUNICORN_CMD_ARGS: >-
         --worker-tmp-dir /dev/shm --threads 4 --keep-alive 0
         --max-requests 500 --max-requests-jitter 50
@@ -55,9 +45,8 @@ services:
     restart: unless-stopped
 
   tareas:
-    # US-03: la revision de cada hora que manda los recordatorios. El servidor no
-    # tiene cron (sin sudo), asi que es la misma imagen con un bucle. Una vuelta se
-    # puede repetir sin duplicar avisos; la primera espera a que web migre.
+    # US-03: manda los recordatorios cada hora. Es un bucle porque el servidor
+    # del curso no tiene cron; la primera vuelta espera a que web migre.
     image: ghcr.io/darkanthem21/oev-sala-grabacion:${TAG:-main}
     command: >
       sh -c "sleep 60;

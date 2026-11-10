@@ -3,23 +3,19 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Nada de esto vive en el código; lo pone por entorno el servidor de turno.
-# Mudarse de alojamiento es cambiar variables, no editar archivos.
-# La clave por defecto solo sirve en desarrollo y en las pruebas: al arrancar en
-# producción, `check --deploy` la rechaza por débil y el contenedor no levanta.
+# Todo esto lo pone el entorno de cada servidor. La clave por defecto solo
+# sirve en desarrollo: en producción `check --deploy` la rechaza por débil.
 SECRET_KEY = os.environ.get("SECRET_KEY", "clave-solo-para-desarrollo")
 DEBUG = os.environ.get("DEBUG", "0") == "1"
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("CSRF_ORIGINS", "").split(",") if o]
 
-# Detrás de un proxy (Caddy) el host y el esquema reales llegan en cabeceras.
-# Sin la segunda línea Django cree que la petición es http aunque el navegador
-# la haya hecho por https, y rechaza el POST del login por CSRF.
+# Detrás del proxy el host y el esquema llegan en cabeceras. Sin la segunda
+# línea Django cree que la petición es http y rechaza el login por CSRF.
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # Fuera de desarrollo la sesión y el token CSRF viajan solo por https. Los
-# navegadores aceptan cookies seguras en http://localhost, así que la simulación
-# local sigue funcionando.
+# navegadores igual aceptan esas cookies en http://localhost.
 SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = not DEBUG
 # La redirección a https y el HSTS los pone el proxy que termina el TLS, no
 # Django: así no se fijan para un dominio que comparten otros sistemas.
@@ -41,10 +37,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    # El de seguridad va primero y el de clickjacking último, por el orden en que
-    # miran la petición y la respuesta. Con solo agregarlos ya salen nosniff,
-    # Referrer-Policy y COOP, que son los valores por defecto de Django. No hay
-    # SSL_REDIRECT ni HSTS porque el TLS lo hace el proxy.
+    # Seguridad va primero y clickjacking último, por el orden en que miran la
+    # petición y la respuesta. Sin SSL_REDIRECT ni HSTS: el TLS lo hace el proxy.
     "django.middleware.security.SecurityMiddleware",
     # gunicorn no sirve estáticos; whitenoise sí, y la imagen no depende de que
     # el proxy de cada servidor los sepa servir.
@@ -113,9 +107,8 @@ TIME_ZONE = "America/Santiago"
 USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-# La imagen corre collectstatic y fija ESTATICOS_COMPRIMIDOS=1: nombres con hash
-# (caché larga) y versiones comprimidas. En desarrollo y en las pruebas no hay
-# collectstatic, así que se sirven tal cual desde cada módulo.
+# La imagen corre collectstatic y fija ESTATICOS_COMPRIMIDOS=1: nombres con
+# hash y compresión. En desarrollo y en las pruebas se sirven tal cual.
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {
@@ -133,10 +126,8 @@ AUTH_USER_MODEL = "personas.Usuario"
 LOGIN_URL = "login_solicitante"
 LOGIN_REDIRECT_URL = "/"
 
-# US-01 AC6. Todavía no hay relay institucional, así que por defecto el correo
-# se imprime en consola y no se pierde en silencio. En el servidor se cambia por
-# variable de entorno; puerto y TLS por defecto son los de cualquier proveedor
-# actual (587 con STARTTLS).
+# US-01 AC6: sin SMTP configurado el correo se imprime en consola, para que no
+# se pierda en silencio. El servidor lo cambia con variables de entorno.
 EMAIL_BACKEND = os.environ.get(
     "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
 )
