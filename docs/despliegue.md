@@ -253,7 +253,9 @@ scp .env.ejemplo USUARIO@45.79.193.250:~/oev/.env
 En el servidor, `chmod 600 ~/oev/.env` y completar las mismas variables de
 [Completar el `.env`](#2-completar-el-env), más `DOMINIO`, el nombre sin
 `https://`. `ALLOWED_HOSTS`, `CSRF_ORIGINS` y `URL_BASE` llevan ese mismo
-dominio. `PUERTO` no se cambia: es interno.
+dominio. `PUERTO` no se cambia: es interno. Compose v2 interpreta el `$` dentro
+del `.env`, así que `POSTGRES_PASSWORD` se genera igual que `SECRET_KEY`, con
+el comando de la tabla, que no produce ese carácter.
 
 Después, el primer despliegue y la [carga de las áreas](#5-cargar-las-áreas).
 
@@ -275,16 +277,6 @@ contenedores sin el `KeyError` del servidor del curso, así que no hace falta el
 Si la versión no levanta, el script muestra el log, **vuelve solo a la última
 versión de `desplegados.log`** y termina con error. Las migraciones que haya
 alcanzado a aplicar la versión fallida no se revierten.
-
-**Volver atrás** es lo mismo con el SHA anterior de `desplegados.log`. Si la
-versión nueva traía migraciones, antes se restaura el respaldo:
-
-```sh
-gunzip -c respaldos/oev-AAAAMMDD-HHMMSS.sql.gz | docker compose -f docker-compose.yml -f docker-compose.produccion.yml exec -T db psql -U oev oev
-```
-
-sobre una base vacía. Las fotos del check-out no entran en ese respaldo: se
-copian con `docker cp` desde el contenedor `web`, como en el servidor del curso.
 
 ### Respaldos
 
@@ -310,6 +302,41 @@ hay que traerlos cada cierto tiempo a otra máquina:
 rsync -a USUARIO@45.79.193.250:oev/respaldos/ respaldos-oev/
 ```
 
+### Volver atrás
+
+Si la versión nueva no aplicó migraciones, basta desplegar la anterior con su
+SHA, que está en `~/oev/desplegados.log`:
+
+```sh
+sh ~/oev/produccion/desplegar.sh <SHA anterior>
+```
+
+Si entre las dos versiones cambiaron los `docker-compose*.yml` o `produccion/`,
+antes se copian los del commit al que se vuelve: `git switch --detach <SHA>` en
+la máquina propia y el `scp` de la primera instalación, sin el `.env`.
+
+Si la versión nueva aplicó migraciones, la imagen anterior no conoce esa base:
+hay que restaurar además el respaldo que el script hizo justo antes de
+desplegarla. **Se pierde lo ingresado desde ese respaldo.**
+
+```sh
+cd ~/oev
+alias dc='docker compose -f docker-compose.yml -f docker-compose.produccion.yml'
+dc stop web tareas
+dc exec -T db dropdb -U oev oev
+dc exec -T db createdb -U oev oev
+gunzip -c respaldos/oev-AAAAMMDD-HHMMSS.sql.gz | dc exec -T db psql -U oev -q -v ON_ERROR_STOP=1 oev
+sh produccion/desplegar.sh <SHA anterior>
+```
+
+Las fotos no hace falta restaurarlas para volver atrás, porque las migraciones
+no tocan los archivos. Si se perdió el volumen, se recuperan de `fotos.tar` con
+el stack arriba:
+
+```sh
+docker cp -a - "$(dc ps -aq web)":/app < respaldos/fotos.tar
+```
+
 ### Despliegue automático
 
 El job `desplegar` de `.github/workflows/imagen.yml` corre después de publicar
@@ -325,8 +352,11 @@ apagado hasta configurar en GitHub, en *Settings*:
 | | `SSH_HUELLA` | La salida de `ssh-keyscan -t ed25519 45.79.193.250`, revisada contra la huella que muestra el servidor. Sin ella el CI no confía en el servidor |
 | *Secrets and variables* > *Actions* > *Variables* | `DESPLIEGUE_AUTOMATICO` | `true` |
 
-En el environment `produccion` se puede exigir una aprobación manual antes de
-cada despliegue (*Required reviewers*).
+En el environment `produccion`, en *Deployment branches and tags*, se elige
+*Selected branches and tags* y se deja solo `main`. Sin eso, cualquiera con
+permiso de escritura puede subir una rama cuyo workflow use ese environment y
+leer la clave. Ahí mismo se puede exigir una aprobación manual antes de cada
+despliegue (*Required reviewers*).
 
 ## Diagramas de la documentación
 
