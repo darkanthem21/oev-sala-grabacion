@@ -259,11 +259,11 @@ function panelValidador(datos, validador, urlResolver) {
   <div class="mandos">
     <button type="button" class="btn" data-abre="resueltas" x-text="'Resueltas (' + resueltas.length + ')'"></button>
     {# US-11: lo resuelto de todos los días. Una sola vista para el validador y el administrador. #}
-    <a class="btn" href="{% url 'historial_validacion' %}">Historial</a>
+    <a class="btn va-en-pestana" href="{% url 'historial_validacion' %}">Historial</a>
     <div class="grupo">
-      <button type="button" class="btn ico" :disabled="semana === 0" @click="semana--" aria-label="Semana anterior">&larr;</button>
+      <button type="button" class="btn ico" :disabled="semana === 0" @click="semana--" aria-label="Semana anterior"><span class="chevron izq" aria-hidden="true"></span></button>
       <button type="button" class="btn" @click="semana = 0">Hoy</button>
-      <button type="button" class="btn ico" :disabled="semana === datos.semanas.length - 1" @click="semana++" aria-label="Semana siguiente">&rarr;</button>
+      <button type="button" class="btn ico" :disabled="semana === datos.semanas.length - 1" @click="semana++" aria-label="Semana siguiente"><span class="chevron der" aria-hidden="true"></span></button>
     </div>
   </div>
 </div>
@@ -299,6 +299,7 @@ function panelValidador(datos, validador, urlResolver) {
       </div>
     </div>
     <ul class="leyenda">
+      <li><span class="muestra pendiente-m" aria-hidden="true"></span>Por resolver</li>
       <li><span class="muestra tope-m" aria-hidden="true"></span>Tope: dos o más piden el bloque</li>
       <li><span class="muestra reservada-m" aria-hidden="true"></span>Reservada</li>
     </ul>

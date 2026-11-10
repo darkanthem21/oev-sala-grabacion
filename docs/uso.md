@@ -466,8 +466,8 @@ una solicitud resuelta tampoco se puede editar ni borrar.
 
 ## 4. Administrador
 
-El panel del administrador tiene siete pestañas: **Check-out**, **Bloques**,
-**Áreas**, **Usuarios**, **Reglas**, **Validación** y **Sanciones**. Se entra por
+El panel del administrador tiene siete pestañas: **Bloques**, **Validación**,
+**Sanciones**, **Usuarios**, **Áreas**, **Reglas** y **Check-out**. Se entra por
 `/configuracion/entrar/`.
 
 ![Puerta de la administración](uso/us-04/puerta-administracion.png)

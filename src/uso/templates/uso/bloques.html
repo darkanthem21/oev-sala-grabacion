@@ -5,9 +5,9 @@
     <h2>{% if fecha == hoy %}Hoy, {% endif %}{{ fecha|date:"l j \d\e F" }}</h2>
     {% comment %} Sin JavaScript: el formulario hace GET y cambia la fecha en la dirección. {% endcomment %}
     <form class="grupo" method="get">
-      <a class="btn ico" href="?fecha={{ anterior|date:'Y-m-d' }}" aria-label="Día anterior">‹</a>
+      <a class="btn ico" href="?fecha={{ anterior|date:'Y-m-d' }}" aria-label="Día anterior"><span class="chevron izq" aria-hidden="true"></span></a>
       <a class="btn {% if fecha == hoy %}activa{% endif %}" href="?">Hoy</a>
-      <a class="btn ico" href="?fecha={{ siguiente|date:'Y-m-d' }}" aria-label="Día siguiente">›</a>
+      <a class="btn ico" href="?fecha={{ siguiente|date:'Y-m-d' }}" aria-label="Día siguiente"><span class="chevron der" aria-hidden="true"></span></a>
       <input class="btn" type="date" name="fecha" value="{{ fecha|date:'Y-m-d' }}"
              aria-label="Ir a una fecha" onchange="this.form.submit()">
     </form>

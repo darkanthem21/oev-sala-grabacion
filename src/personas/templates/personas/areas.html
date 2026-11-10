@@ -1,4 +1,5 @@
 {% extends "panel.html" %}
+{% block titulo %}Áreas académicas · Configuración{% endblock %}
 {% load static %}
 {% comment %}
   US-05. Las áreas no se borran: se desactivan y dejan de ofrecerse al pedir.
@@ -31,7 +32,7 @@
             <td class="cifra">{{ area.cuantos }}</td>
             <td>{% if area.activa %}Activa{% else %}Inactiva{% endif %}</td>
             <td>
-              <form method="post" class="grupo">
+              <form method="post" class="acciones-fila">
                 {% csrf_token %}
                 <input type="hidden" name="area" value="{{ area.pk }}">
                 <button class="btn" type="button" data-abre="editar-area-{{ area.pk }}">Editar</button>

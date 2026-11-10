@@ -18,12 +18,20 @@ cambiar nada más.
   {% include "_banda.html" with puerta="validacion" %}
   <div class="riel">
     <div class="dentro">
+      {% with ruta=request.resolver_match.url_name %}
+      <nav class="pestanas" aria-label="Secciones del validador">
+        <a class="pestana {% if ruta == 'panel_validador' %}activa{% endif %}" href="{% url 'panel_validador' %}"
+           {% if ruta == "panel_validador" %}aria-current="page"{% endif %}>Por resolver</a>
+        <a class="pestana {% if ruta != 'panel_validador' %}activa{% endif %}" href="{% url 'historial_validacion' %}"
+           {% if ruta != "panel_validador" %}aria-current="page"{% endif %}>Historial</a>
+      </nav>
+      {% endwith %}
       {% include "_rol.html" with rol="validacion" nombre="Validador" %}
     </div>
   </div>
 </header>
 
-<main class="panel">
+<main id="principal" tabindex="-1" class="panel con-pestanas">
   {% block seccion %}{% endblock %}
 </main>
 {% endblock %}

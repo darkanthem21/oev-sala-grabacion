@@ -3,7 +3,7 @@
 {% block titulo %}Contraseña actualizada{% endblock %}
 {% block estilos %}<link rel="stylesheet" href="{% static 'personas/ingreso.css' %}">{% endblock %}
 {% block contenido %}
-<main class="tarjeta">
+<main id="principal" tabindex="-1" class="tarjeta">
   <h1>Listo</h1>
   <p class="sub">Tu contraseña quedó cambiada.</p>
   <p class="pie"><a href="{% url 'login_solicitante' %}">Iniciar sesión</a></p>

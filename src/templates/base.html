@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block titulo %}{% endblock %} · Sala de grabación OEV</title>
+<meta name="theme-color" content="#e15200">
+<link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
 <link rel="preload" href="{% static 'fonts/roboto-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{% static 'css/marca.css' %}">
 <link rel="stylesheet" href="{% static 'css/base.css' %}">
@@ -15,11 +17,15 @@
 <script defer src="{% static 'js/vendor/alpine-3.17.5.min.js' %}"></script>
 </head>
 <body>
+{% comment %}2.4.1: quien navega con teclado salta la banda y las pestañas.{% endcomment %}
+<a class="saltar" href="#principal">Saltar al contenido</a>
 {% comment %}
   Sin encabezado propio: cada panel trae el suyo (`techo`), y uno por defecto
   se sumaría encima.
 {% endcomment %}
 {% block contenido %}{% endblock %}
+{% comment %}En el celular las pestañas se deslizan: la activa queda a la vista.{% endcomment %}
+<script>document.querySelector(".pestana.activa")?.scrollIntoView({ block: "nearest", inline: "nearest" });</script>
 <div id="avisos" class="avisos" aria-live="polite">{% include "_avisos.html" %}</div>
 {% block scripts %}{% endblock %}
 </body>

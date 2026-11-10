@@ -41,3 +41,16 @@ que el propio PDF define como `#e15200`. El `#dd5829` de la grilla es otro color
 | Personal de apoyo | `#516e80` | clapperboard |
 
 Los íconos son de [Lucide](https://lucide.dev) (licencia ISC), en `src/static/img/roles/`.
+
+## Reglas de uso
+
+- **Tocar:** con el dedo (`pointer: coarse`) todo control mide 44 px de alto; con
+  mouse, 36. Sale de `--alto-control`, no se fija por pantalla.
+- **Encabezados de tabla y rótulos:** en minúscula, sin `text-transform`. Las
+  mayúsculas sostenidas se leen peor y no eran parejas entre pantallas.
+- **Deshabilitado:** borde claro y texto secundario, sin opacidad: tiene que
+  poder leerse qué es lo que todavía no se puede hacer.
+- **Celular:** las pestañas van en una fila que se desliza; el botón principal
+  parte su rótulo en dos líneas antes que ensanchar la página.
+- **Título de la pestaña del navegador:** el de la pantalla, no el del panel
+  (`Usuarios · Configuración`), para distinguir pestañas e historial.

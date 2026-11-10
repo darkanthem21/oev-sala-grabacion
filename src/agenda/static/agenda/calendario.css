@@ -134,7 +134,7 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
 /* El bloque que se está creando. Se dibuja firme y por encima de los que ya
  * existen, para que un cruce se vea antes de intentar guardarlo. */
 .fantasma.creando {
-  border-style: solid; border-left-width: 3px; z-index: 1;
+  border-style: solid; border-left-width: var(--filete-bloque); z-index: 1;
   background: var(--superficie); color: var(--tinta);
 }
 
@@ -154,7 +154,7 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
   position: absolute; left: 3px; right: 3px; box-sizing: border-box;
   padding: var(--esp-1) var(--esp-2); overflow: hidden; cursor: pointer; text-align: left;
   background: var(--superficie); color: var(--tinta);
-  border: 1px solid var(--borde); border-left: 3px solid var(--tinta-suave);
+  border: 1px solid var(--borde); border-left: var(--filete-bloque) solid var(--tinta-suave);
   font-family: var(--fuente-texto); font-size: var(--txt-xs); font-variant-numeric: tabular-nums;
 }
 .bloque .hasta { color: var(--tinta-suave); }
@@ -162,7 +162,9 @@ button.numero:hover { color: var(--accion); text-decoration: underline; }
 .bloque.elegido { background: var(--accion); border-color: var(--accion); color: var(--superficie); }
 .bloque.elegido .hasta { color: var(--superficie); }
 /* El otro lado del choque: el error dice la hora y acá se ve cuál es. */
-.bloque.choca { border-color: var(--alerta); background: var(--fondo); }
+/* La L es la forma de "dos se cruzan", acá y en el tope del validador: se
+ * reconoce sin distinguir el color. */
+.bloque.choca { border-color: var(--alerta); border-bottom-width: 4px; background: color-mix(in srgb, var(--alerta) 9%, var(--superficie)); }
 
 /* Una columna vacía es un día al que la plantilla no le puso nada, no un
  * error. El + de la cabecera es lo que la llena. */

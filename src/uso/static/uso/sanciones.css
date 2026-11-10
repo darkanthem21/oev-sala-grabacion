@@ -32,7 +32,7 @@
 /* --- Tabla --- */
 .tabla { width: 100%; border-collapse: collapse; font-size: var(--txt-sm); }
 .tabla th {
-  text-align: left; font-size: var(--txt-xs); text-transform: uppercase; letter-spacing: .05em;
+  text-align: left; font-size: var(--txt-xs);
   color: var(--tinta-suave); padding: var(--esp-2) var(--esp-4); border-bottom: 1px solid var(--borde);
 }
 .tabla td { padding: var(--esp-2) var(--esp-4); border-bottom: 1px solid var(--borde); vertical-align: top; }
@@ -90,7 +90,7 @@
   .tabla-personas td, .tabla-personas .numero { display: block; padding: var(--esp-1) 0; border: 0; text-align: left; }
   .tabla-personas td::before {
     content: attr(data-titulo); display: block;
-    font-size: var(--txt-xs); text-transform: uppercase; letter-spacing: .05em; color: var(--tinta-suave);
+    font-size: var(--txt-xs); color: var(--tinta-suave);
   }
   .levantar { flex-wrap: wrap; }
   .paginas { grid-template-columns: 1fr 1fr; }

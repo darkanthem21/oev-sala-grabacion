@@ -1,4 +1,5 @@
 {% extends "panel.html" %}
+{% block titulo %}Usuarios · Configuración{% endblock %}
 {% load static %}
 {% comment %}
   US-08. Las cuentas no se borran: se desactivan y conservan su historial. Crear
@@ -86,15 +87,15 @@
     {% if pagina.has_other_pages %}
       <nav class="paginas" aria-label="Páginas de cuentas">
         {% if pagina.has_previous %}
-          <a class="btn" rel="prev" href="{{ url_pagina }}{{ pagina.previous_page_number }}">&larr; Anterior</a>
+          <a class="btn" rel="prev" href="{{ url_pagina }}{{ pagina.previous_page_number }}"><span class="chevron izq" aria-hidden="true"></span>Anterior</a>
         {% else %}
-          <span class="btn deshabilitado" aria-disabled="true">&larr; Anterior</span>
+          <span class="btn deshabilitado" aria-disabled="true"><span class="chevron izq" aria-hidden="true"></span>Anterior</span>
         {% endif %}
         <span class="suave">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }} · {{ pagina.paginator.count }} cuentas</span>
         {% if pagina.has_next %}
-          <a class="btn" rel="next" href="{{ url_pagina }}{{ pagina.next_page_number }}">Siguiente &rarr;</a>
+          <a class="btn" rel="next" href="{{ url_pagina }}{{ pagina.next_page_number }}">Siguiente<span class="chevron der" aria-hidden="true"></span></a>
         {% else %}
-          <span class="btn deshabilitado" aria-disabled="true">Siguiente &rarr;</span>
+          <span class="btn deshabilitado" aria-disabled="true">Siguiente<span class="chevron der" aria-hidden="true"></span></span>
         {% endif %}
       </nav>
     {% endif %}

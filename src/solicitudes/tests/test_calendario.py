@@ -31,7 +31,7 @@ class CalendarioSolicitudesTestCase(TestCase):
         self.assertTemplateUsed(response, "solicitudes/calendario.html")
         
         # Validar despliegue de semana hábil
-        for dia in ["LUN", "MAR", "MIE", "JUE", "VIE"]:
+        for dia in ["Lun", "Mar", "Mié", "Jue", "Vie"]:
             self.assertContains(response, f">{dia}</th>")
             
         # Comprobar la ausencia de Fines de Semana habilitados en la matriz
