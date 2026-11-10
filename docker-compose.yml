@@ -39,10 +39,13 @@ services:
       # las mantiene, y la que ya se cerro termina en un 502.
       # --max-requests: cada worker se reemplaza tras unas 500 peticiones, para
       # que la memoria que no devuelve (los PDF con fotos) no se acumule.
+      # --access-logformat: el formato de siempre, con la IP que informa el
+      # proxy en vez de la del proxy mismo.
       GUNICORN_CMD_ARGS: >-
         --worker-tmp-dir /dev/shm --threads 4 --keep-alive 0
         --max-requests 500 --max-requests-jitter 50
         --access-logfile -
+        --access-logformat '%({x-forwarded-for}i)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
     volumes:
       - checkoutmedia:/app/media
     depends_on:
