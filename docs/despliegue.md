@@ -292,17 +292,18 @@ Docker se instala con los pasos de
   reinicia con `sudo reboot`; los contenedores vuelven solos
   (`restart: unless-stopped`).
 
-**Dar acceso a otra persona** es agregar su clave pública, y quitárselo es
-borrar esa línea del archivo:
+**La clave autorizada es una sola, la del grupo**: un par creado para este
+servidor que comparten sus integrantes, no la clave personal de nadie. Quitarle
+el acceso a alguien obliga a cambiarla para todos: se autoriza una nueva y se
+borra la anterior de `~/.ssh/authorized_keys`. Otra clave, por ejemplo la de
+quien reciba el sistema, se agrega así:
 
 ```sh
-ssh despliegue@45.79.193.250 'cat >> ~/.ssh/authorized_keys' < clave-de-la-persona.pub
+ssh despliegue@45.79.193.250 'cat >> ~/.ssh/authorized_keys' < clave-nueva.pub
 ```
 
-**Si se pierde el acceso** (la única clave autorizada, o un cambio de sshd o de
-`ufw` que deja a todos afuera), queda la consola Lish del panel de Linode, que
-maneja quien administra la cuenta. Entra por fuera de SSH, así que ahí `root`
-sí puede usar su contraseña.
+Para desplegar basta la clave. La contraseña de `despliegue` solo la pide
+`sudo`, en tareas de administración de la máquina.
 
 ### Primera instalación
 
