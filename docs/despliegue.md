@@ -231,6 +231,7 @@ stack trae el suyo.
 | Compose | v2 (`docker compose`), proyecto `oev` fijado en `docker-compose.produccion.yml` |
 | Volúmenes | `oev_pgdata`, `oev_checkoutmedia` y `oev_caddy_data` (certificados) |
 | Puertos públicos | 80 y 443, de Caddy. La aplicación y la base no publican puertos |
+| Memoria | Tope de 400 MB para `web` y 200 MB para `tareas`; la base y Caddy, sin tope |
 
 Caddy (`produccion/Caddyfile`) saca y renueva el certificado de Let's Encrypt,
 redirige http a https, agrega HSTS y comprime. gunicorn queda detrás, sin

@@ -20,6 +20,10 @@ services:
 
   web:
     env_file: .env
+    # El servidor tiene 1 GB. Con tope, si un PDF con fotos grandes o una fuga
+    # se pasa, cae un worker de web (gunicorn levanta otro) y no la base, que
+    # es a quien podría elegir el kernel al quedarse sin memoria.
+    mem_limit: 400m
     # La página de ingreso no consulta la base: prueba que gunicorn responde, es
     # decir, que el arranque pasó la revisión y las migraciones. desplegar.sh
     # espera este resultado. Hasta estar sano se revisa cada 2 s.
@@ -33,6 +37,7 @@ services:
 
   tareas:
     env_file: .env
+    mem_limit: 200m
     <<: *logs
 
   caddy:

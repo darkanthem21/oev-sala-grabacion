@@ -37,8 +37,11 @@ services:
       # al worker. Con hilos ocupa uno y el worker sigue respondiendo.
       # --keep-alive 0: el proxy reutiliza conexiones mas tiempo del que gunicorn
       # las mantiene, y la que ya se cerro termina en un 502.
+      # --max-requests: cada worker se reemplaza tras unas 500 peticiones, para
+      # que la memoria que no devuelve (los PDF con fotos) no se acumule.
       GUNICORN_CMD_ARGS: >-
         --worker-tmp-dir /dev/shm --threads 4 --keep-alive 0
+        --max-requests 500 --max-requests-jitter 50
         --access-logfile -
     volumes:
       - checkoutmedia:/app/media
