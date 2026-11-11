@@ -99,5 +99,8 @@ urlpatterns = [
     # el nombre son los de US-10, para no romper enlaces.
     path("configuracion/sanciones/", uso.sanciones, name="panel_sanciones"),
     path("configuracion/sanciones/<int:usuario_id>/", uso.sanciones_de, name="sanciones_de"),
+    # El formulario de ingreso del admin no tiene el bloqueo por intentos: se
+    # entra por la puerta de gestión, que acepta `is_staff` y vuelve por `next`.
+    path("admin/login/", RedirectView.as_view(pattern_name="login_gestion", query_string=True)),
     path("admin/", admin.site.urls),
 ]

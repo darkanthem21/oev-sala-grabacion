@@ -1,0 +1,71 @@
+# Servidor propio: va encima del base, con Compose v2, y agrega Caddy para el
+# TLS. El nombre fijo del proyecto evita que los volúmenes dependan de la carpeta.
+name: oev
+
+# Sin límite, los logs de Docker crecen hasta llenar el disco.
+x-logs: &logs
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+# El código de la aplicación corre sin capacidades de root y sin poder ganarlas.
+x-app: &app
+  env_file: .env
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  <<: *logs
+
+services:
+  db:
+    env_file: .env
+    # Cada 2 s solo mientras arranca; después, cada 30 s para no gastar CPU.
+    healthcheck:
+      interval: 30s
+      start_period: 30s
+      start_interval: 2s
+    <<: *logs
+
+  web:
+    <<: *app
+    # Con tope, si web se pasa de memoria cae uno de sus workers y gunicorn
+    # levanta otro. Sin tope, el kernel podría matar la base.
+    mem_limit: 400m
+    # Pasa cuando gunicorn responde, o sea, con la revisión de arranque y las
+    # migraciones listas. desplegar.sh espera este resultado.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, urllib.request as u; u.urlopen(u.Request('http://127.0.0.1:3006/solicitante/entrar/', headers={'Host': os.environ['ALLOWED_HOSTS'].split(',')[0]}), timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      start_interval: 2s
+
+  tareas:
+    <<: *app
+    mem_limit: 200m
+    # Con sh como PID 1 la señal de parada se ignora y cada despliegue espera
+    # 10 s a que Docker lo mate.
+    init: true
+
+  caddy:
+    image: caddy:2.10-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMINIO: ${DOMINIO:?falta DOMINIO en el .env}
+    volumes:
+      # La carpeta entera: un archivo suelto queda atado a su inodo, y lo que
+      # se edite con sed o un editor no llegaría al contenedor.
+      - ./produccion:/etc/caddy:ro
+      # Certificados y claves de ACME: perderlos obliga a pedirlos de nuevo, y
+      # Let's Encrypt limita cuántos se pueden pedir por semana.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web]
+    restart: unless-stopped
+    <<: *logs
+
+volumes:
+  caddy_data:
+  caddy_config:

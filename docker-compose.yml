@@ -1,4 +1,4 @@
-# Base, comun a desarrollo y al servidor del curso.
+# Base común a desarrollo y a los dos servidores.
 services:
   db:
     image: postgres:17
@@ -14,21 +14,29 @@ services:
     restart: unless-stopped
 
   web:
-    # En el servidor la imagen se baja de GHCR y no se construye nada; el compose
-    # de desarrollo agrega `build` para trabajar sobre el codigo local.
-    # TAG es la rama publicada, o el sha de un commit para fijar una version
-    # exacta. Por defecto `main`: desplegar otra cosa hay que pedirlo a proposito.
+    # La imagen se baja de GHCR; solo el compose de desarrollo la construye.
+    # TAG es `main`, una rama publicada o el SHA de un commit.
     image: ghcr.io/darkanthem21/oev-sala-grabacion:${TAG:-main}
-    # runserver sostiene la carga prevista —decenas de personas en horario habil—
-    # y el paso a gunicorn queda pendiente. El --insecure es lo que le permite
-    # servir los estaticos con DEBUG=0.
+    # check --deploy corta el arranque si la configuración es insegura: clave
+    # débil, DEBUG o cookies sin Secure.
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py createsuperuser --noinput 2>/dev/null;
-             python manage.py runserver --insecure 0.0.0.0:${PUERTO:-3006}"
+      sh -c "python manage.py check --deploy --fail-level WARNING &&
+             python manage.py migrate &&
+             { python manage.py createsuperuser --noinput 2>/dev/null || true; } &&
+             exec gunicorn oev.wsgi --bind 0.0.0.0:${PUERTO:-3006} --workers ${WEB_CONCURRENCY:-2}"
     environment:
-      # Unico valor fijo del stack: el resto lo pone el entorno que corresponda.
+      # Lo único fijo del stack; el resto lo pone el entorno de cada servidor.
       DB_HOST: db
+      # Opciones de gunicorn; dentro de `command` YAML partiría la orden.
+      # --threads: una subida lenta de fotos ocupa un hilo, no al worker completo.
+      # --keep-alive 0: el proxy reutilizaba conexiones ya cerradas (502).
+      # --max-requests: recicla cada worker para soltar la memoria de los PDF.
+      # --access-logformat: la IP de quien se conecta y la que informa el proxy.
+      GUNICORN_CMD_ARGS: >-
+        --worker-tmp-dir /dev/shm --threads 4 --keep-alive 0
+        --max-requests 500 --max-requests-jitter 50
+        --access-logfile -
+        --access-logformat '%(h)s %({x-forwarded-for}i)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
     volumes:
       - checkoutmedia:/app/media
     depends_on:
@@ -37,9 +45,8 @@ services:
     restart: unless-stopped
 
   tareas:
-    # US-03: la revision de cada hora que manda los recordatorios. El servidor no
-    # tiene cron (sin sudo), asi que es la misma imagen con un bucle. Una vuelta se
-    # puede repetir sin duplicar avisos; la primera espera a que web migre.
+    # US-03: manda los recordatorios cada hora. Es un bucle porque el servidor
+    # del curso no tiene cron; la primera vuelta espera a que web migre.
     image: ghcr.io/darkanthem21/oev-sala-grabacion:${TAG:-main}
     command: >
       sh -c "sleep 60;

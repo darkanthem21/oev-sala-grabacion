@@ -1,0 +1,17 @@
+# Termina el TLS con un certificado de Let's Encrypt, que renueva solo, y
+# redirige http a https. gunicorn queda detrás, sin conexiones directas.
+{$DOMINIO} {
+	encode zstd gzip
+	# Sin includeSubDomains: el dominio padre no es nuestro.
+	header Strict-Transport-Security "max-age=31536000"
+	# Django escribe en disco cualquier archivo que llegue en un POST, también
+	# sin sesión. Un check-out con varias fotos de 5 MB cabe de sobra.
+	request_body {
+		max_size 50MB
+	}
+	reverse_proxy web:3006 {
+		# Mientras web se recrea en un despliegue, la petición espera en vez de
+		# recibir un 502.
+		lb_try_duration 20s
+	}
+}

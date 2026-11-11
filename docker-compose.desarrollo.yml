@@ -1,11 +1,10 @@
-# Desarrollo: build local, codigo montado y DEBUG. Va con -f explicito, y por eso
-# ya no se llama 'override': con ese nombre Compose lo cargaba solo, y un
-# `docker-compose up` en el servidor construia ahi en vez de bajar la imagen.
+# Desarrollo: build local, código montado y DEBUG. Va con -f explícito; con el
+# nombre 'override' Compose lo cargaba solo y el servidor construía la imagen.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.desarrollo.yml up
 #
-# Las claves de aca son de juguete a proposito: viven en este archivo, no en el
-# base, para que no exista forma de que terminen corriendo en el servidor.
+# Las claves de juguete viven en este archivo para que nunca corran en el
+# servidor.
 services:
   db:
     environment:
@@ -17,21 +16,29 @@ services:
     build:
       context: .
       # Hay entornos donde el contenedor de build no resuelve DNS y falla al bajar
-      # las dependencias. Con la red del host deja de depender de esa configuracion.
+      # las dependencias. Con la red del host no depende de esa configuración.
       network: host
     ports:
       - "8000:${PUERTO:-3006}"
+    # runserver recarga al editar. El código montado tapa los estáticos de la
+    # imagen, así que se sirven sin comprimir.
+    command: >
+      sh -c "python manage.py migrate &&
+             { python manage.py createsuperuser --noinput 2>/dev/null || true; } &&
+             exec python manage.py runserver 0.0.0.0:${PUERTO:-3006}"
     environment:
       DEBUG: "1"
+      ESTATICOS_COMPRIMIDOS: "0"
       POSTGRES_PASSWORD: oev
       DJANGO_SUPERUSER_EMAIL: admin@uach.cl
       DJANGO_SUPERUSER_PASSWORD: admin
     volumes:
-      # El codigo montado permite editar y recargar sin reconstruir la imagen.
+      # Permite editar y recargar sin reconstruir la imagen.
       - ./src:/app
 
   tareas:
     environment:
       POSTGRES_PASSWORD: oev
+      ESTATICOS_COMPRIMIDOS: "0"
     volumes:
       - ./src:/app
