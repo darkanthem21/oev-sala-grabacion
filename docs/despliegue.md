@@ -1,25 +1,25 @@
 # Manual de despliegue
 
 La aplicación se despliega desde la imagen que publica GitHub Actions en GHCR
-(`ghcr.io/darkanthem21/oev-sala-grabacion`), en dos lugares: el servidor del
-curso, a mano, y el [servidor propio](#servidor-propio), donde la puede desplegar
-el CI. En ninguno se clona el repositorio ni se construye nada: solo se
-necesitan los archivos de compose y un `.env`.
+(`ghcr.io/darkanthem21/oev-sala-grabacion`) en dos lugares. En el servidor del
+curso se despliega a mano y en el [servidor propio](#servidor-propio) la puede
+desplegar el CI. En ninguno se clona el repositorio ni se construye nada, basta
+con los archivos de compose y un `.env`.
 
 Al arrancar, el contenedor:
 
-1. Corre `check --deploy` y **no levanta** si la configuración es insegura: una
-   `SECRET_KEY` corta o de ejemplo, `DEBUG=1` o cookies sin `Secure`. El motivo
-   queda en el log.
+1. Corre `check --deploy` y **no levanta** si la configuración es insegura, por
+   ejemplo con una `SECRET_KEY` corta o de ejemplo, `DEBUG=1` o cookies sin
+   `Secure`. El motivo queda en el log.
 2. Aplica las migraciones y crea el superusuario si no existe. No hay pasos
    manuales de base de datos.
 3. Levanta gunicorn con `WEB_CONCURRENCY` workers (2 por defecto) de 4 hilos
    cada uno, para que una subida lenta de fotos no deje a un worker sin
-   responder. Los estáticos los sirve whitenoise, con nombre con hash y
-   comprimidos.
+   responder. Los estáticos los sirve whitenoise, comprimidos y con un hash en
+   el nombre.
 
-El contenedor corre con el usuario `oev` (UID 1000), no como root. Solo puede
-escribir en `/app/media`, las fotos del check-out.
+El contenedor corre con el usuario `oev` (UID 1000) en vez de root, y solo
+puede escribir en `/app/media`, donde van las fotos del check-out.
 
 ## Servidor del curso
 
@@ -44,7 +44,7 @@ vez, o las fotos nuevas del check-out fallan al guardarse:
 docker run --rm -v grupo6_checkoutmedia:/m alpine chown -R 1000:1000 /m
 ```
 
-No necesita sudo: alcanza con estar en el grupo `docker`. Un volumen nuevo ya
+No necesita sudo, basta con estar en el grupo `docker`. Un volumen nuevo ya
 nace con el dueño correcto.
 
 ## Imágenes publicadas
@@ -54,8 +54,8 @@ nace con el dueño correcto.
 | Cada push a `main`, si pasan las pruebas | `main` y el SHA del commit |
 | A mano, desde *Actions* > **imagen** > *Run workflow* sobre una rama | La rama con `/` cambiado por `-` (`feat-us-14-bloques-apoyo`) y el SHA |
 
-El mismo workflow borra lo antiguo: quedan `main` y las 15 versiones más
-recientes.
+El mismo workflow borra las imágenes antiguas y deja `main` y las 15 versiones
+más recientes.
 
 ## Primera instalación
 
@@ -90,17 +90,17 @@ Ese archivo vive solo en el servidor y nunca entra a git.
 | `ALLOWED_HOSTS` | `oev.inf.uach.cl` |
 | `CSRF_ORIGINS` | `https://oev.inf.uach.cl`. Caddy sirve el dominio por HTTPS |
 | `URL_BASE` | `https://oev.inf.uach.cl`. Dominio de los enlaces del recordatorio; por defecto `http://localhost:8000` |
-| `POSTGRES_PASSWORD` | Clave de la base. PostgreSQL la lee solo al crear el volumen: cambiarla después no cambia la de la base |
+| `POSTGRES_PASSWORD` | Clave de la base. PostgreSQL la lee solo al crear el volumen; si se cambia después, la base sigue con la anterior |
 | `SECRET_KEY` | Aleatoria y larga: `python3 -c 'import secrets; print(secrets.token_urlsafe(50))'`. Con una corta el contenedor no levanta |
 | `DJANGO_SUPERUSER_EMAIL` | Correo del superusuario: la cuenta de soporte de la Oficina, la única que da y quita el rol **Administrador** |
 | `DJANGO_SUPERUSER_PASSWORD` | Su clave. Si el usuario ya existe, no se modifica |
 | `EMAIL_BACKEND` | Opcional. Sin él, los correos se escriben en el log del contenedor, también el enlace con que una cuenta nueva crea su contraseña. Para enviarlos: `django.core.mail.backends.smtp.EmailBackend` |
-| `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | Solo con el backend SMTP: servidor, usuario y clave de la cuenta que envía |
+| `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | Solo con el backend SMTP. Servidor, usuario y clave de la cuenta que envía |
 | `EMAIL_PORT`, `EMAIL_USE_TLS` | Opcionales; por defecto `587` y `1` (STARTTLS), lo que usan Gmail, Brevo y Ethereal |
 | `DEFAULT_FROM_EMAIL` | Opcional. Remitente de los correos; por defecto `no-responder@uach.cl`. Con una cuenta externa tiene que ser la dirección de esa cuenta, o el correo cae en spam |
 
-Compose lee el mismo `.env` dos veces: para elegir la imagen (`TAG`, `PUERTO`) y
-para pasarle las variables a los contenedores.
+Compose usa el `.env` para elegir la imagen (`TAG`, `PUERTO`) y para pasarles
+las variables a los contenedores.
 
 ### 3. Definir el atajo
 
@@ -152,12 +152,12 @@ docker images ghcr.io/darkanthem21/oev-sala-grabacion -f dangling=true -q | xarg
 `docker-compose` 1.29.2 falla al recrear un contenedor con
 `KeyError: 'ContainerConfig'`, porque lee un campo que las imágenes construidas
 por el workflow ya no traen. Crear los contenedores de cero no pasa por ese
-código. El `down` sin `-v` no borra el volumen: los datos se conservan.
+código. El `down` sin `-v` conserva el volumen y sus datos.
 **Nunca `dc down -v`**: borra la base.
 
 La última línea borra la imagen que quedó sin etiqueta al bajar la nueva. Solo
-toca las de este repositorio: el servidor es compartido, así que nunca
-`docker image prune`.
+toca las de este repositorio, porque el servidor es compartido y
+`docker image prune` borraría también las de los otros grupos.
 
 ### 3. Verificar
 
@@ -168,14 +168,14 @@ docker logs --tail 50 grupo6_frontend
 
 Tienen que estar arriba `grupo6_frontend`, `grupo6_tareas` y `grupo6_db`. El log
 tiene que mostrar las migraciones aplicadas y terminar en `Booting worker with
-pid`, una línea por worker. Después se entra a la URL
-pública y se inicia sesión.
+pid`, una línea por worker. Después se entra a la URL pública y se inicia
+sesión.
 
 ## Volver a una versión anterior
 
 Se pone en `TAG` el SHA completo del commit que funcionaba y se repite el paso 2
 de "Desplegar una versión". Volver a una imagen anterior **no revierte las
-migraciones**: si la versión nueva cambió la base, hay que restaurar el respaldo.
+migraciones**. Si la versión nueva cambió la base, hay que restaurar el respaldo.
 
 ## Respaldo de la base
 
@@ -219,9 +219,9 @@ relaciones entre tablas también están dibujadas en `docs/diagramas.md`, en
 
 ## Servidor propio
 
-El servidor que asignó la profesora en noviembre. A diferencia del del curso,
-somos sus administradores: no hay red compartida ni proxy de otro, así que el
-stack trae el suyo.
+Es el servidor que asignó la profesora en noviembre. A diferencia del servidor
+del curso, lo administramos nosotros. No hay red compartida ni proxy de otro
+grupo, y el stack trae el suyo.
 
 | Dato | Valor |
 |---|---|
@@ -239,13 +239,14 @@ redirige http a https, agrega HSTS y comprime. gunicorn queda detrás, sin
 recibir conexiones directas de internet. Para que Caddy obtenga el certificado,
 `DOMINIO` tiene que resolver a la IP del servidor y los puertos 80 y 443 tienen
 que estar abiertos. Un cambio en el `Caddyfile` se aplica en el despliegue
-siguiente, porque el script recarga Caddy; si el archivo es inválido, avisa y
-Caddy sigue con el anterior.
+siguiente, porque el script recarga Caddy. Si el archivo es inválido, el script
+avisa y Caddy sigue con el anterior.
 
 ### Preparación del servidor
 
-Lo que necesita una máquina con Ubuntu recién instalado antes de la primera
-instalación. Así está el servidor propio, y así se repite en otra máquina.
+Una máquina con Ubuntu recién instalado necesita esto antes de la primera
+instalación. El servidor propio quedó así, y otra máquina se prepara con los
+mismos pasos.
 
 | Qué | Cómo quedó |
 |---|---|
@@ -255,7 +256,8 @@ instalación. Así está el servidor propio, y así se repite en otra máquina.
 | Docker | Engine y plugin de compose del repositorio oficial de Docker, no los de Ubuntu |
 | Actualizaciones | Las de seguridad se instalan solas, como trae Ubuntu. El reinicio no es automático |
 
-Como `root`, el usuario; después, desde la máquina propia, su clave pública:
+Primero, como `root`, se crea el usuario. Después se copia su clave pública
+desde la máquina propia:
 
 ```sh
 adduser despliegue && usermod -aG sudo despliegue
@@ -285,17 +287,18 @@ Docker se instala con los pasos de
   abierta, se prueba desde otra terminal que se sigue entrando.
 - Los puertos que publica Docker no pasan por `ufw`. Lo que deja a la base y a
   gunicorn fuera de internet es que el compose no les publica puertos.
-- El grupo `docker` equivale a `root` en la máquina, y vale recién en una
-  sesión nueva: en la que estaba abierta, `docker` responde `permission denied`.
+- El grupo `docker` equivale a `root` en la máquina. Vale recién desde la
+  sesión siguiente, y en la que ya estaba abierta `docker` responde
+  `permission denied`.
 - Cuando una actualización pide reiniciar existe `/var/run/reboot-required`. Se
-  reinicia con `sudo reboot`; los contenedores vuelven solos
+  reinicia con `sudo reboot` y los contenedores vuelven solos
   (`restart: unless-stopped`).
 
-**La clave autorizada es una sola, la del grupo**: un par creado para este
-servidor que comparten sus integrantes, no la clave personal de nadie. Quitarle
-el acceso a alguien obliga a cambiarla para todos: se autoriza una nueva y se
-borra la anterior de `~/.ssh/authorized_keys`. Otra clave, por ejemplo la de
-quien reciba el sistema, se agrega así:
+**La clave autorizada es una sola, la del grupo.** Es un par creado para este
+servidor, que comparten los integrantes en vez de usar cada uno su clave
+personal. Para quitarle el acceso a alguien hay que cambiarla para todos. Se
+autoriza una nueva y se borra la anterior de `~/.ssh/authorized_keys`. Otra
+clave, por ejemplo la de quien reciba el sistema, se agrega así:
 
 ```sh
 ssh despliegue@45.79.193.250 'cat >> ~/.ssh/authorized_keys' < clave-nueva.pub
@@ -318,9 +321,9 @@ scp .env.ejemplo despliegue@45.79.193.250:~/oev/.env
 En el servidor, `chmod 600 ~/oev/.env` y completar las mismas variables de
 [Completar el `.env`](#2-completar-el-env), más `DOMINIO`, el nombre sin
 `https://`. `ALLOWED_HOSTS`, `CSRF_ORIGINS` y `URL_BASE` llevan ese mismo
-dominio. `PUERTO` no se cambia: es interno. Compose v2 interpreta el `$` dentro
-del `.env`, así que `POSTGRES_PASSWORD` se genera igual que `SECRET_KEY`, con
-el comando de la tabla, que no produce ese carácter.
+dominio. `PUERTO` queda igual, porque es interno. Compose v2 interpreta el `$`
+dentro del `.env`. Por eso `POSTGRES_PASSWORD` se genera con el mismo comando
+que `SECRET_KEY`, que no produce ese carácter.
 
 Después, el primer [despliegue](#desplegar) y la
 [puesta en marcha](#puesta-en-marcha).
@@ -373,11 +376,11 @@ alias dc='docker compose -f docker-compose.yml -f docker-compose.produccion.yml'
 dc logs --no-log-prefix web | grep -E '^To: |/clave/'
 ```
 
-Sale el destinatario y, debajo, su enlace. Sirve tres días y una sola vez; si
-una cuenta aparece más de una vez, vale el último. Quien tiene el enlace fija
-la contraseña de esa cuenta, así que no se pega en canales abiertos. Si el
-enlace venció, **Reenviar el correo de la contraseña**, en la ficha de la
-cuenta, escribe otro.
+Sale el destinatario y, debajo, su enlace. El enlace sirve tres días y una sola
+vez. Si una cuenta aparece más de una vez, vale el último. Con el enlace
+cualquiera puede crear la contraseña de esa cuenta, y por eso no se pega en
+canales abiertos. Si venció, el botón **Reenviar el correo de la contraseña**
+de la ficha de la cuenta escribe otro en el log.
 
 Para enviar de verdad se agregan al `.env` las variables `EMAIL_*` de
 [Completar el `.env`](#2-completar-el-env) y se recrean los contenedores:
@@ -387,8 +390,8 @@ dc up -d
 dc exec web python manage.py sendtestemail CORREO_PROPIO
 ```
 
-La segunda línea manda un correo de prueba: si no llega, el error queda en la
-terminal.
+La segunda línea manda un correo de prueba. Si el envío falla, el error sale en
+la terminal.
 
 ### Operación
 
@@ -405,8 +408,8 @@ dc restart web                # reiniciar sin cambiar de versión
 dc exec web python manage.py shell
 ```
 
-Cada acceso del log de `web` trae dos direcciones: la de Caddy, que es quien se
-conecta, y la del navegador, que informa Caddy. **Nunca `dc down -v`**: borra
+Cada acceso del log de `web` trae la dirección de Caddy, que es quien se
+conecta, y la del navegador, que Caddy le informa. **Nunca `dc down -v`**: borra
 la base, las fotos y los certificados.
 
 ### Cambiar de dominio
@@ -414,8 +417,8 @@ la base, las fotos y los certificados.
 Cuando `oev.inf.uach.cl` apunte a esta máquina, se cambian en el `.env` las
 cuatro variables que llevan el dominio (`DOMINIO`, `ALLOWED_HOSTS`,
 `CSRF_ORIGINS` y `URL_BASE`) y se corre `dc up -d`. Caddy pide el certificado
-del dominio nuevo al arrancar; antes el DNS ya tiene que resolver a
-`45.79.193.250`, o no lo obtiene.
+del dominio nuevo al arrancar, y para obtenerlo el DNS ya tiene que resolver a
+`45.79.193.250`.
 
 ### Probar el check-out en una instalación nueva
 
@@ -438,7 +441,7 @@ print("solicitud", s.pk, "movida al", f)
 ```
 
 El bloque aparece en `/apoyo/?fecha=AAAA-MM-DD` con el check-out pendiente.
-**Solo con datos de prueba**: cambia la última solicitud aceptada sin pasar por
+**Solo con datos de prueba.** Cambia la última solicitud aceptada sin pasar por
 las reglas del sistema.
 
 ### Desplegar
@@ -447,14 +450,14 @@ las reglas del sistema.
 sh ~/oev/produccion/desplegar.sh <SHA completo del commit>
 ```
 
-El script hace primero el [respaldo](#respaldos) de la base y las fotos, baja
-la imagen, levanta el stack y espera a que `web` esté sano: su healthcheck
-pide la página de ingreso, así que solo pasa con la configuración revisada, las
-migraciones aplicadas y gunicorn respondiendo. Cada despliegue que funcionó
-queda anotado en `~/oev/desplegados.log` y en el `TAG` del `.env`, para que un
-`docker compose up -d` a mano levante esa misma versión. Con compose v2 `up -d` recrea los
-contenedores sin el `KeyError` del servidor del curso, así que no hace falta el
-`down`.
+El script hace primero el [respaldo](#respaldos) de la base y las fotos.
+Después baja la imagen, levanta el stack y espera a que `web` esté sano. Su
+healthcheck pide la página de ingreso, que solo responde si la configuración
+pasó la revisión, las migraciones se aplicaron y gunicorn arrancó. Cada
+despliegue que funcionó queda anotado en `~/oev/desplegados.log` y en el `TAG`
+del `.env`, para que un `docker compose up -d` a mano levante esa misma versión.
+Con compose v2, `up -d` recrea los contenedores sin el `KeyError` del servidor
+del curso y no hace falta el `down`.
 
 Si la versión no levanta, el script muestra el log, **vuelve solo a la última
 versión de `desplegados.log`** y termina con error. Las migraciones que haya
@@ -469,16 +472,16 @@ usuario que despliega:
 - `fotos.tar`: las fotos del check-out, que no entran en el respaldo de la
   base. Una sola copia, porque una foto no cambia después de subida.
 
-Lo corre `desplegar.sh` antes de cada despliegue. Para que además corra todos
+Lo corre `desplegar.sh` antes de cada despliegue. Para que corra también todos
 los días, se agrega al cron del usuario que despliega (`crontab -e`):
 
 ```
 15 3 * * * sh $HOME/oev/produccion/respaldar.sh >> $HOME/oev/respaldos/cron.log 2>&1
 ```
 
-Esos respaldos están en el mismo disco que los datos: sirven contra una
-migración mala o un volumen borrado, no contra la pérdida del servidor. Para eso
-hay que traerlos cada cierto tiempo a otra máquina:
+Esos respaldos están en el mismo disco que los datos. Sirven si una migración
+sale mal o se borra un volumen, pero se pierden con el servidor. Por eso hay que
+copiarlos cada cierto tiempo a otra máquina:
 
 ```sh
 rsync -a despliegue@45.79.193.250:oev/respaldos/ respaldos-oev/
@@ -493,15 +496,15 @@ SHA, que está en `~/oev/desplegados.log`:
 sh ~/oev/produccion/desplegar.sh <SHA anterior>
 ```
 
-El servidor guarda las 5 imágenes más recientes, así que esas se pueden
-desplegar aunque GHCR ya las haya borrado.
+El servidor guarda las 5 imágenes más recientes, y esas se pueden desplegar
+aunque GHCR ya las haya borrado.
 
 Si entre las dos versiones cambiaron los `docker-compose*.yml` o `produccion/`,
-antes se copian los del commit al que se vuelve: `git switch --detach <SHA>` en
-la máquina propia y el `scp` de la primera instalación, sin el `.env`.
+antes se copian los del commit al que se vuelve, con `git switch --detach <SHA>`
+en la máquina propia y el `scp` de la primera instalación, sin el `.env`.
 
-Si la versión nueva aplicó migraciones, la imagen anterior no conoce esa base:
-hay que restaurar además el respaldo que el script hizo justo antes de
+Si la versión nueva aplicó migraciones, la imagen anterior no conoce esa base.
+Hay que restaurar también el respaldo que el script hizo justo antes de
 desplegarla. **Se pierde lo ingresado desde ese respaldo.**
 
 ```sh
@@ -525,9 +528,9 @@ docker cp -a - "$(dc ps -aq web)":/app < respaldos/fotos.tar
 ### Despliegue automático
 
 El job `desplegar` de `.github/workflows/imagen.yml` corre después de publicar
-la imagen de cada push a `main`. Copia los compose y `produccion/`, así que un
-cambio en ellos llega solo, y ejecuta `desplegar.sh` con el SHA del commit. Está
-apagado hasta configurar en GitHub, en *Settings*:
+la imagen de cada push a `main`. Copia los compose y `produccion/` al servidor y
+ejecuta `desplegar.sh` con el SHA del commit. Los cambios en esos archivos
+también llegan solos. Está apagado hasta configurar en GitHub, en *Settings*:
 
 | Dónde | Nombre | Valor |
 |---|---|---|
@@ -545,12 +548,11 @@ despliegue (*Required reviewers*).
 
 ## Diagramas de la documentación
 
-`docs/` no viaja en la imagen (`.dockerignore`), así que los diagramas no se
-despliegan: se compilan en la máquina de quien los cambia y se commitean con su
-fuente. Todos incluyen `docs/diagramas/estilo.iuml`, que fija la resolución, las
-fuentes y el color de cada capa. Para compilarlos hacen falta PlantUML y las
-fuentes **Noto Sans** y **JetBrainsMono NF** instaladas. El detalle está en
-`docs/diagramas.md`, en
+`docs/` no viaja en la imagen (`.dockerignore`). Los diagramas se compilan en
+la máquina de quien los cambia y se commitean junto a su fuente. Todos incluyen
+`docs/diagramas/estilo.iuml`, que fija la resolución, las fuentes y el color de
+cada capa. Para compilarlos hacen falta PlantUML y las fuentes **Noto Sans** y
+**JetBrainsMono NF** instaladas. El detalle está en `docs/diagramas.md`, en
 [Cómo se dibujan y se compilan](diagramas.md#cómo-se-dibujan-y-se-compilan).
 
 ## Decisión abierta: una restricción en la base contra sanciones pisadas
@@ -563,12 +565,11 @@ sobre `daterange(inicio, termino, '[]')` y `usuario_id`, con
 `levantada_en IS NULL`. No se agregó porque:
 
 - Necesita la extensión `btree_gist`, que la migración crearía con
-  `CreateExtension`. Desde PostgreSQL 13 es una extensión *trusted*: la puede
-  crear el dueño de la base. En este servidor el usuario `oev` es el
-  `POSTGRES_USER` de la imagen, que es superusuario, así que alcanzaría; en
-  otro servidor con un usuario sin privilegio `CREATE` sobre la base, la
-  migración falla y alguien con permisos tiene que correr antes
-  `CREATE EXTENSION btree_gist;`.
+  `CreateExtension`. Desde PostgreSQL 13 es una extensión *trusted*, que puede
+  crear el dueño de la base. En este servidor alcanzaría, porque el usuario
+  `oev` es el `POSTGRES_USER` de la imagen y es superusuario. En otro servidor,
+  con un usuario sin privilegio `CREATE` sobre la base, la migración falla y
+  alguien con permisos tiene que correr antes `CREATE EXTENSION btree_gist;`.
 - El contenedor aplica las migraciones solo al arrancar. Si la base ya tiene
   sanciones pisadas, que US-10 permitía, la migración falla y el sitio no
   levanta hasta limpiarlas. Antes hay que decidir qué hacer con ellas.
@@ -588,14 +589,14 @@ docker exec grupo6_db psql -U oev oev -c "
 | Síntoma | Causa | Solución |
 |---|---|---|
 | `KeyError: 'ContainerConfig'` al hacer `up -d` | Compose 1.29.2 intentó recrear un contenedor | `dc down` y después `dc up -d` |
-| `web` se reinicia en bucle y el log muestra `SystemCheckError` | `check --deploy` encontró la configuración insegura: el log dice qué (`security.W009` es la `SECRET_KEY`) | Corregir `.env` y redesplegar |
+| `web` se reinicia en bucle y el log muestra `SystemCheckError` | `check --deploy` encontró la configuración insegura. El log dice qué falló (`security.W009` es la `SECRET_KEY`) | Corregir `.env` y redesplegar |
 | `PermissionError` al guardar una foto del check-out | El volumen de fotos es de root, de antes de la imagen sin root | El `chown` de [Usuario del contenedor](#usuario-del-contenedor) |
 | Caddy no obtiene el certificado | `DOMINIO` no resuelve a la IP del servidor, o el 80 o el 443 están cerrados | `docker compose ... logs caddy`; revisar el DNS y el firewall |
 | 413 al enviar un check-out | El formulario pasa de los 50 MB que acepta Caddy en el servidor propio | Subir fotos más livianas, o subir `max_size` en `produccion/Caddyfile` |
 | Error 500 sin detalle en el navegador | Con `DEBUG=0` el traceback no se muestra | `docker logs grupo6_frontend`; en el servidor propio, `dc logs web` |
 | Una cuenta nueva no recibe el correo para crear su contraseña | No hay SMTP configurado y el correo se escribió en el log | [Correo](#correo) |
 | `permission denied` al conectar con `docker.sock` en el servidor propio | La sesión se abrió antes de agregar el usuario al grupo `docker` | Salir y volver a entrar |
-| 500 al enviar el login, pero la página de login carga | Falló la base: la página no la consulta, autenticar sí | Revisar que `grupo6_db` esté *healthy* y que `POSTGRES_PASSWORD` sea la del volumen |
+| 500 al enviar el login, pero la página de login carga | Falló la base. La página de login no la consulta, pero autenticar sí | Revisar que `grupo6_db` esté *healthy* y que `POSTGRES_PASSWORD` sea la del volumen |
 | 400 *Bad Request* | El dominio no está en `ALLOWED_HOSTS` | Corregir `.env` y redesplegar |
 | 403 *CSRF verification failed* al enviar un formulario | Falta el dominio con `https://` en `CSRF_ORIGINS` | Corregir `.env` y redesplegar |
 | 502 desde el Caddy | El contenedor está caído o no coincide con la regla | `docker ps`; revisar `container_name` y `PUERTO` |
