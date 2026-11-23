@@ -4,13 +4,14 @@ from unittest import mock
 from zoneinfo import ZoneInfo
 
 import pytest
+from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.urls import reverse
 from django.utils import timezone
 
 from personas import services
-from personas.models import Sancion, Usuario
+from personas.models import Rol, Sancion, Usuario
 
 pytestmark = pytest.mark.django_db
 
@@ -137,7 +138,9 @@ def superusuario():
 
 @pytest.fixture
 def administrador():
-    return Usuario.objects.create_user(email="admin@uach.cl", password="x", is_staff=True)
+    usuario = Usuario.objects.create_user(email="admin@uach.cl", password="x", is_staff=True)
+    usuario.groups.add(Group.objects.get(name=Rol.ADMINISTRADOR))
+    return usuario
 
 
 def test_superusuario_crea_sancion_y_queda_quien(client, superusuario, persona, hoy):

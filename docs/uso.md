@@ -478,8 +478,8 @@ administrador también aprueba y rechaza, y la resolución queda a su nombre.
 
 ### Primeros pasos en un sistema recién instalado
 
-Un sistema nuevo tiene una sola cuenta, el
-[superusuario](#superusuario-y-panel-de-django), y ninguna área. Para dejarlo
+Un sistema nuevo parte con la cuenta de soporte, el
+[superusuario](#superusuario-y-panel-de-django), y sin áreas. Para dejarlo
 listo, en este orden:
 
 1. El superusuario entra por `/configuracion/entrar/`.
@@ -689,10 +689,9 @@ cambió, qué campo, de qué valor a cuál, quién y cuándo. Lo que se cambie d
 
 ### Superusuario y panel de Django
 
-El **superusuario** es la cuenta de soporte de la Oficina. No se crea desde el
-sistema: nace con la instalación (ver
-[despliegue](despliegue.md#puesta-en-marcha)). Entra por
-`/configuracion/entrar/` y llega al mismo panel que un administrador. Además:
+El **superusuario** es la cuenta de soporte de la Oficina. Se crea al instalar
+el sistema (ver [despliegue](despliegue.md#puesta-en-marcha)), tiene el rol de
+administrador y entra por `/configuracion/entrar/` al mismo panel. Además:
 
 - Da y quita el rol **Administrador**, y edita o desactiva la cuenta de otro
   administrador.
@@ -704,14 +703,16 @@ bloqueos, solicitudes, sanciones y parámetros, cada uno con su registro de
 cambios. Es para soporte, cuando hay que corregir o revisar algo que las
 pestañas no muestran. El trabajo diario se hace en las pestañas.
 
-- Sin sesión iniciada, `/admin/` lleva a la puerta de administración y vuelve
-  al panel después de entrar. No tiene formulario de ingreso propio.
+- Sin sesión iniciada, `/admin/` lleva a `/soporte/entrar/` y vuelve a
+  `/admin/` después de entrar. No tiene formulario de ingreso propio.
+- La instalación también deja una cuenta técnica, sin rol, que entra solo a
+  `/admin/`.
 - Lo que se cambie ahí en cuentas y áreas queda en los mismos **Últimos
   cambios** de cada pestaña.
 - Ni las cuentas ni las sanciones se borran, y una solicitud resuelta no se
   edita ni se borra.
-- La casilla **Es staff** de una cuenta la deja entrar a este panel y al de
-  administración. No se marca salvo para otra cuenta de soporte.
+- La casilla **Es staff** deja entrar a este panel. El de administración lo
+  abre solo el rol **Administrador**. Se marca solo en cuentas de soporte.
 
 ### Reglas: los parámetros del sistema
 

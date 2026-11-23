@@ -69,7 +69,7 @@ def otro_validador():
 
 @pytest.fixture
 def administrador():
-    return Usuario.objects.create_superuser("admin@uach.cl", "x")
+    return con_rol(Usuario.objects.create_superuser("admin@uach.cl", "x"), Rol.ADMINISTRADOR)
 
 
 @pytest.fixture

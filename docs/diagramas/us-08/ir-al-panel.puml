@@ -18,18 +18,11 @@ break sin sesión
   end note
 end
 N -> N ++ : destino_tras_login(request.user)
-note right of N
-  is_staff cuenta como administrador: el
-  superusuario del despliegue no está en
-  ningún grupo y no se pregunta por él.
-end note
-opt no es is_staff
-  N -> V ++ : usuario.tiene_rol(Rol.ADMINISTRADOR)
-  V -> D ++ : SELECT EXISTS personas_usuario_groups ⋈ auth_group
-  return fila
-  return True o False
-end
-opt tampoco es administrador
+N -> V ++ : usuario.tiene_rol(Rol.ADMINISTRADOR)
+V -> D ++ : SELECT EXISTS personas_usuario_groups ⋈ auth_group
+return fila
+return True o False
+opt no es administrador
   N -> V ++ : usuario.tiene_rol(Rol.VALIDADOR)
   V -> D ++ : SELECT EXISTS personas_usuario_groups ⋈ auth_group
   return fila
@@ -45,10 +38,11 @@ note right of V
   Los roles son grupos y una persona puede
   tener varios (AC6). Se pregunta en orden de
   prioridad y se deja de preguntar en el
-  primero que tiene.
+  primero que tiene. Sin ninguno, la cuenta
+  técnica (is_staff) va a /admin/ (AC11).
 end note
-return $comentario("el panel del primer rol que tiene; sin ninguno, el formulario de reserva")\nreverse("panel_bloques" | "panel_validador" | "panel_apoyo" | "solicitar")
+return $comentario("el panel del primer rol que tiene; sin ninguno, /admin/ o el formulario de reserva")\nreverse("panel_bloques" | "panel_validador" | "panel_apoyo" | "admin:index" | "solicitar")
 N -> N : redirect(…)
-N --> U : 302 · /configuracion/bloques/, /validador/, /apoyo/ o /solicitar/
+N --> U : 302 · /configuracion/bloques/, /validador/, /apoyo/, /admin/ o /solicitar/
 deactivate N
 @enduml

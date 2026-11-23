@@ -74,7 +74,9 @@ def beto(informatica):
 
 @pytest.fixture
 def administrador():
-    return Usuario.objects.create_user(email="admin@uach.cl", password="x", is_staff=True)
+    usuario = Usuario.objects.create_user(email="admin@uach.cl", password="x", is_staff=True)
+    usuario.groups.add(Group.objects.get(name=Rol.ADMINISTRADOR))
+    return usuario
 
 
 @pytest.fixture
@@ -213,21 +215,21 @@ def test_quien_no_pide_ni_fue_sancionado_no_aparece(client, administrador, ana):
 
 
 def test_el_numero_de_consultas_es_fijo(client, administrador, informatica, civil, bloque, django_assert_num_queries):
-    """Sesión, usuario, el área del filtro, el COUNT del paginador, Parametros,
-    la página entera (conteos, sanción y áreas como subconsultas) y las
-    opciones del filtro de área. Ni una más por fila."""
+    """Sesión, usuario, su rol, el área del filtro, el COUNT del paginador,
+    Parametros, la página entera (conteos, sanción y áreas como subconsultas) y
+    las opciones del filtro de área. Ni una más por fila."""
     entrar(client, administrador)
     Parametros.cargar()  # la primera vez la crea, y eso no es del listado
     for i in range(3):
         persona = solicitante(f"a{i}@uach.cl", informatica, civil)
         checkout(persona, informatica, date(2026, 10, 1 + i), bloque, noes=["paredes"])
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(8):
         client.get(LISTADO, {"area": informatica.pk})
     for i in range(20):
         persona = solicitante(f"b{i}@uach.cl", informatica)
         Sancion.objects.create(usuario=persona, motivo="x", inicio=HOY, termino=HOY)
         checkout(persona, informatica, date(2026, 9, 1 + i), bloque, noes=["puerta", "basura"])
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(8):
         client.get(LISTADO, {"area": informatica.pk})
 
 

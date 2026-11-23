@@ -1,6 +1,7 @@
 import pytest
+from django.contrib.auth.models import Group
 from django.urls import reverse
-from personas.models import Usuario
+from personas.models import Rol, Usuario
 from configuracion.models import Parametros, CambioParametro
 
 pytestmark = pytest.mark.django_db
@@ -15,6 +16,7 @@ def admin_user():
         password="ClaveAdmin123", 
         is_staff=True
     )
+    user.groups.add(Group.objects.get(name=Rol.ADMINISTRADOR))
     return user
 
 @pytest.fixture

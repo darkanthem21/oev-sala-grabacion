@@ -6,9 +6,7 @@ def es_apoyo(usuario):
 
 
 def es_administrador(usuario):
-    return usuario.is_authenticated and usuario.is_active and (
-        usuario.is_staff or usuario.tiene_rol(Rol.ADMINISTRADOR)
-    )
+    return usuario.is_authenticated and usuario.es_administrador
 
 
 def puede_consultar(usuario):

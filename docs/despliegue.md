@@ -92,7 +92,7 @@ Ese archivo vive solo en el servidor y nunca entra a git.
 | `URL_BASE` | `https://oev.inf.uach.cl`. Dominio de los enlaces del recordatorio; por defecto `http://localhost:8000` |
 | `POSTGRES_PASSWORD` | Clave de la base. PostgreSQL la lee solo al crear el volumen: cambiarla después no cambia la de la base |
 | `SECRET_KEY` | Aleatoria y larga: `python3 -c 'import secrets; print(secrets.token_urlsafe(50))'`. Con una corta el contenedor no levanta |
-| `DJANGO_SUPERUSER_EMAIL` | Correo del superusuario: la cuenta de soporte de la Oficina, la única que da y quita el rol **Administrador** |
+| `DJANGO_SUPERUSER_EMAIL` | Correo de la cuenta técnica, un superusuario sin rol que entra solo a `/admin/`. Puede ser el mismo de la cuenta de soporte ([Puesta en marcha](#puesta-en-marcha)) |
 | `DJANGO_SUPERUSER_PASSWORD` | Su clave. Si el usuario ya existe, no se modifica |
 | `EMAIL_BACKEND` | Opcional. Sin él, los correos se escriben en el log del contenedor, también el enlace con que una cuenta nueva crea su contraseña. Para enviarlos: `django.core.mail.backends.smtp.EmailBackend` |
 | `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | Solo con el backend SMTP: servidor, usuario y clave de la cuenta que envía |
@@ -327,22 +327,33 @@ Después, el primer [despliegue](#desplegar) y la
 
 ### Puesta en marcha
 
-Con el primer despliegue arriba el sistema tiene una sola cuenta, el
-**superusuario**, que el contenedor crea al arrancar con
-`DJANGO_SUPERUSER_EMAIL` y `DJANGO_SUPERUSER_PASSWORD` del `.env`.
+Después del primer despliegue hay una sola cuenta, la **cuenta técnica**, que
+el contenedor crea al arrancar con `DJANGO_SUPERUSER_EMAIL` y
+`DJANGO_SUPERUSER_PASSWORD` del `.env`. Es un superusuario sin rol y no ve el
+panel del sistema.
 
-1. Entrar con esa cuenta por `/configuracion/entrar/`.
-2. Crear las áreas, como en [Cargar las áreas](#5-cargar-las-áreas).
-3. Crear las cuentas en la pestaña **Usuarios**, partiendo por los
-   administradores: ese rol solo lo da el superusuario.
-4. Cada cuenta nueva crea su contraseña con el enlace que le llega por correo.
+1. Crear la **cuenta de soporte** de la Oficina, un superusuario con el rol
+   Administrador:
+
+   ```sh
+   docker compose -f docker-compose.yml -f docker-compose.produccion.yml exec web python manage.py crear_administrador CORREO
+   ```
+
+   Si el correo es nuevo, crea la cuenta y le manda el enlace para crear la
+   contraseña. Si la cuenta ya existe, por ejemplo la técnica, le agrega el rol
+   y deja la contraseña como estaba. Se puede correr más de una vez.
+2. Entrar con la cuenta de soporte por `/configuracion/entrar/`.
+3. Crear las áreas, como en [Cargar las áreas](#5-cargar-las-áreas).
+4. Crear las cuentas en la pestaña **Usuarios**, partiendo por los
+   administradores, porque ese rol solo lo da la cuenta de soporte.
+5. Cada cuenta nueva crea su contraseña con el enlace que le llega por correo.
    Sin correo configurado el enlace no llega: ver [Correo](#correo).
 
 El resto (jornada, reglas, listado de check-out) viene con valores por defecto
 y se ajusta desde el panel; el detalle está en el
 [manual de uso](uso.md#primeros-pasos-en-un-sistema-recién-instalado).
 
-Sobre el superusuario:
+Sobre la cuenta técnica:
 
 - Las dos variables del `.env` se leen solo si la cuenta no existe. Cambiarlas
   después no cambia el correo ni la contraseña de la cuenta.
@@ -352,12 +363,10 @@ Sobre el superusuario:
   docker compose -f docker-compose.yml -f docker-compose.produccion.yml exec web python manage.py changepassword CORREO
   ```
 
-- No tiene ningún rol. Pasa por la puerta de administración porque es
-  `is_staff`, y es la única cuenta que entra al panel de Django (`/admin/`),
-  salvo que desde ahí se le marque `is_staff` a otra. `/admin/` no tiene
-  formulario de ingreso propio: manda a la puerta de administración, que es la
-  que bloquea por intentos fallidos. Para qué sirve ese panel está en el
-  [manual de uso](uso.md#superusuario-y-panel-de-django).
+- Entra solo al panel de Django, por `/soporte/entrar/`. Esa puerta deja pasar
+  a las cuentas `is_staff` y bloquea por intentos fallidos como las demás.
+  `/admin/` no tiene formulario de ingreso propio y manda ahí. Para qué sirve
+  ese panel está en el [manual de uso](uso.md#superusuario-y-panel-de-django).
 
 ### Correo
 

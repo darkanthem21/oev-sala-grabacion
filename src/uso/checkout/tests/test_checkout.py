@@ -31,6 +31,7 @@ class CheckoutTests(TestCase):
         self.settings_override.enable()
         self.addCleanup(self.settings_override.disable)
         self.admin = Usuario.objects.create_user(email="admin@example.com", is_staff=True)
+        self.admin.groups.add(Group.objects.get(name=Rol.ADMINISTRADOR))
         self.apoyo = Usuario.objects.create_user(email="apoyo@example.com")
         self.apoyo.groups.add(Group.objects.get(name=Rol.APOYO))
         self.persona = Usuario.objects.create_user(email="persona@example.com")

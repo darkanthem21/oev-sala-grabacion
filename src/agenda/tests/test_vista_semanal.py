@@ -4,10 +4,12 @@ from datetime import date
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.test import TestCase
 from django.urls import reverse
 
 from agenda.models import Bloque, Bloqueo, Dia
+from personas.models import Rol
 
 
 class VistaSemanal(TestCase):
@@ -15,6 +17,7 @@ class VistaSemanal(TestCase):
         admin = get_user_model().objects.create_user(
             email="admin@uach.cl", password="clave-de-prueba", is_staff=True
         )
+        admin.groups.add(Group.objects.get(name=Rol.ADMINISTRADOR))
         self.client.force_login(admin)
         # La migración ya carga la jornada por defecto: se usa ese bloque.
         self.bloque = Bloque.objects.filter(dia=Dia.MIERCOLES, activo=True).order_by("inicio").first()

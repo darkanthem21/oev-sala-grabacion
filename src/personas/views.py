@@ -33,16 +33,17 @@ def destino_tras_login(usuario):
     formulario de US-02.
 
     Los roles ya son grupos de Django (US-08 AC6), así que alguien puede tener
-    varios: el orden de abajo es la prioridad, no una clasificación. `is_staff`
-    sigue contando como administrador porque el superusuario que crea el
-    despliegue no pertenece a ningún grupo.
+    varios: el orden de abajo es la prioridad, no una clasificación. Sin rol,
+    la cuenta técnica (`is_staff`) va a /admin/ (AC11).
     """
-    if usuario.is_staff or usuario.tiene_rol(Rol.ADMINISTRADOR):
+    if usuario.tiene_rol(Rol.ADMINISTRADOR):
         return reverse("panel_bloques")
     if usuario.tiene_rol(Rol.VALIDADOR):
         return reverse("panel_validador")
     if usuario.tiene_rol(Rol.APOYO):
         return reverse("panel_apoyo")
+    if usuario.is_staff:
+        return reverse("admin:index")
     return reverse("solicitar")
 
 
@@ -77,13 +78,9 @@ def _registrar_fallo(usuario):
 
 
 def _puede_pasar(usuario, rol):
-    """Quién cruza esta puerta.
-
-    En la de administración vale también `is_staff`, porque el superusuario del
-    despliegue no pertenece a ningún grupo y quedaría afuera de su propia puerta.
-    """
-    if rol == Rol.ADMINISTRADOR and usuario.is_staff:
-        return True
+    """Quién cruza esta puerta. La de soporte (`rol=None`) deja pasar a `is_staff` (AC11)."""
+    if rol is None:
+        return usuario.is_staff
     return usuario.tiene_rol(rol)
 
 
