@@ -26,6 +26,7 @@ class HistorialCheckoutTests(TestCase):
         configuracion.enable()
         self.addCleanup(configuracion.disable)
         self.admin = Usuario.objects.create_user(email="admin.historial@example.com", is_staff=True)
+        self.admin.groups.add(Group.objects.get(name=Rol.ADMINISTRADOR))
         self.apoyo = Usuario.objects.create_user(email="apoyo.historial@example.com")
         self.apoyo.groups.add(Group.objects.get(name=Rol.APOYO))
         self.persona = Usuario.objects.create_user(email="persona.historial@example.com", first_name="María", last_name="Pérez")

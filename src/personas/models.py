@@ -159,9 +159,8 @@ class Usuario(AbstractUser):
 
     @property
     def es_administrador(self):
-        """Quién abre el panel. `is_staff` cuenta mientras la cuenta técnica no
-        tenga el rol (AC11)."""
-        return self.is_active and (self.is_staff or self.tiene_rol(Rol.ADMINISTRADOR))
+        """Solo el rol abre el panel. La cuenta técnica, sin rol, va a /admin/ (AC11)."""
+        return self.is_active and self.tiene_rol(Rol.ADMINISTRADOR)
 
     @property
     def esta_bloqueado(self):

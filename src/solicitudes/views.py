@@ -58,7 +58,7 @@ def es_validador(usuario):
 
 def puede_validar(usuario):
     """Decisión del 04/10: el administrador también valida."""
-    return usuario.is_authenticated and (usuario.is_staff or usuario.tiene_rol(Rol.VALIDADOR))
+    return usuario.is_authenticated and (usuario.es_administrador or usuario.tiene_rol(Rol.VALIDADOR))
 
 
 def _datos_validacion():
@@ -104,7 +104,7 @@ def _envoltorio_validacion(usuario):
     """El administrador ve el historial dentro de su pestaña Validación; el
     validador, con el encabezado de su panel. Con los dos roles manda el de
     administrador, como en destino_tras_login."""
-    if usuario.is_staff:
+    if usuario.es_administrador:
         return {"envoltorio": "panel.html", "pestana": "validacion", "panel": reverse("panel_validacion")}
     return {"envoltorio": "solicitudes/_base_validador.html", "panel": reverse("panel_validador")}
 

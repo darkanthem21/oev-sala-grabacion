@@ -15,6 +15,7 @@ class EncabezadoPorPantallaTestCase(TestCase):
 
     def test_configuracion_trae_solo_su_techo(self):
         admin = Usuario.objects.create_user(email="admin@uach.cl", password="x", is_staff=True)
+        admin.groups.add(Group.objects.get(name=Rol.ADMINISTRADOR))
         self.client.force_login(admin)
         response = self.client.get(reverse("panel_bloques"))
         self.assertEqual(response.status_code, 200)

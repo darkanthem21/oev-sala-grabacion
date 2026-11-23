@@ -73,6 +73,15 @@ urlpatterns = [
          "titulo": "Ingreso del personal de apoyo", "puerta": "apoyo", "nombre": "Personal de apoyo"},
         name="login_apoyo",
     ),
+    # US-08 AC11: puerta de la cuenta técnica, que no tiene rol. Lleva a /admin/
+    # con el mismo bloqueo por intentos.
+    path(
+        "soporte/entrar/",
+        views.entrar,
+        {"ruta": "login_soporte", "rol": None, "destino": "admin:index",
+         "titulo": "Ingreso de soporte técnico", "puerta": "gestion", "nombre": "Soporte técnico"},
+        name="login_soporte",
+    ),
     path("apoyo/", uso.bloques, name="panel_apoyo"),
     path("apoyo/checkout/<str:codigo>/", checkout.checkout, name="checkout_apoyo"),
     path("apoyo/checkout/<str:codigo>/editar/", checkout.editar_checkout, name="editar_checkout"),
@@ -99,8 +108,8 @@ urlpatterns = [
     # el nombre son los de US-10, para no romper enlaces.
     path("configuracion/sanciones/", uso.sanciones, name="panel_sanciones"),
     path("configuracion/sanciones/<int:usuario_id>/", uso.sanciones_de, name="sanciones_de"),
-    # El formulario de ingreso del admin no tiene el bloqueo por intentos: se
-    # entra por la puerta de gestión, que acepta `is_staff` y vuelve por `next`.
-    path("admin/login/", RedirectView.as_view(pattern_name="login_gestion", query_string=True)),
+    # El formulario de ingreso del admin no bloquea por intentos. Se entra por la
+    # puerta de soporte, que vuelve por `next`.
+    path("admin/login/", RedirectView.as_view(pattern_name="login_soporte", query_string=True)),
     path("admin/", admin.site.urls),
 ]

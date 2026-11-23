@@ -19,6 +19,7 @@ def admin_user():
         password="ClaveAdmin123", 
         is_staff=True
     )
+    user.groups.add(Group.objects.get(name=Rol.ADMINISTRADOR))
     return user
 
 @pytest.fixture

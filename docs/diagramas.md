@@ -105,8 +105,9 @@ Las cuatro puertas, `/solicitante/entrar/`, `/configuracion/entrar/`,
 `/validacion/entrar/` y `/apoyo/entrar/`, son la misma vista `entrar` con otros
 argumentos: cada una dice qué rol deja pasar, a qué panel lleva (`destino`) y
 qué título muestra. La plantilla, la autenticación y el bloqueo son los mismos
-para todas. `/login/` solo redirige a la del solicitante, para no romper enlaces
-viejos. Los diagramas siguen al solicitante, que es el rol de US-01, y van
+para todas. `/soporte/entrar/` es la misma vista con `rol=None`, que deja pasar
+a `is_staff` y lleva a `/admin/`. `/login/` solo redirige a la del solicitante,
+para no romper enlaces viejos. Los diagramas siguen al solicitante, que es el rol de US-01, y van
 separados por cómo termina el intento: con la clave correcta, con la clave
 incorrecta o con la cuenta bloqueada.
 
@@ -148,8 +149,8 @@ sesión y vuelve al sitio. Como los roles son grupos de Django y una persona
 puede tener varios (AC6), `destino_tras_login` los pregunta en orden de
 prioridad, administración, validación y personal de apoyo, y manda al panel del
 primero que tiene. Sin ninguno va al formulario de reserva, que es el panel del
-solicitante (US-01 AC3). `is_staff` cuenta como administrador sin consultar la
-base, porque el superusuario que crea el despliegue no pertenece a ningún grupo.
+solicitante (US-01 AC3). Si además es `is_staff`, es la cuenta técnica y va a
+`/admin/` (US-08 AC11).
 
 ![Ir al panel desde la raíz](diagramas/us-08/ir-al-panel.png)
 

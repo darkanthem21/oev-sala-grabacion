@@ -35,9 +35,8 @@ V -> D ++ : SELECT personas_usuario_groups ⋈ auth_group
 return fila
 note right of N
   Las otras tres puertas hacen este recorrido con su rol
-  y su panel. La de administración deja pasar además a
-  is_staff, porque el superusuario del despliegue no
-  pertenece a ningún grupo.
+  y su panel. /soporte/entrar/ también, pero deja pasar
+  a is_staff y lleva a /admin/.
 end note
 
 alt no es solicitante
